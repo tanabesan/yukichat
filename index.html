@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>ゆきちゃっと</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" />
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-31: #313338; --bg-2b: #2b2d31; --bg-38: #383a40;
+            --txt: #dbdee1; --txt-m: #949ba4; --accent: #5865f2;
+            --danger: #ed4245; --success: #3ba55c; --warning: #f1c40f;
+            --friend-gold: #faa61a; --sidebar-w: 260px;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif; margin: 0; height: 100dvh;
+            background: var(--bg-31); color: var(--txt); overflow: hidden;
+        }
+
+        .hidden { display: none !important; }
+
+        .drag-over {
+            outline: 3px dashed var(--accent);
+            outline-offset: -10px;
+            background-color: rgba(88, 101, 242, 0.1) !important;
+        }
+
+        #sidebar {
+            position: fixed; top: 0; left: calc(-1 * var(--sidebar-w)); 
+            width: var(--sidebar-w); height: 100%; background: var(--bg-2b);
+            transition: transform 0.3s ease; z-index: 3000; display: flex; flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+        }
+        #sidebar.open { transform: translateX(var(--sidebar-w)); }
+        #sidebar-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); 
+            z-index: 2999; display: none;
+        }
+        .sidebar-header { padding: 15px; font-weight: bold; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 10px; }
+        .sidebar-item { 
+            display: flex; align-items: center; gap: 10px; padding: 10px; 
+            border-radius: 5px; cursor: pointer; transition: 0.2s; margin-bottom: 2px;
+        }
+        .sidebar-item:hover { background: rgba(255,255,255,0.05); }
+        .sidebar-item.active { background: var(--bg-38); color: #fff; }
+        .sidebar-label { font-size: 11px; color: var(--txt-m); margin: 15px 10px 5px; text-transform: uppercase; }
+
+        #app-wrapper { 
+            display: flex; flex-direction: column; height: 100vh; height: 100dvh;
+            opacity: 0; transition: opacity 0.3s; 
+        }
+        #app-wrapper.visible { opacity: 1; }
+
+        header { 
+            background: var(--bg-2b); padding: 10px 15px; display: flex; 
+            justify-content: space-between; align-items: center; border-bottom: 1px solid #222; 
+            z-index: 100; height: 48px; flex-shrink: 0; box-sizing: border-box; 
+        }
+        
+        .header-left { display: flex; align-items: center; gap: 10px; font-weight: bold; }
+        .menu-btn { cursor: pointer; display: flex; align-items: center; }
+
+        .icon-container { position: relative; display: inline-block; flex-shrink: 0; }
+        .status-dot {
+            position: absolute; bottom: 2px; right: 2px;
+            width: 10px; height: 10px; border-radius: 50%;
+            border: 2px solid var(--bg-31);
+        }
+        .online { background-color: var(--success); }
+        .offline { background-color: var(--txt-m); }
+
+        #call-overlay { background: #000; z-index: 50; display: flex; flex-direction: column; border-bottom: 2px solid var(--accent); flex-shrink: 0; }
+        .video-container { height: 150px; display: flex; background: #111; gap: 1px; }
+        #remoteVideo { flex: 1; height: 100%; object-fit: cover; }
+        #localVideo { width: 100px; height: 100%; object-fit: cover; border-left: 2px solid #333; }
+        .call-controls { padding: 8px; display: flex; justify-content: center; gap: 15px; background: var(--bg-2b); }
+        .ctrl-btn { width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; background: #4e5058; }
+        .ctrl-btn.off { background: var(--danger); }
+        .ctrl-btn.hangup { background: var(--danger); width: 46px; }
+
+        #messages-container { position: relative; flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
+        #typing-indicator { height: 20px; padding: 0 20px 5px; font-size: 12px; color: var(--txt-m); font-style: italic; }
+
+        .message {
+            display: flex; gap: 12px; align-items: flex-start; max-width: 85%; position: relative;
+        }
+        .message.me { 
+            flex-direction: row-reverse; 
+            align-self: flex-end; 
+        }
+        .message .icon { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; cursor: pointer; background: #4e5058; }
+        
+        .message .msg-body { flex: 0 1 auto; min-width: 0; display: flex; flex-direction: column; }
+        .message.me .msg-body { align-items: flex-end; }
+
+        .message .user-info { font-size: 11px; color: var(--txt-m); margin-bottom: 4px; display: flex; align-items: center; gap: 5px; }
+        .message.me .user-info { flex-direction: row-reverse; }
+
+        .message .bubble { 
+            padding: 10px 14px; 
+            border-radius: 12px; 
+            background: #4e5058; 
+            font-size: 15px; 
+            line-height: 1.4; 
+            word-break: break-all; 
+            position: relative; 
+            display: inline-block;
+            color: #fff;
+            width: fit-content;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        .message.me .bubble { background: var(--accent); }
+
+        .message:not(.me) .bubble::before { 
+            content: ""; position: absolute; top: 10px; left: -8px; 
+            border-top: 8px solid transparent; border-bottom: 8px solid transparent; 
+            border-right: 10px solid #4e5058; 
+        }
+        .message.me .bubble::after { 
+            content: ""; position: absolute; top: 10px; right: -8px; 
+            border-top: 8px solid transparent; border-bottom: 8px solid transparent; 
+            border-left: 10px solid var(--accent); 
+        }
+
+        .edited-mark { font-size: 10px; opacity: 0.6; margin-left: 5px; }
+        .message.is-stamp .bubble { background: transparent !important; border: none !important; padding: 0; }
+        .message.is-stamp .bubble::before, .message.is-stamp .bubble::after { display: none; }
+        .message.is-friend .user-info::after { content: "FRIEND"; font-size: 9px; background: var(--friend-gold); color: #000; padding: 1px 4px; border-radius: 3px; font-weight: bold; margin-left: 5px; }
+
+        .sent-img { display: block; margin-top: 8px; border-radius: 8px; max-width: 100%; max-height: 250px; cursor: pointer; }
+        .stamp-display { display: block; width: 160px; height: 160px; object-fit: contain; }
+        .reply-in-bubble { display: inline-block; background: rgba(0,0,0,0.15); padding: 4px 8px; margin-bottom: 6px; border-radius: 6px; font-size: 12px; cursor: pointer; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .msg-ops { display: flex; gap: 8px; margin-top: 6px; align-items: center; flex-wrap: wrap; }
+        .message.me .msg-ops { justify-content: flex-end; }
+        .msg-ops .op-btn { opacity: 0; transition: 0.1s; font-size: 18px; color: var(--txt-m); cursor: pointer; }
+        .message:hover .msg-ops .op-btn { opacity: 1; }
+        .reaction-badge { background: var(--bg-2b); border: 1px solid transparent; border-radius: 8px; padding: 4px 10px; font-size: 16px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .reaction-badge.active { border-color: var(--accent); background: rgba(88,101,242,0.2); }
+
+        .input-area-container { background: var(--bg-2b); border-top: 1px solid #222; width: 100%; flex-shrink: 0; transition: 0.2s; }
+        #reply-preview, #edit-indicator { background: var(--bg-38); padding: 8px 15px; display: flex; justify-content: space-between; font-size: 12px; border-left: 4px solid var(--accent); }
+        #edit-indicator { border-left-color: var(--warning); }
+        #upload-preview-container { padding: 10px; background: var(--bg-38); display: flex; align-items: center; gap: 10px; }
+        #upload-status-indicator { background: var(--bg-38); padding: 5px 15px; color: var(--accent); font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+        .dot-ani { animation: blink 1.4s infinite both; }
+        @keyframes blink { 0% { opacity: .2; } 20% { opacity: 1; } 100% { opacity: .2; } }
+
+        .input-wrapper { display: flex; align-items: center; gap: 10px; padding: 12px; box-sizing: border-box; }
+        #my-profile-trigger { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: 0.2s; max-width: 140px; overflow: hidden; flex-shrink: 0; }
+        #myName { font-size: 13px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #messageInput { flex: 1; background: var(--bg-38); border: none; padding: 10px 15px; border-radius: 20px; color: var(--txt); outline: none; resize: none; font-size: 15px; max-height: 120px; box-sizing: border-box; }
+        
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+        .prof-card { width: 300px; background: #111214; border-radius: 12px; overflow: hidden; position: relative; }
+        .prof-banner { height: 80px; width: 100%; object-fit: cover; background: var(--accent); }
+        .prof-avatar { width: 64px; height: 64px; border-radius: 50%; border: 4px solid #111214; position: absolute; top: 48px; left: 16px; background: #333; }
+        .settings-input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #444; background:#1e1f22; color:#fff; box-sizing: border-box; }
+        
+        .tabs { display: flex; border-bottom: 1px solid #444; margin-bottom: 15px; }
+        .tab-btn { flex: 1; padding: 10px; background: none; border: none; color: var(--txt-m); cursor: pointer; font-weight: bold; }
+        .tab-btn.active { color: #fff; border-bottom: 2px solid var(--accent); }
+        .user-item { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; background: var(--bg-38); padding: 10px; border-radius: 8px; }
+        .btn-sm { padding: 6px 12px; border-radius: 4px; border: none; color: #fff; cursor: pointer; font-size: 12px; font-weight: bold; margin-left: 5px; }
+
+        #init-loader { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; background: var(--bg-31); z-index: 9999; }
+        .preview-box { border: 1px solid #444; border-radius: 8px; overflow: hidden; margin-bottom: 15px; background: #111; padding-bottom: 10px; }
+        .preview-label { font-size: 10px; color: var(--txt-m); padding: 5px 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .stamp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px; }
+        .stamp-item { width: 100%; aspect-ratio: 1/1; cursor: pointer; border-radius: 8px; transition: 0.2s; object-fit: contain; }
+
+        #load-more-indicator { text-align: center; padding: 10px; font-size: 12px; color: var(--txt-m); }
+    </style>
+</head>
+<body id="body-container">
+
+    <div id="init-loader"><div>Loading...</div></div>
+
+    <div id="auth-container" class="modal-overlay hidden">
+        <div style="background:var(--bg-31); padding:30px; border-radius:12px; width:300px; text-align:center;">
+            <h2>ゆきちゃっと</h2>
+            <input type="email" id="email" class="settings-input" placeholder="メール">
+            <input type="password" id="password" class="settings-input" placeholder="パスワード">
+            <button id="loginBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">ログイン / 登録</button>
+        </div>
+    </div>
+
+    <div id="sidebar-overlay"></div>
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <span>メニュー</span>
+            <span class="material-symbols-outlined op-btn" onclick="toggleSidebar(false)">close</span>
+        </div>
+        <div class="sidebar-content">
+            <div class="sidebar-item active" onclick="switchChat(null); toggleSidebar(false);">
+                <span class="material-symbols-outlined">public</span>
+                <span>パブリックチャット</span>
+            </div>
+            <div class="sidebar-item" onclick="$('#user-list-modal').removeClass('hidden'); toggleSidebar(false);">
+                <span class="material-symbols-outlined">person_search</span>
+                <span>ユーザーを探す</span>
+            </div>
+            
+            <div class="sidebar-label">ダイレクトメッセージ</div>
+            <div id="dm-list"></div>
+        </div>
+        <div style="padding: 15px; border-top: 1px solid #222;">
+            <div class="sidebar-item" id="logoutBtnSide" style="color: var(--danger);">
+                <span class="material-symbols-outlined">logout</span>
+                <span>ログアウト</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-wrapper">
+        <header>
+            <div class="header-left">
+                <span id="menuToggle" class="material-symbols-outlined menu-btn">menu</span>
+                <span id="headerTitle">パブリックチャット</span>
+            </div>
+            <div style="display:flex; gap:15px; align-items:center;">
+                <span id="headerCallBtn" class="material-symbols-outlined op-btn" style="color:var(--success); opacity:1;">call</span>
+                <span id="openOtherSettings" class="material-symbols-outlined op-btn" style="opacity:1;">settings</span>
+            </div>
+        </header>
+
+        <div id="call-overlay" class="hidden">
+            <div class="video-container">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <video id="localVideo" autoplay playsinline muted></video>
+            </div>
+            <div class="call-controls">
+                <button class="ctrl-btn off" id="toggleMic"><span class="material-symbols-outlined">mic_off</span></button>
+                <button class="ctrl-btn off" id="toggleCam"><span class="material-symbols-outlined">videocam_off</span></button>
+                <button class="ctrl-btn hangup" id="hangupBtn"><span class="material-symbols-outlined">call_end</span></button>
+            </div>
+        </div>
+
+        <div id="messages-container">
+            <div id="messages"></div>
+            <div id="typing-indicator" class="hidden"></div>
+        </div>
+
+        <div id="chat-input-area" class="input-area-container">
+            <div id="reply-preview" class="hidden">
+                <div style="overflow:hidden; text-overflow:ellipsis;">返信先: <span id="reply-user-p" style="font-weight:bold; color:var(--accent);"></span></div>
+                <span id="cancel-reply" class="material-symbols-outlined op-btn" style="font-size:16px; opacity:1;">close</span>
+            </div>
+            <div id="edit-indicator" class="hidden">
+                <div style="overflow:hidden; text-overflow:ellipsis;">メッセージを編集モード</div>
+                <span id="cancel-edit" class="material-symbols-outlined op-btn" style="font-size:16px; opacity:1;">close</span>
+            </div>
+            <div id="upload-status-indicator" class="hidden">
+                アップロード中<span class="dot-ani">.</span><span class="dot-ani">.</span><span class="dot-ani">.</span>
+            </div>
+            <div id="upload-preview-container" class="hidden">
+                <div style="position:relative;">
+                    <img id="img-preview-src" src="" style="width:50px; height:50px; object-fit:cover; border-radius:4px;">
+                    <div id="remove-img-btn" style="position:absolute; top:-5px; right:-5px; background:var(--danger); border-radius:50%; width:16px; height:16px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:10px;">×</div>
+                </div>
+            </div>
+            <div class="input-wrapper">
+                <div id="my-profile-trigger">
+                    <div id="myIconContainer"></div>
+                    <span id="myName"></span>
+                </div>
+                <span id="imgBtn" class="material-symbols-outlined op-btn" style="opacity:1;">add_circle</span>
+                <input type="file" id="real_file_input" class="hidden" accept="image/*">
+                <textarea id="messageInput" placeholder="メッセージを送信" rows="1"></textarea>
+                <span id="stampBtn" class="material-symbols-outlined op-btn" style="opacity:1; cursor:pointer;">mood</span>
+                <button id="sendBtn" style="background:var(--accent); color:#fff; border:none; border-radius:50%; width:36px; height:36px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+                    <span class="material-symbols-outlined">send</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="stamp-modal" class="modal-overlay hidden" onclick="$(this).addClass('hidden')">
+        <div style="background:var(--bg-31); padding:20px; border-radius:12px; width:300px;" onclick="event.stopPropagation()">
+            <h3 style="margin-top:0;">スタンプを選択</h3>
+            <div id="stamp-list" class="stamp-grid"></div>
+            <button onclick="$('#stamp-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:10px; cursor:pointer;">キャンセル</button>
+        </div>
+    </div>
+
+    <div id="prof-modal" class="modal-overlay hidden" onclick="$(this).addClass('hidden')">
+        <div class="prof-card" onclick="event.stopPropagation()">
+            <img id="viewBanner" class="prof-banner" src="">
+            <div style="padding:15px; padding-top:40px; color:#fff;">
+                <img id="viewAvatar" class="prof-avatar" src="">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div><div id="viewName" style="font-size:18px; font-weight:bold;"></div></div>
+                    <div id="prof-action-box"></div>
+                </div>
+                <div id="viewBio" style="font-size:13px; color:var(--txt); margin-top:10px; white-space:pre-wrap;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div style="background:var(--bg-31); padding:20px; border-radius:12px; width:340px; max-height:90vh; overflow-y:auto;">
+            <h3 style="margin-top:0;">プロフィール編集</h3>
+            <div class="preview-box">
+                <div class="preview-label">Live Preview</div>
+                <div class="prof-card" style="width: 100%; background: #18191c;">
+                    <img id="editPreviewBanner" class="prof-banner" src="">
+                    <div style="padding:15px; padding-top:40px; position:relative;">
+                        <img id="editPreviewAvatar" class="prof-avatar" src="" style="position:absolute; top:-32px; left:16px;">
+                        <div id="editPreviewName" style="font-size:18px; font-weight:bold; color:#fff;"></div>
+                        <div id="editPreviewBio" style="font-size:12px; color:var(--txt); margin-top:10px; white-space:pre-wrap;"></div>
+                    </div>
+                </div>
+            </div>
+            <label style="font-size:11px; color:var(--txt-m);">名前</label>
+            <input type="text" id="editName" class="settings-input" placeholder="名前">
+            <label style="font-size:11px; color:var(--txt-m);">アイコンURL</label>
+            <input type="text" id="editPhoto" class="settings-input" placeholder="https://...">
+            <label style="font-size:11px; color:var(--txt-m);">バナーURL</label>
+            <input type="text" id="editBanner" class="settings-input" placeholder="https://...">
+            <label style="font-size:11px; color:var(--txt-m);">自己紹介</label>
+            <textarea id="editBio" class="settings-input" placeholder="自己紹介" style="height:60px;"></textarea>
+            <button id="saveProfile" style="width:100%; padding:10px; background:var(--accent); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">保存して更新</button>
+            <button onclick="$('#settings-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:10px; cursor:pointer;">キャンセル</button>
+        </div>
+    </div>
+
+    <div id="other-settings-modal" class="modal-overlay hidden">
+        <div style="background:var(--bg-31); padding:25px; border-radius:12px; width:300px; text-align:center;">
+            <h3>メニュー</h3>
+            <button id="openUserListBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; margin-bottom:10px;">ユーザーを探す / フレンド</button>
+            <button id="startCallBtn" style="width:100%; padding:12px; background:var(--success); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; margin-bottom:10px;">通話を開始</button>
+            <button id="logoutBtn" style="width:100%; padding:10px; background:var(--danger); color:#fff; border:none; border-radius:5px; font-weight:bold;">ログアウト</button>
+            <button onclick="$('#other-settings-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:10px; cursor:pointer;">閉じる</button>
+        </div>
+    </div>
+
+    <div id="user-list-modal" class="modal-overlay hidden">
+        <div style="background:var(--bg-31); padding:20px; border-radius:12px; width:360px; max-height:80vh; display:flex; flex-direction:column;">
+            <h3 style="margin-top:0;">ユーザー</h3>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchUserTab('all')">すべて</button>
+                <button class="tab-btn" onclick="switchUserTab('friends')">フレンド</button>
+            </div>
+            <div id="user-list-container" style="flex:1; overflow-y:auto;"></div>
+            <button onclick="$('#user-list-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:15px; cursor:pointer;">閉じる</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, startAfter } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyA8X7HsOXDERBTy4GvLE8ibg3bk8JhldZg", authDomain: "chat-16746.firebaseapp.com", projectId: "chat-16746", storageBucket: "chat-16746.firebasestorage.app", messagingSenderId: "1009009975164", appId: "1:1009009975164:web:64192371271cb589614ef9" };
+        const app = initializeApp(firebaseConfig);
+        
+        const db = initializeFirestore(app, {
+            localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+        });
+        
+        const auth = getAuth(app);
+        const CLOUD_NAME = "DD17U0VMA", UPLOAD_PRESET = "my_chat_preset";
+        const DEFAULT_AVATAR = "https://www.w3schools.com/howto/img_avatar.png";
+        const DEFAULT_BANNER = "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?auto=format&fit=crop&w=1000";
+
+        function escapeHTML(str) {
+            if (!str) return "";
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[m];
+            });
+        }
+
+        const STAMP_LIST = [
+            "https://fonts.gstatic.com/s/e/notoemoji/latest/1f600/512.webp",
+            "https://fonts.gstatic.com/s/e/notoemoji/latest/1f60d/512.webp",
+            "https://fonts.gstatic.com/s/e/notoemoji/latest/1f62d/512.webp",
+            "https://fonts.gstatic.com/s/e/notoemoji/latest/1f602/512.webp",
+            "https://fonts.gstatic.com/s/e/notoemoji/latest/1f44d/512.webp",
+            "https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp",
+            "https://fonts.gstatic.com/s/e/notoemoji/latest/1f389/512.webp",
+            "https://fonts.gstatic.com/s/e/notoemoji/latest/1f4af/512.webp"
+        ];
+
+        let pendingImageUrl = null, replyTarget = null, editTargetId = null, pc, localStream, currentCallId = null;
+        let currentRoomId = null;
+        let currentUnsubscribe = null;
+        let globalUnsubscribers = [];
+        let friendIds = [];
+        const servers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
+        let currentTab = 'all', usersCache = {}, isInitialLoad = true, lastMsgCount = 0;
+        let typingTimeout;
+
+        let lastVisibleDoc = null; 
+        let isFetchingMore = false;
+        let hasMoreMessages = true;
+        const PAGE_SIZE = 30;
+
+        async function uploadImageFile(file) {
+            if(!file || !file.type.startsWith('image/')) return;
+            $("#upload-status-indicator").removeClass("hidden");
+            $("#sendBtn").prop("disabled", true).css("opacity", "0.5");
+            const fd = new FormData();
+            fd.append("file", file);
+            fd.append("upload_preset", UPLOAD_PRESET);
+            try {
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: "POST", body: fd });
+                const data = await res.json(); 
+                pendingImageUrl = data.secure_url;
+                $("#img-preview-src").attr("src", pendingImageUrl); 
+                $("#upload-preview-container").removeClass("hidden");
+            } catch (err) { alert("アップロード失敗"); }
+            finally {
+                $("#upload-status-indicator").addClass("hidden");
+                $("#sendBtn").prop("disabled", false).css("opacity", "1");
+                $("#real_file_input").val("");
+            }
+        }
+
+        const $chatInputArea = $("#chat-input-area");
+        $(document).on("dragover", (e) => { e.preventDefault(); $chatInputArea.addClass("drag-over"); });
+        $(document).on("dragleave drop", (e) => { e.preventDefault(); $chatInputArea.removeClass("drag-over"); });
+        $(document).on("drop", (e) => {
+            const files = e.originalEvent.dataTransfer.files;
+            if (files.length > 0) uploadImageFile(files[0]);
+        });
+
+        $("#messageInput").on("paste", (e) => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf("image") !== -1) {
+                    const blob = items[i].getAsFile();
+                    uploadImageFile(blob);
+                }
+            }
+        });
+
+        window.toggleSidebar = (show) => {
+            if(show) {
+                $("#sidebar").addClass("open");
+                $("#sidebar-overlay").fadeIn(200);
+                updateSidebarDMList();
+            } else {
+                $("#sidebar").removeClass("open");
+                $("#sidebar-overlay").fadeOut(200);
+            }
+        };
+        $("#menuToggle, #sidebar-overlay").on("click", () => toggleSidebar(!$("#sidebar").hasClass("open")));
+
+        async function updateSidebarDMList() {
+            const $dmList = $("#dm-list").empty();
+            if(friendIds.length === 0) {
+                $dmList.append('<div style="padding:10px; font-size:12px; color:var(--txt-m);">フレンドがいません</div>');
+                return;
+            }
+            friendIds.forEach(fid => {
+                const u = usersCache[fid];
+                if(!u) return;
+                const activeClass = currentRoomId && currentRoomId.includes(fid) ? 'active' : '';
+                const statusClass = u.status === 'online' ? 'online' : 'offline';
+                $dmList.append(`
+                    <div class="sidebar-item ${activeClass}" onclick="openDM('${fid}','${escapeHTML(u.name)}')" data-user-id="${fid}">
+                        <div class="icon-container">
+                            <img src="${u.photo || DEFAULT_AVATAR}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;">
+                            <div class="status-dot ${statusClass}" style="width:8px; height:8px;"></div>
+                        </div>
+                        <span style="font-size:14px;">${escapeHTML(u.name)}</span>
+                    </div>
+                `);
+            });
+        }
+
+        function scrollToBottom(force = false) {
+            const $box = $("#messages");
+            if ($box.length === 0) return;
+            const isAtBottom = ($box[0].scrollHeight - $box.scrollTop() <= $box[0].clientHeight + 150);
+            if (force || isAtBottom) {
+                setTimeout(() => { $box.scrollTop($box[0].scrollHeight); }, 100);
+            }
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            $("#init-loader").fadeOut();
+            if (user) {
+                await setDoc(doc(db, "users", user.uid), { status: "online", lastSeen: serverTimestamp(), isTyping: false }, { merge: true });
+                $("#auth-container").addClass("hidden");
+                $("#app-wrapper").addClass("visible");
+                $("#myName").text(user.displayName || "ゲスト");
+                $("#myIconContainer").html(`<div class="icon-container"><img src="${user.photoURL || DEFAULT_AVATAR}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;"><div class="status-dot online"></div></div>`);
+                
+                const unsubFriends = onSnapshot(collection(db, "friendRequests"), (snap) => {
+                    friendIds = [];
+                    snap.forEach(d => {
+                        const data = d.data();
+                        if (data.status === "accepted") {
+                            if (data.from === user.uid) friendIds.push(data.to);
+                            if (data.to === user.uid) friendIds.push(data.from);
+                        }
+                    });
+                    if ($("#sidebar").hasClass("open")) updateSidebarDMList();
+                });
+
+                const unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
+                    let typingNames = [];
+                    snap.forEach(userDoc => { 
+                        const userData = userDoc.data();
+                        const uid = userDoc.id;
+                        usersCache[uid] = userData; 
+                        if(uid !== auth.currentUser.uid && userData.isTyping) {
+                            typingNames.push(userData.name || "ゲスト");
+                        }
+                        const statusClass = userData.status === 'online' ? 'online' : 'offline';
+                        $(`.message[data-uid="${uid}"] .status-dot`).removeClass('online offline').addClass(statusClass);
+                        $(`.sidebar-item[data-user-id="${uid}"] .status-dot`).removeClass('online offline').addClass(statusClass);
+                        if (!$("#user-list-modal").hasClass("hidden")) {
+                             $(`.user-item[data-uid="${uid}"] .status-dot`).removeClass('online offline').addClass(statusClass);
+                        }
+                    });
+                    if(typingNames.length > 0) $("#typing-indicator").text(typingNames.map(n => escapeHTML(n)).join(", ") + " が入力中...").removeClass("hidden");
+                    else $("#typing-indicator").addClass("hidden");
+                });
+
+                globalUnsubscribers.push(unsubFriends, unsubUsers);
+
+                switchChat(null);
+                listenForCalls();
+                initStampPicker();
+            } else {
+                $("#app-wrapper").removeClass("visible");
+                $("#auth-container").removeClass("hidden");
+                globalUnsubscribers.forEach(unsub => unsub());
+                globalUnsubscribers = [];
+            }
+        });
+
+        const syncProfilePreview = () => {
+            $("#editPreviewName").text($("#editName").val() || "ゲスト");
+            $("#editPreviewAvatar").attr("src", $("#editPhoto").val() || DEFAULT_AVATAR);
+            $("#editPreviewBanner").attr("src", $("#editBanner").val() || DEFAULT_BANNER);
+            $("#editPreviewBio").text($("#editBio").val() || "自己紹介はまだありません。");
+        };
+        $("#editName, #editPhoto, #editBanner, #editBio").on("input", syncProfilePreview);
+
+        window.switchChat = (roomId, otherName = null) => {
+            currentRoomId = roomId;
+            isInitialLoad = true;
+            lastMsgCount = 0;
+            lastVisibleDoc = null;
+            hasMoreMessages = true;
+            $("#messages").empty();
+            if (currentUnsubscribe) currentUnsubscribe();
+            $(".sidebar-item").removeClass("active");
+            if(!roomId) $(".sidebar-item:first").addClass("active");
+
+            const colRef = roomId ? collection(db, "rooms", roomId, "messages") : collection(db, "chats");
+            if (roomId) $("#headerTitle").text(otherName + " とのDM");
+            else $("#headerTitle").text("グローバルチャット");
+
+            const msgQuery = query(colRef, orderBy("createdAt", "desc"), limit(PAGE_SIZE));
+            currentUnsubscribe = onSnapshot(msgQuery, (snap) => {
+                if (isInitialLoad && !snap.empty) {
+                    lastVisibleDoc = snap.docs[snap.docs.length - 1];
+                }
+                renderMessages(snap, true);
+            });
+        };
+
+        async function loadMoreMessages() {
+            if (isFetchingMore || !hasMoreMessages || !lastVisibleDoc) return;
+            isFetchingMore = true;
+            
+            const $box = $("#messages");
+            const oldHeight = $box[0].scrollHeight;
+            const oldScrollTop = $box.scrollTop();
+
+            $("#messages").prepend('<div id="load-more-indicator">過去のメッセージを読み込み中...</div>');
+
+            const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
+            const nextQuery = query(colRef, orderBy("createdAt", "desc"), startAfter(lastVisibleDoc), limit(PAGE_SIZE));
+
+            try {
+                const snap = await getDocs(nextQuery);
+                $("#load-more-indicator").remove();
+
+                if (snap.empty) {
+                    hasMoreMessages = false;
+                    isFetchingMore = false;
+                    return;
+                }
+
+                lastVisibleDoc = snap.docs[snap.docs.length - 1];
+                if (snap.size < PAGE_SIZE) hasMoreMessages = false;
+
+                let html = "";
+                let docs = [];
+                snap.forEach(d => docs.push({id: d.id, data: d.data()}));
+                
+                docs.forEach(item => {
+                    html += generateMessageHtml(item.id, item.data);
+                });
+
+                $("#messages").prepend(html);
+                const newHeight = $box[0].scrollHeight;
+                $box.scrollTop(newHeight - oldHeight + oldScrollTop);
+
+            } catch (err) {
+                console.error("Load more error:", err);
+            } finally {
+                isFetchingMore = false;
+            }
+        }
+
+        function generateMessageHtml(id, d) {
+            const isMe = d.uid === auth.currentUser.uid;
+            const isFriend = friendIds.includes(d.uid);
+            const reactions = d.reactions || {};
+            const userStatus = usersCache[d.uid]?.status || "offline";
+            const isStamp = !!d.stamp;
+            let rHtml = '';
+            for (const [emoji, uids] of Object.entries(reactions)) {
+                if (uids.length > 0) rHtml += `<div class="reaction-badge ${uids.includes(auth.currentUser.uid)?'active':''}" onclick="react('${id}','${emoji}',${JSON.stringify(reactions).replace(/"/g, '&quot;')})">${emoji} ${uids.length}</div>`;
+            }
+            const imgHtml = d.image ? `<img src="${d.image}" class="sent-img" onclick="window.open('${d.image}')">` : '';
+            const stampHtml = d.stamp ? `<img src="${d.stamp}" class="stamp-display">` : '';
+            
+            const safeName = escapeHTML(d.name || "ゲスト");
+            const safeText = escapeHTML(d.text || "");
+            const replyName = d.replyTo ? escapeHTML(d.replyTo.name) : "";
+            const replyText = d.replyTo ? escapeHTML(d.replyTo.text) : "";
+
+            return `<div class="message ${isMe?'me':''} ${isStamp?'is-stamp':''} ${isFriend?'is-friend':''}" id="msg-${id}" data-uid="${d.uid}">
+                <div class="icon-container" onclick="showProfile('${d.uid}')">
+                    <img src="${d.photo || DEFAULT_AVATAR}" class="icon">
+                    <div class="status-dot ${userStatus === 'online' ? 'online' : 'offline'}"></div>
+                </div>
+                <div class="msg-body">
+                    <div class="user-info">${safeName}</div>
+                    <div class="bubble">
+                        ${d.replyTo ? `<div class="reply-in-bubble" onclick="scrollToMsg('${d.replyTo.id}')">@${replyName} ${replyText}</div>` : ''}
+                        ${d.text ? `<div>${safeText}${d.isEdited ? '<span class="edited-mark">(編集済)</span>' : ''}</div>` : ''}
+                        ${imgHtml}
+                        ${stampHtml}
+                    </div>
+                    <div class="msg-ops">
+                        ${rHtml}
+                        <span class="material-symbols-outlined op-btn" onclick="react('${id}','👍',${JSON.stringify(reactions).replace(/"/g, '&quot;')})">add_reaction</span>
+                        <span class="material-symbols-outlined op-btn" onclick="setReply('${id}','${safeName.replace(/'/g, "\\'")}','${(safeText || (isStamp?"スタンプ":"画像")).replace(/'/g, "\\'").replace(/\n/g, " ")}')">reply</span>
+                        ${isMe && !isStamp ? `<span class="material-symbols-outlined op-btn" onclick="setEdit('${id}','${safeText.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')">edit</span>` : ''}
+                        ${isMe ? `<span class="material-symbols-outlined op-btn" style="color:var(--danger);" onclick="deleteMsg('${id}')">delete</span>` : ''}
+                    </div>
+                </div></div>`;
+        }
+
+        $("#messages").on("scroll", function() {
+            if ($(this).scrollTop() === 0) {
+                loadMoreMessages();
+            }
+        });
+
+        function renderMessages(snap, isDesc = false) {
+            const $box = $("#messages");
+            const newCount = snap.size;
+            const shouldScroll = isInitialLoad || (newCount > lastMsgCount);
+            
+            let docs = [];
+            snap.forEach(d => docs.push({id: d.id, data: d.data()}));
+            if(isDesc) docs.reverse();
+
+            if (isInitialLoad) {
+                $box.empty();
+                docs.forEach((item) => {
+                    $box.append(generateMessageHtml(item.id, item.data));
+                });
+            } else {
+                docs.forEach((item) => {
+                    const existing = $(`#msg-${item.id}`);
+                    if (existing.length) {
+                        const newHtml = generateMessageHtml(item.id, item.data);
+                        existing.replaceWith(newHtml);
+                    } else {
+                        $box.append(generateMessageHtml(item.id, item.data));
+                    }
+                });
+            }
+            
+            if (shouldScroll) { scrollToBottom(true); isInitialLoad = false; }
+            lastMsgCount = newCount;
+        }
+
+        const send = async () => {
+            const txt = $("#messageInput").val().trim(); if (!txt && !pendingImageUrl) return;
+            const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
+            if(editTargetId) {
+                await updateDoc(doc(colRef, editTargetId), { text: txt, isEdited: true });
+                cancelEdit();
+            } else {
+                await addDoc(colRef, { text: txt, image: pendingImageUrl, uid: auth.currentUser.uid, name: auth.currentUser.displayName || "ゲスト", photo: auth.currentUser.photoURL || DEFAULT_AVATAR, createdAt: serverTimestamp(), replyTo: replyTarget, reactions: {} });
+            }
+            $("#messageInput").val("").css("height", "auto"); pendingImageUrl = null; replyTarget = null; 
+            $("#upload-preview-container, #reply-preview").addClass("hidden");
+            updateTypingStatus(false);
+            scrollToBottom(true);
+        };
+
+        const updateTypingStatus = async (isTyping) => {
+            if(!auth.currentUser) return;
+            await updateDoc(doc(db, "users", auth.currentUser.uid), { isTyping: isTyping });
+        };
+
+        $("#messageInput").on("input", function() {
+            updateTypingStatus(true);
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => updateTypingStatus(false), 3000);
+        });
+
+        window.sendStamp = async (url) => {
+            const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
+            await addDoc(colRef, { stamp: url, uid: auth.currentUser.uid, name: auth.currentUser.displayName || "ゲスト", photo: auth.currentUser.photoURL || DEFAULT_AVATAR, createdAt: serverTimestamp(), replyTo: replyTarget, reactions: {} });
+            replyTarget = null; $("#reply-preview").addClass("hidden"); $("#stamp-modal").addClass("hidden");
+            scrollToBottom(true);
+        };
+
+        const initStampPicker = () => {
+            const $list = $("#stamp-list").empty();
+            STAMP_LIST.forEach(url => { $list.append(`<img src="${url}" class="stamp-item" onclick="sendStamp('${url}')">`); });
+        };
+
+        window.react = async (id, emoji, currentJson) => {
+            const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
+            const users = (currentJson && currentJson[emoji]) || [];
+            await updateDoc(doc(colRef, id), { [`reactions.${emoji}`]: users.includes(auth.currentUser.uid) ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid) });
+        };
+
+        window.deleteMsg = async (id) => {
+            if(confirm("このメッセージを削除しますか？")) {
+                const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
+                await deleteDoc(doc(colRef, id));
+            }
+        };
+
+        window.setEdit = (id, text) => {
+            editTargetId = id;
+            $("#messageInput").val(text).focus();
+            $("#edit-indicator").removeClass("hidden");
+            $("#reply-preview").addClass("hidden");
+            replyTarget = null;
+        };
+
+        window.cancelEdit = () => {
+            editTargetId = null; $("#messageInput").val(""); $("#edit-indicator").addClass("hidden");
+        };
+        $("#cancel-edit").on("click", cancelEdit);
+
+        $("#sendBtn").on("click", send);
+        $("#messageInput").on("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
+        $("#imgBtn").on("click", () => $("#real_file_input").click());
+        $("#stampBtn").on("click", () => $("#stamp-modal").removeClass("hidden"));
+        $("#real_file_input").on("change", (e) => uploadImageFile(e.target.files[0]));
+        $("#remove-img-btn").on("click", () => { pendingImageUrl = null; $("#upload-preview-container").addClass("hidden"); });
+
+        window.setReply = (id, name, text) => { 
+            cancelEdit();
+            replyTarget = { id, name, text: text.substring(0, 20) + "..." }; 
+            $("#reply-user-p").text(name); $("#reply-preview").removeClass("hidden"); $("#messageInput").focus(); 
+        };
+        $("#cancel-reply").on("click", () => { replyTarget = null; $("#reply-preview").addClass("hidden"); });
+        window.scrollToMsg = (id) => { document.getElementById(`msg-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+
+        window.showProfile = async (uid) => {
+            const snap = await getDoc(doc(db, "users", uid)); if (!snap.exists()) return;
+            const d = snap.data(); 
+            $("#viewName").text(d.name || "ゲスト"); 
+            $("#viewAvatar").attr("src", d.photo || DEFAULT_AVATAR); 
+            $("#viewBanner").attr("src", d.banner || DEFAULT_BANNER); 
+            $("#viewBio").text(d.bio || "No bio.");
+            const $actionBox = $("#prof-action-box").empty();
+            if (uid !== auth.currentUser.uid) {
+                const reqId = [auth.currentUser.uid, uid].sort().join("_");
+                const rSnap = await getDoc(doc(db, "friendRequests", reqId));
+                if (!rSnap.exists()) $actionBox.append(`<button onclick="sendRequest('${uid}')" class="btn-sm" style="background:var(--accent);">申請</button>`);
+                else if (rSnap.data().status === "accepted") {
+                    $actionBox.append(`<button onclick="openDM('${uid}','${escapeHTML(d.name || "ゲスト").replace(/'/g, "\\'")}')" class="btn-sm" style="background:var(--success);">DMを送る</button>`);
+                    $actionBox.append(`<span style="color:var(--friend-gold); font-size:12px; margin-left:10px;">★</span>`);
+                }
+            }
+            $("#prof-modal").removeClass("hidden");
+        };
+
+        window.openDM = async (otherUid, otherName) => {
+            const roomId = [auth.currentUser.uid, otherUid].sort().join("_");
+            await setDoc(doc(db, "rooms", roomId), { users: [auth.currentUser.uid, otherUid] }, { merge: true });
+            $("#prof-modal, #user-list-modal").addClass("hidden");
+            toggleSidebar(false);
+            switchChat(roomId, otherName);
+        };
+
+        $("#my-profile-trigger").on("click", async () => {
+            const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
+            if (snap.exists()) { const d = snap.data(); $("#editName").val(d.name); $("#editPhoto").val(d.photo); $("#editBanner").val(d.banner); $("#editBio").val(d.bio); }
+            syncProfilePreview(); $("#settings-modal").removeClass("hidden");
+        });
+
+        $("#saveProfile").on("click", async () => {
+            const data = { name: $("#editName").val(), photo: $("#editPhoto").val(), banner: $("#editBanner").val(), bio: $("#editBio").val() };
+            await updateProfile(auth.currentUser, { displayName: data.name, photoURL: data.photo });
+            await setDoc(doc(db, "users", auth.currentUser.uid), data, { merge: true });
+            location.reload();
+        });
+
+        window.switchUserTab = (tab) => { currentTab = tab; $(".tab-btn").removeClass("active"); $(`.tab-btn:contains(${tab==='all'?'すべて':'フレンド'})`).addClass("active"); loadUserList(); };
+        window.loadUserList = () => {
+            onSnapshot(collection(db, "friendRequests"), (reqSnap) => {
+                const reqMap = {}; reqSnap.forEach(d => reqMap[d.id] = d.data());
+                onSnapshot(collection(db, "users"), (userSnap) => {
+                    const $list = $("#user-list-container").empty();
+                    userSnap.forEach((uDoc) => {
+                        const uid = uDoc.id; if (uid === auth.currentUser.uid) return;
+                        const d = uDoc.data(); const isOnline = d.status === "online"; const reqId = [auth.currentUser.uid, uid].sort().join("_"); const req = reqMap[reqId];
+                        const safeName = escapeHTML(d.name || "ゲスト");
+                        let btn = `<button onclick="sendRequest('${uid}')" class="btn-sm" style="background:var(--accent);">申請</button>`;
+                        let isF = false;
+                        if (req) {
+                            if (req.status === "accepted") { 
+                                btn = `<button onclick="openDM('${uid}','${safeName.replace(/'/g, "\\'")}')" class="btn-sm" style="background:var(--success);">DM</button>`; 
+                                btn += `<button onclick="removeFriend('${reqId}')" class="btn-sm" style="background:var(--bg-2b); color:var(--danger);">解除</button>`;
+                                isF = true; 
+                            }
+                            else if (req.from === auth.currentUser.uid) btn = `<span style="color:var(--txt-m); font-size:12px;">申請中</span>`;
+                            else btn = `<button onclick="acceptRequest('${reqId}')" class="btn-sm" style="background:var(--success);">承認</button>`;
+                        }
+                        if (currentTab === 'friends' && !isF) return;
+                        $list.append(`<div class="user-item" data-uid="${uid}"><div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="showProfile('${uid}')"><div class="icon-container"><img src="${d.photo || DEFAULT_AVATAR}" style="width:30px;height:30px;border-radius:50%"><div class="status-dot ${isOnline?'online':'offline'}"></div></div><span style="${isF?'color:var(--friend-gold);font-weight:bold;':''}">${safeName}</span></div><div>${btn}</div></div>`);
+                    });
+                });
+            });
+        };
+        window.sendRequest = async (uid) => { const id = [auth.currentUser.uid, uid].sort().join("_"); await setDoc(doc(db, "friendRequests", id), { from: auth.currentUser.uid, to: uid, status: "pending" }); };
+        window.acceptRequest = async (id) => { await updateDoc(doc(db, "friendRequests", id), { status: "accepted" }); };
+        window.removeFriend = async (id) => { if (confirm("解除しますか？")) await deleteDoc(doc(db, "friendRequests", id)); };
+
+        async function setupWebRTC() {
+            pc = new RTCPeerConnection(servers);
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+            $("#localVideo")[0].srcObject = localStream;
+            pc.ontrack = (e) => { $("#remoteVideo")[0].srcObject = e.streams[0]; };
+            $("#call-overlay").removeClass("hidden");
+        }
+        window.startCall = async () => {
+            $("#other-settings-modal").addClass("hidden"); await setupWebRTC();
+            const callDoc = doc(collection(db, "calls")); currentCallId = callDoc.id;
+            const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
+            await setDoc(callDoc, { offer: { type: offer.type, sdp: offer.sdp }, caller: auth.currentUser.displayName });
+            onSnapshot(callDoc, (s) => { if (!pc.currentRemoteDescription && s.data()?.answer) pc.setRemoteDescription(new RTCSessionDescription(s.data().answer)); });
+        };
+        function listenForCalls() {
+            onSnapshot(collection(db, "calls"), (snap) => {
+                snap.docChanges().forEach(async (change) => {
+                    const data = change.doc.data();
+                    if (change.type === "added" && data.offer && !data.answer && data.caller !== auth.currentUser.displayName) {
+                        currentCallId = change.doc.id; await setupWebRTC();
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                        const answer = await pc.createAnswer(); await pc.setLocalDescription(answer);
+                        await updateDoc(doc(db, "calls", currentCallId), { answer: { type: answer.type, sdp: answer.sdp } });
+                    }
+                });
+            });
+        }
+        $("#headerCallBtn, #startCallBtn").on("click", startCall);
+        $("#hangupBtn").on("click", async () => {
+            if (localStream) localStream.getTracks().forEach(t => t.stop());
+            if (pc) pc.close();
+            if (currentCallId) await deleteDoc(doc(db, "calls", currentCallId));
+            $("#call-overlay").addClass("hidden");
+        });
+        $("#loginBtn").on("click", async () => {
+            const e = $("#email").val(), p = $("#password").val();
+            try { await signInWithEmailAndPassword(auth, e, p); }
+            catch { const res = await createUserWithEmailAndPassword(auth, e, p); await setDoc(doc(db, "users", res.user.uid), { name: "ゲスト", photo: DEFAULT_AVATAR, status: "online", isTyping: false }); }
+            location.reload();
+        });
+        const doLogout = async () => { if (auth.currentUser) await updateDoc(doc(db, "users", auth.currentUser.uid), { status: "offline", isTyping: false }); signOut(auth).then(() => location.reload()); };
+        $("#logoutBtn, #logoutBtnSide").on("click", doLogout);
+        $("#openOtherSettings").on("click", () => $("#other-settings-modal").removeClass("hidden"));
+        $("#openUserListBtn").on("click", () => { $("#other-settings-modal").addClass("hidden"); $("#user-list-modal").removeClass("hidden"); switchUserTab('all'); });
+
+        window.addEventListener('beforeunload', () => {
+            if (auth.currentUser) {
+                updateDoc(doc(db, "users", auth.currentUser.uid), { status: "offline", isTyping: false });
+            }
+        });
+    </script>
+</body>
+</html>
