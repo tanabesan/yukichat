@@ -656,7 +656,7 @@
                 setTimeout(() => { $box.animate({ scrollTop: $box[0].scrollHeight }, 100); }, 150);
             }
         }
-        window.scrollToBottom = scrollToBottom; // ★これを追加して解決
+        window.scrollToBottom = scrollToBottom;
 
         /* -------------------------------------------------------------------------
            Firebase 認証状態の監視
@@ -665,7 +665,7 @@
             $("#init-loader").fadeOut();
             if (user) {
                 // オンライン状態に更新
-                await setDoc(doc(db, "users", user.uid), { status: "online", lastSeen: serverTimestamp(), isTyping: false }, { merge: true });
+                setOnline();
                 $("#auth-container").addClass("hidden");
                 $("#app-wrapper").addClass("visible");
                 $("#myName").text(user.displayName || "ゲスト");
@@ -1057,23 +1057,60 @@
         /* -------------------------------------------------------------------------
            その他（ログイン・ログアウト・イベント管理）
         -------------------------------------------------------------------------- */
+        
+        // ステータス管理関数
+        const setOnline = async () => {
+            if (auth.currentUser) {
+                try {
+                    await updateDoc(doc(db, "users", auth.currentUser.uid), { status: "online", lastSeen: serverTimestamp() });
+                } catch (e) { console.log("Status update error (online)"); }
+            }
+        };
+
+        const setOffline = async () => {
+            if (auth.currentUser) {
+                try {
+                    // バックグラウンド移行時にオフライン化
+                    await updateDoc(doc(db, "users", auth.currentUser.uid), { status: "offline", lastSeen: serverTimestamp(), isTyping: false });
+                } catch (e) { console.log("Status update error (offline)"); }
+            }
+        };
+
         $("#loginBtn").on("click", async () => {
             const e = $("#email").val(), p = $("#password").val();
             try { await signInWithEmailAndPassword(auth, e, p); }
             catch { const res = await createUserWithEmailAndPassword(auth, e, p); await setDoc(doc(db, "users", res.user.uid), { name: "ゲスト", photo: DEFAULT_AVATAR, status: "online", isTyping: false }); }
             location.reload();
         });
-        const doLogout = async () => { if (auth.currentUser) await updateDoc(doc(db, "users", auth.currentUser.uid), { status: "offline", isTyping: false }); signOut(auth).then(() => location.reload()); };
+        
+        const doLogout = async () => { 
+            await setOffline();
+            signOut(auth).then(() => location.reload()); 
+        };
+
         $("#logoutBtn, #logoutBtnSide").on("click", doLogout);
         $("#openOtherSettings").on("click", () => $("#other-settings-modal").removeClass("hidden"));
         $("#openUserListBtn").on("click", () => { $("#other-settings-modal").addClass("hidden"); $("#user-list-modal").removeClass("hidden"); switchUserTab('all'); });
 
-        // ウィンドウを閉じる前にステータスをオフラインにする
-        window.addEventListener('beforeunload', () => {
-            if (auth.currentUser) {
-                updateDoc(doc(db, "users", auth.currentUser.uid), { status: "offline", isTyping: false });
+        // スマホ対応：画面が見えなくなったら（ホームに戻る、タブ切り替えなど）オフラインにする
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                setOnline();
+            } else {
+                setOffline();
             }
         });
+
+        // ページ終了時の監視（モバイル対応強化）
+        window.addEventListener("pagehide", () => {
+            setOffline();
+        });
+        
+        // PC等での閉じる動作
+        window.addEventListener("beforeunload", () => {
+            setOffline();
+        });
+
     </script>
 </body>
 </html>
