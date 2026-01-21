@@ -18,18 +18,16 @@
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif; margin: 0; height: 100dvh;
             background: var(--bg-31); color: var(--txt); overflow: hidden;
-            /* iOS Safariでのスクロールバウンス防止 */
             overscroll-behavior: none;
         }
 
         .hidden { display: none !important; }
 
-        /* ボタン・アイコンの「押した感」 */
         .op-btn, .btn-sm, .sidebar-item, button, #sendBtn, .stamp-item {
             transition: transform 0.1s, opacity 0.1s;
             cursor: pointer;
             user-select: none;
-            -webkit-tap-highlight-color: transparent; /* モバイルでのタップハイライト削除 */
+            -webkit-tap-highlight-color: transparent;
         }
         .op-btn:active, .btn-sm:active, .sidebar-item:active, button:active, #sendBtn:active, .stamp-item:active {
             transform: scale(0.92);
@@ -48,7 +46,7 @@
             width: var(--sidebar-w); height: 100%; background: var(--bg-2b);
             transition: transform 0.3s ease; z-index: 3000; display: flex; flex-direction: column;
             box-shadow: 2px 0 10px rgba(0,0,0,0.5);
-            padding-bottom: env(safe-area-inset-bottom); /* iOS Safe Area */
+            padding-bottom: env(safe-area-inset-bottom);
         }
         #sidebar.open { transform: translateX(var(--sidebar-w)); }
         #sidebar-overlay {
@@ -76,7 +74,7 @@
             background: var(--bg-2b); padding: 10px 15px; display: flex; 
             justify-content: space-between; align-items: center; border-bottom: 1px solid #222; 
             z-index: 100; height: 48px; flex-shrink: 0; box-sizing: border-box; 
-            padding-top: max(10px, env(safe-area-inset-top)); /* iOS Notch対応 */
+            padding-top: max(10px, env(safe-area-inset-top));
         }
         
         .header-left { display: flex; align-items: center; gap: 10px; font-weight: bold; font-size: 16px; }
@@ -168,7 +166,7 @@
         /* --- 入力エリア --- */
         .input-area-container { 
             background: var(--bg-2b); border-top: 1px solid #222; width: 100%; flex-shrink: 0; transition: 0.2s; 
-            padding-bottom: env(safe-area-inset-bottom); /* iOS Bottom Bar */
+            padding-bottom: env(safe-area-inset-bottom);
         }
         #reply-preview, #edit-indicator { background: var(--bg-38); padding: 8px 15px; display: flex; justify-content: space-between; font-size: 12px; border-left: 4px solid var(--accent); }
         #edit-indicator { border-left-color: var(--warning); }
@@ -181,17 +179,16 @@
         #my-profile-trigger { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px; border-radius: 4px; transition: 0.2s; max-width: 140px; overflow: hidden; flex-shrink: 0; }
         #my-profile-trigger:active { background: rgba(255,255,255,0.1); }
         #myName { font-size: 13px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        #messageInput { flex: 1; background: var(--bg-38); border: none; padding: 10px 12px; border-radius: 20px; color: var(--txt); outline: none; resize: none; font-size: 16px; /* 16px prevent zoom on iOS */ max-height: 120px; box-sizing: border-box; }
+        #messageInput { flex: 1; background: var(--bg-38); border: none; padding: 10px 12px; border-radius: 20px; color: var(--txt); outline: none; resize: none; font-size: 16px; max-height: 120px; box-sizing: border-box; }
         
         /* --- モーダル共通 --- */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px; box-sizing: border-box; }
         
-        /* レスポンシブ用の共通カードスタイル */
         .responsive-card {
             background: var(--bg-31);
             border-radius: 12px;
             width: 100%;
-            max-width: 360px; /* デフォルト最大幅 */
+            max-width: 360px;
             max-height: 90vh;
             overflow-y: auto;
             position: relative;
@@ -235,27 +232,15 @@
         }
         .banner-edit-overlay:hover { opacity: 1; }
 
-        /* --- モバイル専用レスポンシブ調整 --- */
         @media screen and (max-width: 600px) {
-            /* 入力欄の名前を消してスペース確保 */
             #myName { display: none; }
             #my-profile-trigger { padding: 0; }
-            
-            /* メッセージ入力周りをタイトに */
             .input-wrapper { gap: 6px; padding: 6px 8px; }
             #messageInput { padding: 8px 10px; font-size: 16px; }
             #sendBtn { width: 32px; height: 32px; }
-            
-            /* スタンプグリッドを3列に */
             .stamp-grid { grid-template-columns: repeat(3, 1fr); }
-            
-            /* メッセージ操作ボタンを常にうっすら表示（タッチだとHoverできないため） */
             .msg-ops .op-btn { opacity: 0.6; }
-            
-            /* モーダル微調整 */
             .prof-card, .responsive-card { width: 95%; }
-            
-            /* フォント調整 */
             .header-left { font-size: 14px; }
         }
     </style>
@@ -284,7 +269,7 @@
                 <span class="material-symbols-outlined">public</span>
                 <span>パブリックチャット</span>
             </div>
-            <div class="sidebar-item" onclick="$('#user-list-modal').removeClass('hidden'); toggleSidebar(false);">
+            <div class="sidebar-item" onclick="$('#user-list-modal').removeClass('hidden'); toggleSidebar(false); switchUserTab('all');">
                 <span class="material-symbols-outlined">person_search</span>
                 <span>ユーザーを探す</span>
             </div>
@@ -307,6 +292,7 @@
                 <span id="headerTitle">パブリックチャット</span>
             </div>
             <div style="display:flex; gap:15px; align-items:center;">
+                <span id="notifyBtn" class="material-symbols-outlined op-btn" style="opacity:0.5;" title="通知ON/OFF">notifications_off</span>
                 <span id="headerCallBtn" class="material-symbols-outlined op-btn" style="color:var(--success); opacity:1;">call</span>
                 <span id="openOtherSettings" class="material-symbols-outlined op-btn" style="opacity:1;">settings</span>
             </div>
@@ -463,9 +449,6 @@
     </div>
 
     <script type="module">
-        /* -------------------------------------------------------------------------
-           Firebase SDK の初期化と設定
-        -------------------------------------------------------------------------- */
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, startAfter } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -473,19 +456,16 @@
         const firebaseConfig = { apiKey: "AIzaSyA8X7HsOXDERBTy4GvLE8ibg3bk8JhldZg", authDomain: "chat-16746.firebaseapp.com", projectId: "chat-16746", storageBucket: "chat-16746.firebasestorage.app", messagingSenderId: "1009009975164", appId: "1:1009009975164:web:64192371271cb589614ef9" };
         const app = initializeApp(firebaseConfig);
         
-        // 複数タブでのキャッシュ同期を有効化
         const db = initializeFirestore(app, {
             localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
         });
         
         const auth = getAuth(app);
 
-        // 画像アップロード用（Cloudinary）の設定
         const CLOUD_NAME = "DD17U0VMA", UPLOAD_PRESET = "my_chat_preset";
         const DEFAULT_AVATAR = "https://www.w3schools.com/howto/img_avatar.png";
         const DEFAULT_BANNER = "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?auto=format&fit=crop&w=1000";
 
-        // セキュリティ対策: 文字列のエスケープ処理
         function escapeHTML(str) {
             if (!str) return "";
             return str.replace(/[&<>"']/g, function(m) {
@@ -493,7 +473,6 @@
             });
         }
 
-        // デフォルトスタンプリスト
         const STAMP_LIST = [
             "https://fonts.gstatic.com/s/e/notoemoji/latest/1f600/512.webp",
             "https://fonts.gstatic.com/s/e/notoemoji/latest/1f60d/512.webp",
@@ -514,15 +493,11 @@
         let currentTab = 'all', usersCache = {}, isInitialLoad = true, lastMsgCount = 0;
         let typingTimeout;
 
-        // ページネーション（過去ログ読み込み）用変数
         let lastVisibleDoc = null; 
         let isFetchingMore = false;
         let hasMoreMessages = true;
         const PAGE_SIZE = 30;
 
-        /* -------------------------------------------------------------------------
-           Cloudinary への画像アップロード処理
-        -------------------------------------------------------------------------- */
         async function baseUpload(file, isProfile = false, profileText = "画像をアップロード中") {
             if(!file || !file.type.startsWith('image/')) return null;
             
@@ -554,7 +529,6 @@
             }
         }
 
-        // チャットメッセージ用画像アップロード
         async function uploadImageFile(file) {
             const url = await baseUpload(file);
             if(url) {
@@ -565,7 +539,6 @@
             $("#real_file_input").val("");
         }
 
-        // プロフィールアイコン画像アップロード
         async function uploadAvatarFile(file) {
             const url = await baseUpload(file, true, "アイコンをアップロード中");
             if(url) {
@@ -575,7 +548,6 @@
             $("#real_avatar_input").val("");
         }
 
-        // プロフィールバナー画像アップロード
         async function uploadBannerFile(file) {
             const url = await baseUpload(file, true, "バナーをアップロード中");
             if(url) {
@@ -585,9 +557,6 @@
             $("#real_banner_input").val("");
         }
 
-        /* -------------------------------------------------------------------------
-           ドラッグ＆ドロップとクリップボードペーストの制御
-        -------------------------------------------------------------------------- */
         const $chatInputArea = $("#chat-input-area");
         $(document).on("dragover", (e) => { e.preventDefault(); $chatInputArea.addClass("drag-over"); });
         $(document).on("dragleave drop", (e) => { e.preventDefault(); $chatInputArea.removeClass("drag-over"); });
@@ -606,9 +575,6 @@
             }
         });
 
-        /* -------------------------------------------------------------------------
-           UI・サイドバー制御
-        -------------------------------------------------------------------------- */
         window.toggleSidebar = (show) => {
             if(show) {
                 $("#sidebar").addClass("open");
@@ -621,7 +587,6 @@
         };
         $("#menuToggle, #sidebar-overlay").on("click", () => toggleSidebar(!$("#sidebar").hasClass("open")));
 
-        // サイドバー内のDM（フレンド）リストを更新
         async function updateSidebarDMList() {
             const $dmList = $("#dm-list").empty();
             if(friendIds.length === 0) {
@@ -645,7 +610,6 @@
             });
         }
 
-        // 自動スクロール処理
         function scrollToBottom(force = false) {
             const $box = $("#messages");
             if ($box.length === 0) return;
@@ -658,20 +622,15 @@
         }
         window.scrollToBottom = scrollToBottom;
 
-        /* -------------------------------------------------------------------------
-           Firebase 認証状態の監視
-        -------------------------------------------------------------------------- */
         onAuthStateChanged(auth, async (user) => {
             $("#init-loader").fadeOut();
             if (user) {
-                // オンライン状態に更新
                 setOnline();
                 $("#auth-container").addClass("hidden");
                 $("#app-wrapper").addClass("visible");
                 $("#myName").text(user.displayName || "ゲスト");
                 $("#myIconContainer").html(`<div class="icon-container"><img src="${user.photoURL || DEFAULT_AVATAR}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;"><div class="status-dot online"></div></div>`);
                 
-                // フレンド関係の監視
                 const unsubFriends = onSnapshot(collection(db, "friendRequests"), (snap) => {
                     friendIds = [];
                     snap.forEach(d => {
@@ -684,7 +643,6 @@
                     if ($("#sidebar").hasClass("open")) updateSidebarDMList();
                 });
 
-                // ユーザー情報の監視（入力中ステータスなど）
                 const unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
                     let typingNames = [];
                     snap.forEach(userDoc => { 
@@ -706,9 +664,9 @@
                 });
 
                 globalUnsubscribers.push(unsubFriends, unsubUsers);
-                switchChat(null); // デフォルトでグローバルチャットを表示
-                listenForCalls(); // 通話の待ち受け開始
-                initStampPicker(); // スタンプ一覧生成
+                switchChat(null);
+                listenForCalls();
+                initStampPicker();
             } else {
                 $("#app-wrapper").removeClass("visible");
                 $("#auth-container").removeClass("hidden");
@@ -717,7 +675,6 @@
             }
         });
 
-        // プロフィール編集のプレビューを同期
         const syncProfilePreview = () => {
             $("#editPreviewName").text($("#editName").val() || "ゲスト");
             $("#editPreviewAvatar").attr("src", $("#editPhoto").val() || DEFAULT_AVATAR);
@@ -726,9 +683,6 @@
         };
         $("#editName, #editPhoto, #editBanner, #editBio").on("input", syncProfilePreview);
 
-        /* -------------------------------------------------------------------------
-           チャットルームの切り替えとメッセージ取得
-        -------------------------------------------------------------------------- */
         window.switchChat = (roomId, otherName = null) => {
             currentRoomId = roomId;
             isInitialLoad = true;
@@ -744,7 +698,6 @@
             if (roomId) $("#headerTitle").text(otherName + " とのDM");
             else $("#headerTitle").text("グローバルチャット");
 
-            // Firestoreからリアルタイムにメッセージを購読
             const msgQuery = query(colRef, orderBy("createdAt", "desc"), limit(PAGE_SIZE));
             currentUnsubscribe = onSnapshot(msgQuery, (snap) => {
                 if (isInitialLoad && !snap.empty) {
@@ -754,7 +707,6 @@
             });
         };
 
-        // スクロール最上部で過去ログを読み込む
         async function loadMoreMessages() {
             if (isFetchingMore || !hasMoreMessages || !lastVisibleDoc) return;
             isFetchingMore = true;
@@ -780,9 +732,6 @@
             } catch (err) { console.error("Load more error:", err); } finally { isFetchingMore = false; }
         }
 
-        /* -------------------------------------------------------------------------
-           メッセージのHTML生成とレンダリング
-        -------------------------------------------------------------------------- */
         function generateMessageHtml(id, d) {
             const isMe = d.uid === auth.currentUser.uid;
             const isFriend = friendIds.includes(d.uid);
@@ -825,6 +774,9 @@
 
         $("#messages").on("scroll", function() { if ($(this).scrollTop() === 0) loadMoreMessages(); });
 
+        /* --- 通知制御変数 --- */
+        let notificationsEnabled = false;
+
         function renderMessages(snap, isDesc = false) {
             const $box = $("#messages");
             const currentMsgCount = snap.size;
@@ -843,23 +795,38 @@
                     if (existing.length) { existing.replaceWith(generateMessageHtml(item.id, item.data)); }
                     else { $box.append(generateMessageHtml(item.id, item.data)); }
                 });
-                if (hasNewMessage) scrollToBottom(true);
+                if (hasNewMessage) {
+                    scrollToBottom(true);
+                    
+                    // ▼ 通知ロジック
+                    const lastDoc = docs[docs.length - 1];
+                    if (notificationsEnabled && 
+                        auth.currentUser && 
+                        lastDoc.data.uid !== auth.currentUser.uid && 
+                        document.visibilityState === 'hidden') {
+                        
+                        const notificationTitle = `新着: ${lastDoc.data.name || "ゲスト"}`;
+                        const notificationBody = lastDoc.data.text || (lastDoc.data.stamp ? "スタンプ" : "画像");
+                        
+                        const n = new Notification(notificationTitle, {
+                            body: notificationBody,
+                            icon: lastDoc.data.photo || DEFAULT_AVATAR,
+                            tag: 'chat-msg'
+                        });
+                        n.onclick = () => { window.focus(); };
+                    }
+                }
             }
             lastMsgCount = currentMsgCount;
         }
 
-        /* -------------------------------------------------------------------------
-           送信・編集・リアクション処理
-        -------------------------------------------------------------------------- */
         const send = async () => {
             const txt = $("#messageInput").val().trim(); if (!txt && !pendingImageUrl) return;
             const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
             if(editTargetId) {
-                // 編集処理
                 await updateDoc(doc(colRef, editTargetId), { text: txt, isEdited: true });
                 cancelEdit();
             } else {
-                // 新規投稿処理
                 await addDoc(colRef, { text: txt, image: pendingImageUrl, uid: auth.currentUser.uid, name: auth.currentUser.displayName || "ゲスト", photo: auth.currentUser.photoURL || DEFAULT_AVATAR, createdAt: serverTimestamp(), replyTo: replyTarget, reactions: {} });
                 scrollToBottom(true);
             }
@@ -868,7 +835,6 @@
             updateTypingStatus(false);
         };
 
-        // 入力中ステータスの更新（Firestore上のユーザーデータに保存）
         const updateTypingStatus = async (isTyping) => {
             if(!auth.currentUser) return;
             await updateDoc(doc(db, "users", auth.currentUser.uid), { isTyping: isTyping });
@@ -880,7 +846,6 @@
             typingTimeout = setTimeout(() => updateTypingStatus(false), 3000);
         });
 
-        // スタンプ送信
         window.sendStamp = async (url) => {
             const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
             await addDoc(colRef, { stamp: url, uid: auth.currentUser.uid, name: auth.currentUser.displayName || "ゲスト", photo: auth.currentUser.photoURL || DEFAULT_AVATAR, createdAt: serverTimestamp(), replyTo: replyTarget, reactions: {} });
@@ -893,14 +858,12 @@
             STAMP_LIST.forEach(url => { $list.append(`<img src="${url}" class="stamp-item" onclick="sendStamp('${url}')">`); });
         };
 
-        // リアクションの追加・削除
         window.react = async (id, emoji, currentJson) => {
             const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
             const users = (currentJson && currentJson[emoji]) || [];
             await updateDoc(doc(colRef, id), { [`reactions.${emoji}`]: users.includes(auth.currentUser.uid) ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid) });
         };
 
-        // メッセージ削除
         window.deleteMsg = async (id) => {
             if(confirm("このメッセージを削除しますか？")) {
                 const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
@@ -908,7 +871,6 @@
             }
         };
 
-        // 編集・返信のUI制御
         window.setEdit = (id, text) => {
             editTargetId = id;
             $("#messageInput").val(text).focus();
@@ -937,9 +899,6 @@
         $("#cancel-reply").on("click", () => { replyTarget = null; $("#reply-preview").addClass("hidden"); });
         window.scrollToMsg = (id) => { document.getElementById(`msg-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
 
-        /* -------------------------------------------------------------------------
-           プロフィールとフレンド管理
-        -------------------------------------------------------------------------- */
         window.showProfile = async (uid) => {
             const snap = await getDoc(doc(db, "users", uid)); if (!snap.exists()) return;
             const d = snap.data(); 
@@ -960,7 +919,6 @@
             $("#prof-modal").removeClass("hidden");
         };
 
-        // DMルームを作成・移動
         window.openDM = async (otherUid, otherName) => {
             const roomId = [auth.currentUser.uid, otherUid].sort().join("_");
             await setDoc(doc(db, "rooms", roomId), { users: [auth.currentUser.uid, otherUid] }, { merge: true });
@@ -975,7 +933,6 @@
             syncProfilePreview(); $("#settings-modal").removeClass("hidden");
         });
 
-        // 自分のプロフィールの保存
         $("#saveProfile").on("click", async () => {
             const data = { name: $("#editName").val(), photo: $("#editPhoto").val(), banner: $("#editBanner").val(), bio: $("#editBio").val() };
             await updateProfile(auth.currentUser, { displayName: data.name, photoURL: data.photo });
@@ -983,7 +940,6 @@
             location.reload();
         });
 
-        // ユーザーリストのタブ切り替えと表示
         window.switchUserTab = (tab) => { currentTab = tab; $(".tab-btn").removeClass("active"); $(`.tab-btn:contains(${tab==='all'?'すべて':'フレンド'})`).addClass("active"); loadUserList(); };
         window.loadUserList = () => {
             onSnapshot(collection(db, "friendRequests"), (reqSnap) => {
@@ -1015,9 +971,6 @@
         window.acceptRequest = async (id) => { await updateDoc(doc(db, "friendRequests", id), { status: "accepted" }); };
         window.removeFriend = async (id) => { if (confirm("解除しますか？")) await deleteDoc(doc(db, "friendRequests", id)); };
 
-        /* -------------------------------------------------------------------------
-           WebRTC による通話機能
-        -------------------------------------------------------------------------- */
         async function setupWebRTC() {
             pc = new RTCPeerConnection(servers);
             localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -1054,11 +1007,37 @@
             $("#call-overlay").addClass("hidden");
         });
 
-        /* -------------------------------------------------------------------------
-           その他（ログイン・ログアウト・イベント管理）
-        -------------------------------------------------------------------------- */
-        
-        // ステータス管理関数
+        /* --- 通知ボタンのイベント --- */
+        $("#notifyBtn").on("click", async () => {
+            if (!("Notification" in window)) {
+                alert("このブラウザは通知に対応していません。");
+                return;
+            }
+
+            if (!notificationsEnabled) {
+                const permission = await Notification.requestPermission();
+                if (permission === "granted") {
+                    notificationsEnabled = true;
+                    updateNotifyIcon();
+                    new Notification("ゆきちゃっと", { body: "通知がオンになりました！" });
+                } else {
+                    alert("通知権限が拒否されました。");
+                }
+            } else {
+                notificationsEnabled = false;
+                updateNotifyIcon();
+            }
+        });
+
+        function updateNotifyIcon() {
+            const $btn = $("#notifyBtn");
+            if (notificationsEnabled) {
+                $btn.text("notifications").css({ opacity: "1", color: "var(--accent)" });
+            } else {
+                $btn.text("notifications_off").css({ opacity: "0.5", color: "" });
+            }
+        }
+
         const setOnline = async () => {
             if (auth.currentUser) {
                 try {
@@ -1070,7 +1049,6 @@
         const setOffline = async () => {
             if (auth.currentUser) {
                 try {
-                    // バックグラウンド移行時にオフライン化
                     await updateDoc(doc(db, "users", auth.currentUser.uid), { status: "offline", lastSeen: serverTimestamp(), isTyping: false });
                 } catch (e) { console.log("Status update error (offline)"); }
             }
@@ -1092,7 +1070,6 @@
         $("#openOtherSettings").on("click", () => $("#other-settings-modal").removeClass("hidden"));
         $("#openUserListBtn").on("click", () => { $("#other-settings-modal").addClass("hidden"); $("#user-list-modal").removeClass("hidden"); switchUserTab('all'); });
 
-        // スマホ対応：画面が見えなくなったら（ホームに戻る、タブ切り替えなど）オフラインにする
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
                 setOnline();
@@ -1101,12 +1078,10 @@
             }
         });
 
-        // ページ終了時の監視（モバイル対応強化）
         window.addEventListener("pagehide", () => {
             setOffline();
         });
         
-        // PC等での閉じる動作
         window.addEventListener("beforeunload", () => {
             setOffline();
         });
