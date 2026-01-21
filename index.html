@@ -255,6 +255,11 @@
             <input type="email" id="email" class="settings-input" placeholder="メール">
             <input type="password" id="password" class="settings-input" placeholder="パスワード">
             <button id="loginBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:16px;">ログイン / 登録</button>
+            
+            <div style="margin: 15px 0; border-top: 1px solid #444;"></div>
+            
+            <button id="guestBtn" style="width:100%; padding:12px; background:#4e5058; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:16px;">ゲストで参加 (匿名)</button>
+            <div style="font-size:11px; color:var(--txt-m); margin-top:5px;">※ゲストは最終ログインから30日後に自動削除されます</div>
         </div>
     </div>
 
@@ -451,7 +456,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, startAfter } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = { apiKey: "AIzaSyA8X7HsOXDERBTy4GvLE8ibg3bk8JhldZg", authDomain: "chat-16746.firebaseapp.com", projectId: "chat-16746", storageBucket: "chat-16746.firebasestorage.app", messagingSenderId: "1009009975164", appId: "1:1009009975164:web:64192371271cb589614ef9" };
         const app = initializeApp(firebaseConfig);
@@ -625,6 +630,30 @@
         onAuthStateChanged(auth, async (user) => {
             $("#init-loader").fadeOut();
             if (user) {
+                // ▼▼▼ ゲスト自動消去機能 ▼▼▼
+                if (user.isAnonymous) {
+                    const exp = new Date(); 
+                    exp.setDate(exp.getDate() + 30); // 30日後の日付
+                    
+                    const uRef = doc(db, "users", user.uid);
+                    const s = await getDoc(uRef);
+                    
+                    // ゲストユーザーのドキュメント作成/更新
+                    // 自動消去のフラグ(expireAt)はゲストにのみ書き込まれます
+                    if(!s.exists()) {
+                        await setDoc(uRef, { 
+                            name: "ゲスト", 
+                            photo: DEFAULT_AVATAR, 
+                            status: "online", 
+                            isTyping: false, 
+                            expireAt: exp 
+                        });
+                    } else {
+                        await updateDoc(uRef, { expireAt: exp });
+                    }
+                }
+                // ▲▲▲ ここまで ▲▲▲
+
                 setOnline();
                 $("#auth-container").addClass("hidden");
                 $("#app-wrapper").addClass("visible");
@@ -798,7 +827,6 @@
                 if (hasNewMessage) {
                     scrollToBottom(true);
                     
-                    // ▼ 通知ロジック
                     const lastDoc = docs[docs.length - 1];
                     if (notificationsEnabled && 
                         auth.currentUser && 
@@ -1060,6 +1088,13 @@
             catch { const res = await createUserWithEmailAndPassword(auth, e, p); await setDoc(doc(db, "users", res.user.uid), { name: "ゲスト", photo: DEFAULT_AVATAR, status: "online", isTyping: false }); }
             location.reload();
         });
+        
+        // ▼▼▼ ゲストログインボタンのイベント ▼▼▼
+        $("#guestBtn").on("click", async () => {
+            try { await signInAnonymously(auth); location.reload(); }
+            catch (e) { alert("ゲストログインエラー: " + e.message); }
+        });
+        // ▲▲▲ ここまで ▲▲▲
         
         const doLogout = async () => { 
             await setOffline();
