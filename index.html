@@ -163,6 +163,12 @@
         .prof-avatar { width: 64px; height: 64px; border-radius: 50%; border: 4px solid #111214; position: absolute; top: 48px; left: 16px; background: #333; }
         .settings-input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #444; background:#1e1f22; color:#fff; box-sizing: border-box; }
         
+        /* インプットとボタンを横並びにするクラス */
+        .settings-input-group { display: flex; gap: 8px; margin-bottom: 10px; }
+        .settings-input-group .settings-input { margin-bottom: 0; flex: 1; }
+        .btn-upload-small { background: var(--accent); color: #fff; border: none; border-radius: 5px; padding: 0 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .btn-upload-small:hover { opacity: 0.8; }
+
         .tabs { display: flex; border-bottom: 1px solid #444; margin-bottom: 15px; }
         .tab-btn { flex: 1; padding: 10px; background: none; border: none; color: var(--txt-m); cursor: pointer; font-weight: bold; }
         .tab-btn.active { color: #fff; border-bottom: 2px solid var(--accent); }
@@ -176,6 +182,21 @@
         .stamp-item { width: 100%; aspect-ratio: 1/1; cursor: pointer; border-radius: 8px; transition: 0.2s; object-fit: contain; }
 
         #load-more-indicator { text-align: center; padding: 10px; font-size: 12px; color: var(--txt-m); }
+
+        /* プロフィール編集の特殊スタイル */
+        .avatar-edit-overlay {
+            position: absolute; top: 48px; left: 16px; width: 64px; height: 64px;
+            border-radius: 50%; background: rgba(0,0,0,0.4); display: flex;
+            align-items: center; justify-content: center; color: #fff; cursor: pointer;
+            border: 4px solid #111214; z-index: 10; opacity: 0; transition: 0.2s;
+        }
+        .avatar-edit-overlay:hover { opacity: 1; }
+        .banner-edit-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 80px;
+            background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;
+            color: #fff; cursor: pointer; opacity: 0; transition: 0.2s;
+        }
+        .banner-edit-overlay:hover { opacity: 1; }
     </style>
 </head>
 <body id="body-container">
@@ -310,19 +331,42 @@
                 <div class="preview-label">Live Preview</div>
                 <div class="prof-card" style="width: 100%; background: #18191c;">
                     <img id="editPreviewBanner" class="prof-banner" src="">
+                    <div class="banner-edit-overlay" onclick="$('#real_banner_input').click()">
+                        <span class="material-symbols-outlined">photo_camera</span>
+                    </div>
                     <div style="padding:15px; padding-top:40px; position:relative;">
                         <img id="editPreviewAvatar" class="prof-avatar" src="" style="position:absolute; top:-32px; left:16px;">
+                        <div class="avatar-edit-overlay" onclick="$('#real_avatar_input').click()">
+                            <span class="material-symbols-outlined">photo_camera</span>
+                        </div>
                         <div id="editPreviewName" style="font-size:18px; font-weight:bold; color:#fff;"></div>
                         <div id="editPreviewBio" style="font-size:12px; color:var(--txt); margin-top:10px; white-space:pre-wrap;"></div>
                     </div>
                 </div>
             </div>
+            
+            <input type="file" id="real_avatar_input" class="hidden" accept="image/*">
+            <input type="file" id="real_banner_input" class="hidden" accept="image/*">
+
             <label style="font-size:11px; color:var(--txt-m);">名前</label>
             <input type="text" id="editName" class="settings-input" placeholder="名前">
+            
             <label style="font-size:11px; color:var(--txt-m);">アイコンURL</label>
-            <input type="text" id="editPhoto" class="settings-input" placeholder="https://...">
+            <div class="settings-input-group">
+                <input type="text" id="editPhoto" class="settings-input" placeholder="https://...">
+                <button type="button" class="btn-upload-small" onclick="$('#real_avatar_input').click()">
+                    <span class="material-symbols-outlined" style="font-size:18px;">upload</span>
+                </button>
+            </div>
+
             <label style="font-size:11px; color:var(--txt-m);">バナーURL</label>
-            <input type="text" id="editBanner" class="settings-input" placeholder="https://...">
+            <div class="settings-input-group">
+                <input type="text" id="editBanner" class="settings-input" placeholder="https://...">
+                <button type="button" class="btn-upload-small" onclick="$('#real_banner_input').click()">
+                    <span class="material-symbols-outlined" style="font-size:18px;">upload</span>
+                </button>
+            </div>
+
             <label style="font-size:11px; color:var(--txt-m);">自己紹介</label>
             <textarea id="editBio" class="settings-input" placeholder="自己紹介" style="height:60px;"></textarea>
             <button id="saveProfile" style="width:100%; padding:10px; background:var(--accent); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">保存して更新</button>
@@ -407,25 +451,56 @@
         let hasMoreMessages = true;
         const PAGE_SIZE = 30;
 
-        async function uploadImageFile(file) {
-            if(!file || !file.type.startsWith('image/')) return;
+        // 汎用的な画像アップロード関数
+        async function baseUpload(file) {
+            if(!file || !file.type.startsWith('image/')) return null;
             $("#upload-status-indicator").removeClass("hidden");
-            $("#sendBtn").prop("disabled", true).css("opacity", "0.5");
+            $("#sendBtn, #saveProfile").prop("disabled", true).css("opacity", "0.5");
             const fd = new FormData();
             fd.append("file", file);
             fd.append("upload_preset", UPLOAD_PRESET);
             try {
                 const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: "POST", body: fd });
                 const data = await res.json(); 
-                pendingImageUrl = data.secure_url;
+                return data.secure_url;
+            } catch (err) { 
+                alert("アップロード失敗"); 
+                return null;
+            } finally {
+                $("#upload-status-indicator").addClass("hidden");
+                $("#sendBtn, #saveProfile").prop("disabled", false).css("opacity", "1");
+            }
+        }
+
+        // チャットメッセージ用アップロード
+        async function uploadImageFile(file) {
+            const url = await baseUpload(file);
+            if(url) {
+                pendingImageUrl = url;
                 $("#img-preview-src").attr("src", pendingImageUrl); 
                 $("#upload-preview-container").removeClass("hidden");
-            } catch (err) { alert("アップロード失敗"); }
-            finally {
-                $("#upload-status-indicator").addClass("hidden");
-                $("#sendBtn").prop("disabled", false).css("opacity", "1");
-                $("#real_file_input").val("");
             }
+            $("#real_file_input").val("");
+        }
+
+        // プロフィールアイコン用アップロード
+        async function uploadAvatarFile(file) {
+            const url = await baseUpload(file);
+            if(url) {
+                $("#editPhoto").val(url);
+                syncProfilePreview();
+            }
+            $("#real_avatar_input").val("");
+        }
+
+        // プロフィールバナー用アップロード
+        async function uploadBannerFile(file) {
+            const url = await baseUpload(file);
+            if(url) {
+                $("#editBanner").val(url);
+                syncProfilePreview();
+            }
+            $("#real_banner_input").val("");
         }
 
         const $chatInputArea = $("#chat-input-area");
@@ -484,9 +559,11 @@
         function scrollToBottom(force = false) {
             const $box = $("#messages");
             if ($box.length === 0) return;
-            const isAtBottom = ($box[0].scrollHeight - $box.scrollTop() <= $box[0].clientHeight + 150);
+            const threshold = 150;
+            const isAtBottom = ($box[0].scrollHeight - $box.scrollTop() <= $box[0].clientHeight + threshold);
             if (force || isAtBottom) {
-                setTimeout(() => { $box.scrollTop($box[0].scrollHeight); }, 100);
+                setTimeout(() => { $box.scrollTop($box[0].scrollHeight); }, 50);
+                setTimeout(() => { $box.animate({ scrollTop: $box[0].scrollHeight }, 100); }, 150);
             }
         }
 
@@ -532,7 +609,6 @@
                 });
 
                 globalUnsubscribers.push(unsubFriends, unsubUsers);
-
                 switchChat(null);
                 listenForCalls();
                 initStampPicker();
@@ -579,46 +655,26 @@
         async function loadMoreMessages() {
             if (isFetchingMore || !hasMoreMessages || !lastVisibleDoc) return;
             isFetchingMore = true;
-            
             const $box = $("#messages");
             const oldHeight = $box[0].scrollHeight;
             const oldScrollTop = $box.scrollTop();
-
             $("#messages").prepend('<div id="load-more-indicator">過去のメッセージを読み込み中...</div>');
-
             const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
             const nextQuery = query(colRef, orderBy("createdAt", "desc"), startAfter(lastVisibleDoc), limit(PAGE_SIZE));
-
             try {
                 const snap = await getDocs(nextQuery);
                 $("#load-more-indicator").remove();
-
-                if (snap.empty) {
-                    hasMoreMessages = false;
-                    isFetchingMore = false;
-                    return;
-                }
-
+                if (snap.empty) { hasMoreMessages = false; isFetchingMore = false; return; }
                 lastVisibleDoc = snap.docs[snap.docs.length - 1];
                 if (snap.size < PAGE_SIZE) hasMoreMessages = false;
-
                 let html = "";
                 let docs = [];
                 snap.forEach(d => docs.push({id: d.id, data: d.data()}));
-                
-                docs.forEach(item => {
-                    html += generateMessageHtml(item.id, item.data);
-                });
-
+                docs.forEach(item => { html += generateMessageHtml(item.id, item.data); });
                 $("#messages").prepend(html);
                 const newHeight = $box[0].scrollHeight;
                 $box.scrollTop(newHeight - oldHeight + oldScrollTop);
-
-            } catch (err) {
-                console.error("Load more error:", err);
-            } finally {
-                isFetchingMore = false;
-            }
+            } catch (err) { console.error("Load more error:", err); } finally { isFetchingMore = false; }
         }
 
         function generateMessageHtml(id, d) {
@@ -631,9 +687,8 @@
             for (const [emoji, uids] of Object.entries(reactions)) {
                 if (uids.length > 0) rHtml += `<div class="reaction-badge ${uids.includes(auth.currentUser.uid)?'active':''}" onclick="react('${id}','${emoji}',${JSON.stringify(reactions).replace(/"/g, '&quot;')})">${emoji} ${uids.length}</div>`;
             }
-            const imgHtml = d.image ? `<img src="${d.image}" class="sent-img" onclick="window.open('${d.image}')">` : '';
-            const stampHtml = d.stamp ? `<img src="${d.stamp}" class="stamp-display">` : '';
-            
+            const imgHtml = d.image ? `<img src="${d.image}" class="sent-img" onload="scrollToBottom()" onclick="window.open('${d.image}')">` : '';
+            const stampHtml = d.stamp ? `<img src="${d.stamp}" class="stamp-display" onload="scrollToBottom()">` : '';
             const safeName = escapeHTML(d.name || "ゲスト");
             const safeText = escapeHTML(d.text || "");
             const replyName = d.replyTo ? escapeHTML(d.replyTo.name) : "";
@@ -662,40 +717,29 @@
                 </div></div>`;
         }
 
-        $("#messages").on("scroll", function() {
-            if ($(this).scrollTop() === 0) {
-                loadMoreMessages();
-            }
-        });
+        $("#messages").on("scroll", function() { if ($(this).scrollTop() === 0) loadMoreMessages(); });
 
         function renderMessages(snap, isDesc = false) {
             const $box = $("#messages");
-            const newCount = snap.size;
-            const shouldScroll = isInitialLoad || (newCount > lastMsgCount);
-            
+            const currentMsgCount = snap.size;
+            const hasNewMessage = currentMsgCount > lastMsgCount;
             let docs = [];
             snap.forEach(d => docs.push({id: d.id, data: d.data()}));
             if(isDesc) docs.reverse();
-
             if (isInitialLoad) {
                 $box.empty();
-                docs.forEach((item) => {
-                    $box.append(generateMessageHtml(item.id, item.data));
-                });
+                docs.forEach((item) => { $box.append(generateMessageHtml(item.id, item.data)); });
+                scrollToBottom(true);
+                isInitialLoad = false;
             } else {
                 docs.forEach((item) => {
                     const existing = $(`#msg-${item.id}`);
-                    if (existing.length) {
-                        const newHtml = generateMessageHtml(item.id, item.data);
-                        existing.replaceWith(newHtml);
-                    } else {
-                        $box.append(generateMessageHtml(item.id, item.data));
-                    }
+                    if (existing.length) { existing.replaceWith(generateMessageHtml(item.id, item.data)); }
+                    else { $box.append(generateMessageHtml(item.id, item.data)); }
                 });
+                if (hasNewMessage) scrollToBottom(true);
             }
-            
-            if (shouldScroll) { scrollToBottom(true); isInitialLoad = false; }
-            lastMsgCount = newCount;
+            lastMsgCount = currentMsgCount;
         }
 
         const send = async () => {
@@ -706,11 +750,11 @@
                 cancelEdit();
             } else {
                 await addDoc(colRef, { text: txt, image: pendingImageUrl, uid: auth.currentUser.uid, name: auth.currentUser.displayName || "ゲスト", photo: auth.currentUser.photoURL || DEFAULT_AVATAR, createdAt: serverTimestamp(), replyTo: replyTarget, reactions: {} });
+                scrollToBottom(true);
             }
             $("#messageInput").val("").css("height", "auto"); pendingImageUrl = null; replyTarget = null; 
             $("#upload-preview-container, #reply-preview").addClass("hidden");
             updateTypingStatus(false);
-            scrollToBottom(true);
         };
 
         const updateTypingStatus = async (isTyping) => {
@@ -757,16 +801,19 @@
             replyTarget = null;
         };
 
-        window.cancelEdit = () => {
-            editTargetId = null; $("#messageInput").val(""); $("#edit-indicator").addClass("hidden");
-        };
+        window.cancelEdit = () => { editTargetId = null; $("#messageInput").val(""); $("#edit-indicator").addClass("hidden"); };
         $("#cancel-edit").on("click", cancelEdit);
 
         $("#sendBtn").on("click", send);
         $("#messageInput").on("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
         $("#imgBtn").on("click", () => $("#real_file_input").click());
         $("#stampBtn").on("click", () => $("#stamp-modal").removeClass("hidden"));
+        
+        // ファイル入力のイベント紐付け
         $("#real_file_input").on("change", (e) => uploadImageFile(e.target.files[0]));
+        $("#real_avatar_input").on("change", (e) => uploadAvatarFile(e.target.files[0]));
+        $("#real_banner_input").on("change", (e) => uploadBannerFile(e.target.files[0]));
+        
         $("#remove-img-btn").on("click", () => { pendingImageUrl = null; $("#upload-preview-container").addClass("hidden"); });
 
         window.setReply = (id, name, text) => { 
