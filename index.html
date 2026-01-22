@@ -112,6 +112,23 @@
         }
         .online { background-color: var(--success); }
         .offline { background-color: var(--txt-m); }
+        
+        /* DM未読バッジ */
+        .dm-unread-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: var(--danger);
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            border-radius: 10px;
+            padding: 2px 6px;
+            min-width: 18px;
+            text-align: center;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
 
         /* --- 通話エリア --- */
         #call-overlay { background: #000; z-index: 50; display: flex; flex-direction: column; border-bottom: 2px solid var(--accent); flex-shrink: 0; }
@@ -503,6 +520,8 @@
         notifyAudio.volume = 0.5;
 
         let unreadCount = 0;
+        let unreadRooms = {}; // 各DM部屋の未読数を管理
+        let lastSeenTimestamps = {}; // 各チャットの最終閲覧時刻
         let isSoundEnabled = localStorage.getItem("chat_sound_enabled") !== "false"; 
 
         function updateSoundBtnUI() {
@@ -526,11 +545,55 @@
         });
 
         function clearUnread() {
+            // 現在のチャットの最終閲覧時刻を記録
+            const readKey = currentRoomId || "global";
+            lastSeenTimestamps[readKey] = Date.now();
+            localStorage.setItem('chat_last_seen_' + readKey, lastSeenTimestamps[readKey].toString());
+            
+            // このチャットの未読をクリア
+            if(unreadRooms[readKey]) {
+                delete unreadRooms[readKey];
+                updateDMBadges();
+            }
+            
+            // 全体の未読数を再計算
+            recalculateTotalUnread();
+            
+            console.log("Cleared unread for:", readKey, "Total unread:", unreadCount);
+        }
+        
+        // 全体の未読数を再計算してバッジを更新
+        function recalculateTotalUnread() {
+            const total = Object.values(unreadRooms).reduce((sum, count) => sum + count, 0);
+            unreadCount = total;
+            
             if(unreadCount > 0) {
-                unreadCount = 0;
+                document.title = `(${unreadCount}) ゆきちゃっと`;
+                $("#menuToggle").addClass("badge-notify");
+            } else {
                 document.title = "ゆきちゃっと";
                 $("#menuToggle").removeClass("badge-notify");
             }
+        }
+        
+        // DMバッジを更新する関数
+        function updateDMBadges() {
+            Object.keys(unreadRooms).forEach(roomId => {
+                const count = unreadRooms[roomId] || 0;
+                const $dmItem = $(`.sidebar-item[data-room-id="${roomId}"]`);
+                
+                if(count > 0) {
+                    let $badge = $dmItem.find('.dm-unread-badge');
+                    if($badge.length === 0) {
+                        $dmItem.css('position', 'relative');
+                        $dmItem.prepend('<div class="dm-unread-badge"></div>');
+                        $badge = $dmItem.find('.dm-unread-badge');
+                    }
+                    $badge.text(count > 9 ? '9+' : count).show();
+                } else {
+                    $dmItem.find('.dm-unread-badge').remove();
+                }
+            });
         }
         // -----------------------
 
@@ -668,10 +731,15 @@
             friendIds.forEach(fid => {
                 const u = usersCache[fid];
                 if(!u) return;
-                const activeClass = currentRoomId && currentRoomId.includes(fid) ? 'active' : '';
+                const roomId = [auth.currentUser.uid, fid].sort().join("_");
+                const activeClass = currentRoomId === roomId ? 'active' : '';
                 const statusClass = u.status === 'online' ? 'online' : 'offline';
+                const unreadCount = unreadRooms[roomId] || 0;
+                const badgeHtml = unreadCount > 0 ? `<div class="dm-unread-badge">${unreadCount > 9 ? '9+' : unreadCount}</div>` : '';
+                
                 $dmList.append(`
-                    <div class="sidebar-item ${activeClass}" onclick="openDM('${fid}','${escapeHTML(u.name)}')" data-user-id="${fid}">
+                    <div class="sidebar-item ${activeClass}" onclick="openDM('${fid}','${escapeHTML(u.name)}')" data-user-id="${fid}" data-room-id="${roomId}" style="position: relative;">
+                        ${badgeHtml}
                         <div class="icon-container">
                             <img src="${u.photo || DEFAULT_AVATAR}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;">
                             <div class="status-dot ${statusClass}" style="width:8px; height:8px;"></div>
@@ -697,6 +765,19 @@
         onAuthStateChanged(auth, async (user) => {
             $("#init-loader").fadeOut();
             if (user) {
+                // ページロード時に既読状態を復元
+                const keys = Object.keys(localStorage);
+                keys.forEach(key => {
+                    if(key.startsWith('chat_last_seen_')) {
+                        const roomKey = key.replace('chat_last_seen_', '');
+                        const timestamp = parseInt(localStorage.getItem(key));
+                        if(!isNaN(timestamp)) {
+                            lastSeenTimestamps[roomKey] = timestamp;
+                        }
+                    }
+                });
+                console.log("Restored last seen timestamps:", lastSeenTimestamps);
+                
                 if (user.isAnonymous) {
                     const exp = new Date(); 
                     exp.setDate(exp.getDate() + 30);
@@ -754,12 +835,25 @@
                     snap.docChanges().forEach(change => {
                         if(change.type === "modified" || change.type === "added") {
                             const d = change.doc.data();
-                            // 自分以外の更新で、かつ現在開いている部屋ではない場合 -> 未読バッジ
-                            if (d.updatedBy && d.updatedBy !== user.uid && change.doc.id !== currentRoomId) {
-                                triggerBadge();
+                            const roomId = change.doc.id;
+                            
+                            // 自分以外の更新で、かつ現在開いている部屋ではない場合
+                            if (d.updatedBy && d.updatedBy !== user.uid && roomId !== currentRoomId) {
+                                // 最終閲覧時刻より新しい更新かチェック
+                                const lastSeen = lastSeenTimestamps[roomId] || 0;
+                                const updatedTime = d.updatedAt ? d.updatedAt.toMillis() : Date.now();
+                                
+                                if(updatedTime > lastSeen) {
+                                    triggerBadge(roomId);
+                                }
                             }
                         }
                     });
+                    
+                    // サイドバーのDMリストを更新
+                    if ($("#sidebar").hasClass("open")) {
+                        updateSidebarDMList();
+                    }
                 });
 
                 globalUnsubscribers.push(unsubFriends, unsubUsers, unsubRooms);
@@ -803,6 +897,14 @@
                     lastVisibleDoc = snap.docs[snap.docs.length - 1];
                 }
                 renderMessages(snap, true);
+                // チャット切り替え後、少し待ってから既読マーク
+                if(isInitialLoad) {
+                    setTimeout(() => {
+                        if(document.hasFocus() && document.visibilityState === 'visible') {
+                            clearUnread();
+                        }
+                    }, 500);
+                }
             });
         };
 
@@ -875,10 +977,15 @@
 
         let notificationsEnabled = false;
 
-        function triggerBadge() {
-            unreadCount++;
-            document.title = `(${unreadCount}) ゆきちゃっと`;
-            $("#menuToggle").addClass("badge-notify");
+        function triggerBadge(roomId = null) {
+            // DM別の未読カウント
+            if(roomId) {
+                unreadRooms[roomId] = (unreadRooms[roomId] || 0) + 1;
+                updateDMBadges();
+            }
+            
+            // 全体の未読数を再計算
+            recalculateTotalUnread();
             
             if (isSoundEnabled) {
                 notifyAudio.currentTime = 0;
@@ -918,19 +1025,31 @@
                         const isUnseen = document.visibilityState === 'hidden' || !document.hasFocus() || !isAtBottom;
 
                         if (isUnseen) {
-                            triggerBadge();
+                            const roomIdForBadge = currentRoomId || "global";
                             
-                            // ブラウザ通知（許可されている場合のみ）
-                            if (notificationsEnabled && (document.visibilityState === 'hidden' || !document.hasFocus())) {
-                                const notificationTitle = `新着: ${lastDoc.data.name || "ゲスト"}`;
-                                const notificationBody = lastDoc.data.text || (lastDoc.data.stamp ? "スタンプ" : "画像");
-                                const n = new Notification(notificationTitle, {
-                                    body: notificationBody,
-                                    icon: lastDoc.data.photo || DEFAULT_AVATAR,
-                                    tag: 'chat-msg'
-                                });
-                                n.onclick = () => { window.focus(); };
+                            // 最終閲覧時刻より新しいメッセージかチェック
+                            const lastSeen = lastSeenTimestamps[roomIdForBadge] || 0;
+                            const msgTime = lastDoc.data.createdAt ? lastDoc.data.createdAt.toMillis() : Date.now();
+                            
+                            // 既読済みのメッセージはスキップ
+                            if(msgTime > lastSeen) {
+                                triggerBadge(roomIdForBadge);
+                                
+                                // ブラウザ通知（許可されている場合のみ）
+                                if (notificationsEnabled && (document.visibilityState === 'hidden' || !document.hasFocus())) {
+                                    const notificationTitle = `新着: ${lastDoc.data.name || "ゲスト"}`;
+                                    const notificationBody = lastDoc.data.text || (lastDoc.data.stamp ? "スタンプ" : "画像");
+                                    const n = new Notification(notificationTitle, {
+                                        body: notificationBody,
+                                        icon: lastDoc.data.photo || DEFAULT_AVATAR,
+                                        tag: 'chat-msg'
+                                    });
+                                    n.onclick = () => { window.focus(); };
+                                }
                             }
+                        } else {
+                            // 見ている状態なら即座に既読マーク
+                            clearUnread();
                         }
                     }
                     // -------------------
@@ -1167,57 +1286,19 @@
             }
         }
 
-        let heartbeatInterval = null;
-        let isAppActive = true;
-
         const setOnline = async () => {
             if (auth.currentUser) {
                 try {
-                    isAppActive = true;
-                    await updateDoc(doc(db, "users", auth.currentUser.uid), { 
-                        status: "online", 
-                        lastSeen: serverTimestamp() 
-                    });
-                    
-                    // ハートビート開始（30秒ごとにlastSeenを更新してオンライン状態を維持）
-                    if (heartbeatInterval) clearInterval(heartbeatInterval);
-                    heartbeatInterval = setInterval(async () => {
-                        if (auth.currentUser && isAppActive) {
-                            try {
-                                await updateDoc(doc(db, "users", auth.currentUser.uid), { 
-                                    lastSeen: serverTimestamp() 
-                                });
-                            } catch (e) { 
-                                console.log("Heartbeat error:", e); 
-                            }
-                        }
-                    }, 30000); // 30秒ごと
-                    
-                    console.log("Online status set with heartbeat");
-                } catch (e) { 
-                    console.log("Status update error (online):", e); 
-                }
+                    await updateDoc(doc(db, "users", auth.currentUser.uid), { status: "online", lastSeen: serverTimestamp() });
+                } catch (e) { console.log("Status update error (online)"); }
             }
         };
 
         const setOffline = async () => {
             if (auth.currentUser) {
-                isAppActive = false;
-                // ハートビート停止
-                if (heartbeatInterval) {
-                    clearInterval(heartbeatInterval);
-                    heartbeatInterval = null;
-                }
                 try {
-                    await updateDoc(doc(db, "users", auth.currentUser.uid), { 
-                        status: "offline", 
-                        lastSeen: serverTimestamp(), 
-                        isTyping: false 
-                    });
-                    console.log("Offline status set");
-                } catch (e) { 
-                    console.log("Status update error (offline):", e); 
-                }
+                    await updateDoc(doc(db, "users", auth.currentUser.uid), { status: "offline", lastSeen: serverTimestamp(), isTyping: false });
+                } catch (e) { console.log("Status update error (offline)"); }
             }
         };
 
@@ -1242,70 +1323,32 @@
         $("#openOtherSettings").on("click", () => $("#other-settings-modal").removeClass("hidden"));
         $("#openUserListBtn").on("click", () => { $("#other-settings-modal").addClass("hidden"); $("#user-list-modal").removeClass("hidden"); switchUserTab('all'); });
 
-        // --- イベント監視: モバイル対応改善版 ---
-        
-        // Page Visibility API（タブ切り替え、バックグラウンド移行）
+        // --- イベント監視追加: タブ表示時・フォーカス時、ユーザー操作時に未読クリア ---
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
-                console.log("App visible - setting online");
                 setOnline();
+                // 表示されただけではクリアしない（見ていない可能性があるため）
                 if (document.hasFocus()) clearUnread();
             } else {
-                console.log("App hidden - setting offline");
                 setOffline();
             }
         });
-        
-        // フォーカスイベント
         window.addEventListener("focus", () => {
-            console.log("App focused - setting online");
-            setOnline();
             clearUnread();
         });
-        
-        // ブラーイベント（別のアプリに切り替えた時など）
-        window.addEventListener("blur", () => {
-            console.log("App blurred - setting offline");
-            setOffline();
-        });
-        
-        // ユーザーアクション時に未読クリア
-        let clearUnreadTimeout;
-        const debouncedClearUnread = () => {
-            clearTimeout(clearUnreadTimeout);
-            clearUnreadTimeout = setTimeout(() => {
-                if(document.hasFocus() && isAppActive) clearUnread();
-            }, 500);
-        };
-        window.addEventListener("mousemove", debouncedClearUnread);
-        window.addEventListener("touchstart", debouncedClearUnread);
-        window.addEventListener("click", () => { if(isAppActive) clearUnread(); });
-        window.addEventListener("keydown", () => { if(isAppActive) clearUnread(); });
-        
-        // ページ離脱時（iOS Safariではpagehideの方が確実）
-        window.addEventListener("pagehide", (event) => {
-            console.log("Page hide - setting offline");
-            setOffline();
-        }, { capture: true });
-        
-        // beforeunload（デスクトップ用）
-        window.addEventListener("beforeunload", () => {
-            console.log("Before unload - setting offline");
-            setOffline();
-        });
-        
-        // フリーズ検出（モバイルでタブが凍結される前）
-        document.addEventListener("freeze", () => {
-            console.log("Page freeze - setting offline");
-            setOffline();
-        }, { capture: true });
-        
-        // レジューム検出
-        document.addEventListener("resume", () => {
-            console.log("Page resume - setting online");
-            setOnline();
-        }, { capture: true });
+        // ユーザーが何らかのアクション（マウス移動、クリック、キー入力）をしたら「見た」とみなしてクリア
+        window.addEventListener("mousemove", () => { if(document.hasFocus()) clearUnread(); });
+        window.addEventListener("click", () => { clearUnread(); });
+        window.addEventListener("keydown", () => { clearUnread(); });
+        // --------------------------------------------------------
 
+        window.addEventListener("pagehide", () => {
+            setOffline();
+        });
+        
+        window.addEventListener("beforeunload", () => {
+            setOffline();
+        });
 
     </script>
 </body>
