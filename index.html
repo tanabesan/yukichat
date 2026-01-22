@@ -357,6 +357,15 @@
         </div>
 
         <div id="messages-container">
+            <!-- 名前変更を促すバナー -->
+            <div id="guest-warning-banner" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 15px; text-align: center; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); position: relative; z-index: 50;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                    <span style="flex: 1 1 auto; min-width: 200px;">👋 あなたの名前が「ゲスト」です。プロフィールから名前を変更してください！</span>
+                    <button onclick="$('#my-profile-trigger').click(); $('#guest-warning-banner').hide();" style="background: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap;">設定へ</button>
+                    <button onclick="$('#guest-warning-banner').hide();" style="background: transparent; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0 5px; opacity: 0.8; line-height: 1;">✕</button>
+                </div>
+            </div>
+            
             <div id="messages"></div>
             <div id="typing-indicator" class="hidden"></div>
         </div>
@@ -785,9 +794,9 @@
                     const uRef = doc(db, "users", user.uid);
                     const s = await getDoc(uRef);
                     if(!s.exists()) {
-                        await setDoc(uRef, { name: "ゲスト", photo: DEFAULT_AVATAR, status: "online", isTyping: false, expireAt: exp });
+                        await setDoc(uRef, { name: "ゲスト", photo: DEFAULT_AVATAR, status: "online", isTyping: false, expireAt: exp, isAnonymous: true });
                     } else {
-                        await updateDoc(uRef, { expireAt: exp });
+                        await updateDoc(uRef, { expireAt: exp, isAnonymous: true });
                     }
                 }
 
@@ -797,8 +806,75 @@
                 $("#myName").text(user.displayName || "ゲスト");
                 $("#myIconContainer").html(`<div class="icon-container"><img src="${user.photoURL || DEFAULT_AVATAR}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;"><div class="status-dot online"></div></div>`);
                 
+                // ユーザー名が「ゲスト」の場合、警告バナーを表示
+                if (user.displayName === "ゲスト" || !user.displayName) {
+                    $("#guest-warning-banner").show();
+                }
+                
                 const unsubFriends = onSnapshot(collection(db, "friendRequests"), (snap) => {
                     friendIds = [];
+                    
+                    // 変更を検知してフレンド申請通知を表示
+                    snap.docChanges().forEach(change => {
+                        const data = change.doc.data();
+                        const reqId = change.doc.id;
+                        
+                        // 新しいフレンド申請が来た場合
+                        if (change.type === "added" && data.to === user.uid && data.status === "pending") {
+                            // 送信者の情報を取得
+                            const senderData = usersCache[data.from];
+                            const senderName = senderData ? senderData.name : "ゲスト";
+                            const senderPhoto = senderData ? senderData.photo : DEFAULT_AVATAR;
+                            
+                            // バッジとタイトル更新
+                            triggerBadge("friend_request_" + reqId);
+                            
+                            // 音を鳴らす
+                            if (isSoundEnabled) {
+                                notifyAudio.currentTime = 0;
+                                notifyAudio.play().catch(e => console.log("Audio play blocked", e));
+                            }
+                            
+                            // ブラウザ通知
+                            if (notificationsEnabled) {
+                                const n = new Notification("新しいフレンド申請", {
+                                    body: `${senderName}さんからフレンド申請が届きました`,
+                                    icon: senderPhoto,
+                                    tag: 'friend-request-' + reqId
+                                });
+                                n.onclick = () => { 
+                                    window.focus(); 
+                                    $("#openUserListBtn").click();
+                                };
+                            }
+                            
+                            console.log("New friend request from:", senderName);
+                        }
+                        
+                        // フレンド申請が承認された場合
+                        if (change.type === "modified" && data.from === user.uid && data.status === "accepted") {
+                            const accepterData = usersCache[data.to];
+                            const accepterName = accepterData ? accepterData.name : "ゲスト";
+                            const accepterPhoto = accepterData ? accepterData.photo : DEFAULT_AVATAR;
+                            
+                            // 承認通知
+                            if (notificationsEnabled) {
+                                const n = new Notification("フレンド申請が承認されました", {
+                                    body: `${accepterName}さんがフレンド申請を承認しました`,
+                                    icon: accepterPhoto,
+                                    tag: 'friend-accepted-' + reqId
+                                });
+                                n.onclick = () => { 
+                                    window.focus(); 
+                                    openDM(data.to, accepterName);
+                                };
+                            }
+                            
+                            console.log("Friend request accepted by:", accepterName);
+                        }
+                    });
+                    
+                    // フレンドリストを更新
                     snap.forEach(d => {
                         const data = d.data();
                         if (data.status === "accepted") {
@@ -1198,7 +1274,13 @@
                     const $list = $("#user-list-container").empty();
                     userSnap.forEach((uDoc) => {
                         const uid = uDoc.id; if (uid === auth.currentUser.uid) return;
-                        const d = uDoc.data(); const isOnline = d.status === "online"; const reqId = [auth.currentUser.uid, uid].sort().join("_"); const req = reqMap[reqId];
+                        const d = uDoc.data();
+                        
+                        // 匿名ユーザーまたは「ゲスト」という名前のユーザーを除外
+                        if (d.isAnonymous === true) return;
+                        if (d.name === "ゲスト") return;
+                        
+                        const isOnline = d.status === "online"; const reqId = [auth.currentUser.uid, uid].sort().join("_"); const req = reqMap[reqId];
                         const safeName = escapeHTML(d.name || "ゲスト");
                         let btn = `<button onclick="sendRequest('${uid}')" class="btn-sm" style="background:var(--accent);">申請</button>`;
                         let isF = false;
@@ -1305,7 +1387,7 @@
         $("#loginBtn").on("click", async () => {
             const e = $("#email").val(), p = $("#password").val();
             try { await signInWithEmailAndPassword(auth, e, p); }
-            catch { const res = await createUserWithEmailAndPassword(auth, e, p); await setDoc(doc(db, "users", res.user.uid), { name: "ゲスト", photo: DEFAULT_AVATAR, status: "online", isTyping: false }); }
+            catch { const res = await createUserWithEmailAndPassword(auth, e, p); await setDoc(doc(db, "users", res.user.uid), { name: "ゲスト", photo: DEFAULT_AVATAR, status: "online", isTyping: false, isAnonymous: false }); }
             location.reload();
         });
         
