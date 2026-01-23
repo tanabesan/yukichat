@@ -802,6 +802,9 @@
         onAuthStateChanged(auth, async (user) => {
             $("#init-loader").fadeOut();
             if (user) {
+                // 通知ボタンの状態を復元
+                updateNotifyIcon();
+                
                 // ページロード時に既読状態を復元
                 const keys = Object.keys(localStorage);
                 keys.forEach(key => {
@@ -1118,7 +1121,14 @@
 
         $("#messages").on("scroll", function() { if ($(this).scrollTop() === 0) loadMoreMessages(); });
 
-        let notificationsEnabled = false;
+        let notificationsEnabled = localStorage.getItem("chat_notifications_enabled") === "true";
+
+        // ページ読み込み時に通知権限をチェックして状態を復元
+        if ('Notification' in window && Notification.permission === 'granted') {
+            notificationsEnabled = localStorage.getItem("chat_notifications_enabled") !== "false";
+        } else {
+            notificationsEnabled = false;
+        }
 
         function triggerBadge(roomId = null) {
             // DM別の未読カウント
@@ -1649,6 +1659,7 @@
                 const permission = await Notification.requestPermission();
                 if (permission === "granted") {
                     notificationsEnabled = true;
+                    localStorage.setItem("chat_notifications_enabled", "true");
                     updateNotifyIcon();
                     new Notification("ゆきちゃっと", { body: "通知がオンになりました！" });
                 } else {
@@ -1656,6 +1667,7 @@
                 }
             } else {
                 notificationsEnabled = false;
+                localStorage.setItem("chat_notifications_enabled", "false");
                 updateNotifyIcon();
             }
         });
