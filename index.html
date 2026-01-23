@@ -1319,20 +1319,37 @@
                 $picker.append(`<div class="reaction-emoji" onclick="react('${msgId}', '${emoji}', ${JSON.stringify(currentReactions).replace(/"/g, '&quot;')}); $('#reaction-picker').addClass('hidden');">${emoji}</div>`);
             });
             
+            // 一旦表示して実際のサイズを取得
+            $picker.css({ left: '0px', top: '0px', visibility: 'hidden' }).removeClass('hidden');
+            const pickerWidth = $picker.outerWidth();
+            const pickerHeight = $picker.outerHeight();
+            $picker.addClass('hidden').css('visibility', 'visible');
+            
             // ピッカーの位置を計算
             const rect = event.target.getBoundingClientRect();
-            const pickerWidth = 330; // 6列 × 約55px
-            const pickerHeight = 280; // 推定高さ
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const padding = 10; // 画面端からの余白
             
             let left = rect.left;
             let top = rect.bottom + 5;
             
-            // 画面外に出ないように調整
-            if (left + pickerWidth > window.innerWidth) {
-                left = window.innerWidth - pickerWidth - 10;
+            // 右端チェック
+            if (left + pickerWidth > windowWidth - padding) {
+                left = windowWidth - pickerWidth - padding;
             }
-            if (top + pickerHeight > window.innerHeight) {
+            // 左端チェック
+            if (left < padding) {
+                left = padding;
+            }
+            
+            // 下端チェック（画面下に収まらない場合は上に表示）
+            if (top + pickerHeight > windowHeight - padding) {
                 top = rect.top - pickerHeight - 5;
+            }
+            // 上端チェック
+            if (top < padding) {
+                top = padding;
             }
             
             $picker.css({ left: left + 'px', top: top + 'px' }).removeClass('hidden');
