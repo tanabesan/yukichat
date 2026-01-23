@@ -360,7 +360,7 @@
             <!-- 名前変更を促すバナー -->
             <div id="guest-warning-banner" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 15px; text-align: center; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); position: relative; z-index: 50;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
-                    <span style="flex: 1 1 auto; min-width: 200px;">👋 あなたの名前が「ゲスト」です。プロフィールから名前を変更してください！</span>
+                    <span style="flex: 1 1 auto; min-width: 200px;">👋 ゲストモードではフレンド機能が使えません。名前を変更するか、メールアドレスでログインしてください！</span>
                     <button onclick="$('#my-profile-trigger').click(); $('#guest-warning-banner').hide();" style="background: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap;">設定へ</button>
                     <button onclick="$('#guest-warning-banner').hide();" style="background: transparent; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0 5px; opacity: 0.8; line-height: 1;">✕</button>
                 </div>
@@ -503,6 +503,7 @@
             <div class="tabs">
                 <button class="tab-btn active" onclick="switchUserTab('all')">すべて</button>
                 <button class="tab-btn" onclick="switchUserTab('friends')">フレンド</button>
+                <button class="tab-btn" onclick="switchUserTab('requests')">申請 <span id="request-count-badge" style="display:none; background:var(--danger); color:white; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:5px;"></span></button>
             </div>
             <div id="user-list-container" style="flex:1; overflow-y:auto;"></div>
             <button onclick="$('#user-list-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:15px; cursor:pointer; padding:10px;">閉じる</button>
@@ -760,6 +761,9 @@
         }
 
         function scrollToBottom(force = false) {
+            // 過去メッセージ読み込み中はスクロールしない
+            if (isLoadingMoreMessages) return;
+            
             const $box = $("#messages");
             if ($box.length === 0) return;
             const threshold = 150;
@@ -984,29 +988,68 @@
             });
         };
 
+        let isLoadingMoreMessages = false; // 過去メッセージ読み込み中フラグ
+        let pauseSnapshot = false; // onSnapshotを一時停止するフラグ
+        
         async function loadMoreMessages() {
             if (isFetchingMore || !hasMoreMessages || !lastVisibleDoc) return;
             isFetchingMore = true;
+            isLoadingMoreMessages = true; // フラグを立てる
+            pauseSnapshot = true; // onSnapshotの処理を止める
+            
             const $box = $("#messages");
-            const oldHeight = $box[0].scrollHeight;
-            const oldScrollTop = $box.scrollTop();
+            
+            // 現在見ている最初のメッセージ要素を基準として保存
+            const firstVisibleMessage = $box.children().first()[0];
+            const firstMessageId = firstVisibleMessage ? firstVisibleMessage.id : null;
+            
+            console.log("Before load - first message:", firstMessageId, "scrollTop:", $box.scrollTop());
+            
             $("#messages").prepend('<div id="load-more-indicator">過去のメッセージを読み込み中...</div>');
             const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
             const nextQuery = query(colRef, orderBy("createdAt", "desc"), startAfter(lastVisibleDoc), limit(PAGE_SIZE));
             try {
                 const snap = await getDocs(nextQuery);
                 $("#load-more-indicator").remove();
-                if (snap.empty) { hasMoreMessages = false; isFetchingMore = false; return; }
+                if (snap.empty) { 
+                    hasMoreMessages = false; 
+                    isFetchingMore = false; 
+                    isLoadingMoreMessages = false; 
+                    pauseSnapshot = false;
+                    return; 
+                }
                 lastVisibleDoc = snap.docs[snap.docs.length - 1];
                 if (snap.size < PAGE_SIZE) hasMoreMessages = false;
                 let html = "";
                 let docs = [];
                 snap.forEach(d => docs.push({id: d.id, data: d.data()}));
+                // 逆順にする（古い順に表示するため）
+                docs.reverse();
                 docs.forEach(item => { html += generateMessageHtml(item.id, item.data); });
                 $("#messages").prepend(html);
-                const newHeight = $box[0].scrollHeight;
-                $box.scrollTop(newHeight - oldHeight + oldScrollTop);
-            } catch (err) { console.error("Load more error:", err); } finally { isFetchingMore = false; }
+                
+                // 基準メッセージの位置までスクロール（見た目が変わらないように）
+                if (firstMessageId) {
+                    const firstMessageElement = document.getElementById(firstMessageId);
+                    if (firstMessageElement) {
+                        // 基準メッセージを画面の同じ位置に保つ
+                        firstMessageElement.scrollIntoView({ block: 'start', behavior: 'instant' });
+                        console.log("Scrolled to preserve message:", firstMessageId);
+                    }
+                }
+                
+                console.log("Loaded more messages, final scrollTop:", $box.scrollTop());
+                
+            } catch (err) { console.error("Load more error:", err); } 
+            finally { 
+                isFetchingMore = false;
+                // 少し待ってからフラグを下ろす
+                setTimeout(() => {
+                    isLoadingMoreMessages = false;
+                    pauseSnapshot = false;
+                    console.log("Resumed normal mode");
+                }, 1500);
+            }
         }
 
         function generateMessageHtml(id, d) {
@@ -1019,8 +1062,8 @@
             for (const [emoji, uids] of Object.entries(reactions)) {
                 if (uids.length > 0) rHtml += `<div class="reaction-badge ${uids.includes(auth.currentUser.uid)?'active':''}" onclick="react('${id}','${emoji}',${JSON.stringify(reactions).replace(/"/g, '&quot;')})">${emoji} ${uids.length}</div>`;
             }
-            const imgHtml = d.image ? `<img src="${d.image}" class="sent-img" onload="scrollToBottom()" onclick="window.open('${d.image}')">` : '';
-            const stampHtml = d.stamp ? `<img src="${d.stamp}" class="stamp-display" onload="scrollToBottom()">` : '';
+            const imgHtml = d.image ? `<img src="${d.image}" class="sent-img" onclick="window.open('${d.image}')">` : '';
+            const stampHtml = d.stamp ? `<img src="${d.stamp}" class="stamp-display">` : '';
             const safeName = escapeHTML(d.name || "ゲスト");
             const safeText = escapeHTML(d.text || "");
             const replyName = d.replyTo ? escapeHTML(d.replyTo.name) : "";
@@ -1070,16 +1113,28 @@
         }
 
         function renderMessages(snap, isDesc = false) {
+            // onSnapshotが一時停止中なら何もしない
+            if (pauseSnapshot) {
+                console.log("renderMessages blocked - pauseSnapshot is true");
+                return;
+            }
+            
             const $box = $("#messages");
             const currentMsgCount = snap.size;
-            const hasNewMessage = currentMsgCount > lastMsgCount;
+            
+            // 過去メッセージ読み込み中は新着メッセージ判定をスキップ
+            const hasNewMessage = !isLoadingMoreMessages && (currentMsgCount > lastMsgCount);
+            
             let docs = [];
             snap.forEach(d => docs.push({id: d.id, data: d.data()}));
             if(isDesc) docs.reverse();
             if (isInitialLoad) {
                 $box.empty();
                 docs.forEach((item) => { $box.append(generateMessageHtml(item.id, item.data)); });
-                scrollToBottom(true);
+                // 過去メッセージ読み込み中でなければスクロール
+                if (!isLoadingMoreMessages) {
+                    scrollToBottom(true);
+                }
                 isInitialLoad = false;
             } else {
                 docs.forEach((item) => {
@@ -1088,7 +1143,10 @@
                     else { $box.append(generateMessageHtml(item.id, item.data)); }
                 });
                 if (hasNewMessage) {
-                    scrollToBottom(true);
+                    // 過去メッセージ読み込み中でなければスクロール
+                    if (!isLoadingMoreMessages) {
+                        scrollToBottom(true);
+                    }
                     
                     const lastDoc = docs[docs.length - 1];
                     // --- 通知・バッジ処理（強化版） ---
@@ -1131,28 +1189,56 @@
                     // -------------------
                 }
             }
-            lastMsgCount = currentMsgCount;
+            // 過去メッセージ読み込み中でなければlastMsgCountを更新
+            // これにより、過去メッセージ読み込み中にonSnapshotが発火しても新着扱いされない
+            if (!isLoadingMoreMessages) {
+                lastMsgCount = currentMsgCount;
+            }
         }
 
+        let isSending = false; // 送信中フラグ
+        
         const send = async () => {
-            const txt = $("#messageInput").val().trim(); if (!txt && !pendingImageUrl) return;
-            const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
-            if(editTargetId) {
-                await updateDoc(doc(colRef, editTargetId), { text: txt, isEdited: true });
-                cancelEdit();
-            } else {
-                await addDoc(colRef, { text: txt, image: pendingImageUrl, uid: auth.currentUser.uid, name: auth.currentUser.displayName || "ゲスト", photo: auth.currentUser.photoURL || DEFAULT_AVATAR, createdAt: serverTimestamp(), replyTo: replyTarget, reactions: {} });
-                
-                // DMの場合、親ルーム情報の更新日時を更新（他のユーザーに通知を飛ばすため）
-                if (currentRoomId) {
-                    await updateDoc(doc(db, "rooms", currentRoomId), { lastMessage: txt || "画像", updatedAt: serverTimestamp(), updatedBy: auth.currentUser.uid });
-                }
+            // 送信中なら何もしない（連打防止）
+            if (isSending) return;
+            
+            const txt = $("#messageInput").val().trim(); 
+            if (!txt && !pendingImageUrl) return;
+            
+            // 送信中フラグを立てる
+            isSending = true;
+            $("#sendBtn").css("opacity", "0.5").css("pointer-events", "none"); // ボタンを無効化
+            
+            try {
+                const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
+                if(editTargetId) {
+                    await updateDoc(doc(colRef, editTargetId), { text: txt, isEdited: true });
+                    cancelEdit();
+                } else {
+                    await addDoc(colRef, { text: txt, image: pendingImageUrl, uid: auth.currentUser.uid, name: auth.currentUser.displayName || "ゲスト", photo: auth.currentUser.photoURL || DEFAULT_AVATAR, createdAt: serverTimestamp(), replyTo: replyTarget, reactions: {} });
+                    
+                    // DMの場合、親ルーム情報の更新日時を更新（他のユーザーに通知を飛ばすため）
+                    if (currentRoomId) {
+                        await updateDoc(doc(db, "rooms", currentRoomId), { lastMessage: txt || "画像", updatedAt: serverTimestamp(), updatedBy: auth.currentUser.uid });
+                    }
 
-                scrollToBottom(true);
+                    scrollToBottom(true);
+                }
+                $("#messageInput").val("").css("height", "auto"); 
+                pendingImageUrl = null; 
+                replyTarget = null; 
+                $("#upload-preview-container, #reply-preview").addClass("hidden");
+                updateTypingStatus(false);
+            } catch (error) {
+                console.error("Send error:", error);
+                alert("メッセージの送信に失敗しました");
+            } finally {
+                // 送信完了後、フラグを下ろしてボタンを有効化
+                setTimeout(() => {
+                    isSending = false;
+                    $("#sendBtn").css("opacity", "1").css("pointer-events", "auto");
+                }, 500); // 0.5秒のクールダウン
             }
-            $("#messageInput").val("").css("height", "auto"); pendingImageUrl = null; replyTarget = null; 
-            $("#upload-preview-container, #reply-preview").addClass("hidden");
-            updateTypingStatus(false);
         };
 
         const updateTypingStatus = async (isTyping) => {
@@ -1266,12 +1352,133 @@
             location.reload();
         });
 
-        window.switchUserTab = (tab) => { currentTab = tab; $(".tab-btn").removeClass("active"); $(`.tab-btn:contains(${tab==='all'?'すべて':'フレンド'})`).addClass("active"); loadUserList(); };
+        window.switchUserTab = (tab) => { 
+            currentTab = tab; 
+            $(".tab-btn").removeClass("active"); 
+            if(tab === 'all') $(".tab-btn:contains('すべて')").addClass("active");
+            else if(tab === 'friends') $(".tab-btn:contains('フレンド')").addClass("active");
+            else if(tab === 'requests') {
+                $(".tab-btn:contains('申請')").addClass("active");
+                // 申請タブを開いたら、フレンド申請の未読をクリア
+                clearFriendRequestUnread();
+            }
+            loadUserList(); 
+        };
+        
+        // フレンド申請の未読をクリアする関数
+        function clearFriendRequestUnread() {
+            // friend_request_で始まるキーを全て削除
+            Object.keys(unreadRooms).forEach(key => {
+                if(key.startsWith('friend_request_')) {
+                    delete unreadRooms[key];
+                }
+            });
+            recalculateTotalUnread();
+            console.log("Cleared friend request notifications");
+        }
         window.loadUserList = () => {
             onSnapshot(collection(db, "friendRequests"), (reqSnap) => {
-                const reqMap = {}; reqSnap.forEach(d => reqMap[d.id] = d.data());
+                const reqMap = {}; 
+                let pendingRequestCount = 0;
+                
+                reqSnap.forEach(d => {
+                    reqMap[d.id] = d.data();
+                    // 自分宛ての未承認申請をカウント
+                    const data = d.data();
+                    if (data.to === auth.currentUser.uid && data.status === "pending") {
+                        pendingRequestCount++;
+                    }
+                });
+                
+                // 申請タブのバッジを更新
+                const $badge = $("#request-count-badge");
+                if (pendingRequestCount > 0) {
+                    $badge.text(pendingRequestCount).show();
+                } else {
+                    $badge.hide();
+                }
+                
                 onSnapshot(collection(db, "users"), (userSnap) => {
                     const $list = $("#user-list-container").empty();
+                    
+                    // 「申請」タブの場合
+                    if (currentTab === 'requests') {
+                        let hasRequests = false;
+                        
+                        // 受信した申請を表示
+                        $list.append('<div style="padding:10px; font-weight:bold; color:var(--txt-m); font-size:12px; border-bottom:1px solid var(--bg-38);">受信した申請</div>');
+                        Object.entries(reqMap).forEach(([reqId, reqData]) => {
+                            if (reqData.to === auth.currentUser.uid && reqData.status === "pending") {
+                                hasRequests = true;
+                                const senderDoc = userSnap.docs.find(doc => doc.id === reqData.from);
+                                if (senderDoc) {
+                                    const d = senderDoc.data();
+                                    const uid = senderDoc.id;
+                                    const safeName = escapeHTML(d.name || "ゲスト");
+                                    const isOnline = d.status === "online";
+                                    const isGuest = d.name === "ゲスト" || d.isAnonymous === true;
+                                    const guestLabel = isGuest ? '<span style="background:var(--bg-38); color:var(--txt-m); font-size:10px; padding:2px 6px; border-radius:3px; margin-left:5px;">ゲスト</span>' : '';
+                                    
+                                    $list.append(`<div class="user-item" data-uid="${uid}">
+                                        <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="showProfile('${uid}')">
+                                            <div class="icon-container">
+                                                <img src="${d.photo || DEFAULT_AVATAR}" style="width:30px;height:30px;border-radius:50%">
+                                                <div class="status-dot ${isOnline?'online':'offline'}"></div>
+                                            </div>
+                                            <span>${safeName}${guestLabel}</span>
+                                        </div>
+                                        <div>
+                                            <button onclick="acceptRequest('${reqId}')" class="btn-sm" style="background:var(--success);">承認</button>
+                                            <button onclick="removeFriend('${reqId}')" class="btn-sm" style="background:var(--danger); color:white;">拒否</button>
+                                        </div>
+                                    </div>`);
+                                }
+                            }
+                        });
+                        
+                        if (!hasRequests) {
+                            $list.append('<div style="padding:20px; text-align:center; color:var(--txt-m); font-size:14px;">受信した申請はありません</div>');
+                        }
+                        
+                        // 送信した申請を表示
+                        $list.append('<div style="padding:10px; font-weight:bold; color:var(--txt-m); font-size:12px; border-bottom:1px solid var(--bg-38); margin-top:15px;">送信した申請</div>');
+                        let hasSentRequests = false;
+                        
+                        Object.entries(reqMap).forEach(([reqId, reqData]) => {
+                            if (reqData.from === auth.currentUser.uid && reqData.status === "pending") {
+                                hasSentRequests = true;
+                                const targetDoc = userSnap.docs.find(doc => doc.id === reqData.to);
+                                if (targetDoc) {
+                                    const d = targetDoc.data();
+                                    const uid = targetDoc.id;
+                                    const safeName = escapeHTML(d.name || "ゲスト");
+                                    const isOnline = d.status === "online";
+                                    
+                                    $list.append(`<div class="user-item" data-uid="${uid}">
+                                        <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="showProfile('${uid}')">
+                                            <div class="icon-container">
+                                                <img src="${d.photo || DEFAULT_AVATAR}" style="width:30px;height:30px;border-radius:50%">
+                                                <div class="status-dot ${isOnline?'online':'offline'}"></div>
+                                            </div>
+                                            <span>${safeName}</span>
+                                        </div>
+                                        <div>
+                                            <span style="color:var(--txt-m); font-size:12px;">申請中</span>
+                                            <button onclick="removeFriend('${reqId}')" class="btn-sm" style="background:var(--bg-2b); color:var(--danger); margin-left:5px;">取消</button>
+                                        </div>
+                                    </div>`);
+                                }
+                            }
+                        });
+                        
+                        if (!hasSentRequests) {
+                            $list.append('<div style="padding:20px; text-align:center; color:var(--txt-m); font-size:14px;">送信した申請はありません</div>');
+                        }
+                        
+                        return; // 申請タブの処理はここで終了
+                    }
+                    
+                    // 「すべて」「フレンド」タブの処理（既存のロジック）
                     userSnap.forEach((uDoc) => {
                         const uid = uDoc.id; if (uid === auth.currentUser.uid) return;
                         const d = uDoc.data();
@@ -1299,7 +1506,15 @@
                 });
             });
         };
-        window.sendRequest = async (uid) => { const id = [auth.currentUser.uid, uid].sort().join("_"); await setDoc(doc(db, "friendRequests", id), { from: auth.currentUser.uid, to: uid, status: "pending" }); };
+        window.sendRequest = async (uid) => { 
+            // ゲストユーザーは申請できない
+            if (auth.currentUser.isAnonymous || auth.currentUser.displayName === "ゲスト") {
+                alert("フレンド機能を使うには、メールアドレスでログインしてください。\n\n右上のメニュー → ログアウト → メールでログイン");
+                return;
+            }
+            const id = [auth.currentUser.uid, uid].sort().join("_"); 
+            await setDoc(doc(db, "friendRequests", id), { from: auth.currentUser.uid, to: uid, status: "pending" }); 
+        };
         window.acceptRequest = async (id) => { await updateDoc(doc(db, "friendRequests", id), { status: "accepted" }); };
         window.removeFriend = async (id) => { if (confirm("解除しますか？")) await deleteDoc(doc(db, "friendRequests", id)); };
 
