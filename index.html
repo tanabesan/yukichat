@@ -510,6 +510,30 @@
         </div>
     </div>
 
+    <!-- リアクションピッカー -->
+    <div id="reaction-picker" class="hidden" style="position: fixed; z-index: 9999; background: var(--bg-2b); border-radius: 12px; padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;">
+    </div>
+
+    <style>
+        .reaction-emoji {
+            font-size: 28px;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: var(--bg-38);
+            text-align: center;
+            user-select: none;
+        }
+        .reaction-emoji:hover {
+            transform: scale(1.2);
+            background: var(--bg-31);
+        }
+        .reaction-emoji:active {
+            transform: scale(0.95);
+        }
+    </style>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, startAfter, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -1084,7 +1108,7 @@
                     </div>
                     <div class="msg-ops">
                         ${rHtml}
-                        <span class="material-symbols-outlined op-btn" onclick="react('${id}','👍',${JSON.stringify(reactions).replace(/"/g, '&quot;')})" title="リアクション">add_reaction</span>
+                        <span class="material-symbols-outlined op-btn" onclick="openReactionPicker('${id}', event, ${JSON.stringify(reactions).replace(/"/g, '&quot;')})" title="リアクション">add_reaction</span>
                         <span class="material-symbols-outlined op-btn" onclick="setReply('${id}','${safeName.replace(/'/g, "\\'")}','${(safeText || (isStamp?"スタンプ":"画像")).replace(/'/g, "\\'").replace(/\n/g, " ")}')" title="返信">reply</span>
                         ${isMe && !isStamp ? `<span class="material-symbols-outlined op-btn" onclick="setEdit('${id}','${safeText.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" title="編集">edit</span>` : ''}
                         ${isMe ? `<span class="material-symbols-outlined op-btn" style="color:var(--danger);" onclick="deleteMsg('${id}')" title="削除">delete</span>` : ''}
@@ -1275,6 +1299,51 @@
             const users = (currentJson && currentJson[emoji]) || [];
             await updateDoc(doc(colRef, id), { [`reactions.${emoji}`]: users.includes(auth.currentUser.uid) ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid) });
         };
+
+        // リアクションピッカーの絵文字リスト
+        const reactionEmojis = [
+            '👍', '❤️', '😂', '😮', '😢', '😡',
+            '🙏', '👏', '🎉', '🔥', '✨', '💯',
+            '👀', '🤔', '😅', '😊', '🥰', '😎',
+            '🤩', '😇', '🤗', '🙌', '✅', '❌',
+            '⭐', '💪', '👌', '🎊', '🎈', '💕'
+        ];
+
+        window.openReactionPicker = (msgId, event, currentReactions) => {
+            event.stopPropagation();
+            const $picker = $('#reaction-picker');
+            
+            // 絵文字を配置
+            $picker.empty();
+            reactionEmojis.forEach(emoji => {
+                $picker.append(`<div class="reaction-emoji" onclick="react('${msgId}', '${emoji}', ${JSON.stringify(currentReactions).replace(/"/g, '&quot;')}); $('#reaction-picker').addClass('hidden');">${emoji}</div>`);
+            });
+            
+            // ピッカーの位置を計算
+            const rect = event.target.getBoundingClientRect();
+            const pickerWidth = 330; // 6列 × 約55px
+            const pickerHeight = 280; // 推定高さ
+            
+            let left = rect.left;
+            let top = rect.bottom + 5;
+            
+            // 画面外に出ないように調整
+            if (left + pickerWidth > window.innerWidth) {
+                left = window.innerWidth - pickerWidth - 10;
+            }
+            if (top + pickerHeight > window.innerHeight) {
+                top = rect.top - pickerHeight - 5;
+            }
+            
+            $picker.css({ left: left + 'px', top: top + 'px' }).removeClass('hidden');
+        };
+
+        // ピッカー外をクリックしたら閉じる
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#reaction-picker, .op-btn').length) {
+                $('#reaction-picker').addClass('hidden');
+            }
+        });
 
         window.deleteMsg = async (id) => {
             if(confirm("このメッセージを削除しますか？")) {
