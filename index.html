@@ -204,6 +204,144 @@
         .reaction-badge { background: var(--bg-2b); border: 1px solid transparent; border-radius: 8px; padding: 4px 8px; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
         .reaction-badge.active { border-color: var(--accent); background: rgba(88,101,242,0.2); }
 
+        /* --- アイテムバッジ --- */
+        .user-badge {
+            display: inline-block;
+            font-size: 14px;
+            margin-left: 4px;
+            vertical-align: middle;
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+        @keyframes badgePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* --- テーマ適用 --- */
+        body.rainbow-theme {
+            background: linear-gradient(45deg, #ff6b6b, #f093fb, #4facfe, #43e97b, #feca57, #ff6b6b);
+            background-size: 400% 400%;
+            animation: rainbowMove 10s ease infinite;
+        }
+        @keyframes rainbowMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        body.rainbow-theme #app-wrapper { background: rgba(49, 51, 56, 0.95); }
+
+        body.heart-theme {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        body.heart-theme #app-wrapper { background: rgba(49, 51, 56, 0.95); }
+        body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; border: 1px solid rgba(245, 87, 108, 0.3); }
+
+        /* --- メッセージエフェクト --- */
+        /* アイコンにエフェクトを適用 */
+        .message.effect-fire .icon-container {
+            position: relative;
+            animation: iconShake 3s ease-in-out infinite;
+        }
+        .message.effect-fire .icon-container .icon {
+            box-shadow: 
+                0 0 0 3px #ff6b6b,
+                0 0 15px rgba(255, 107, 107, 0.6),
+                0 0 25px rgba(255, 107, 107, 0.4);
+            animation: fireIconGlow 3s ease infinite;
+        }
+        .message.effect-fire .icon-container::before {
+            content: '🔥';
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 20px;
+            animation: fireFloat 2s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 10;
+            filter: drop-shadow(0 0 5px rgba(255, 107, 107, 0.8));
+        }
+        @keyframes fireIconGlow {
+            0% { box-shadow: 0 0 0 3px #ff6b6b, 0 0 15px rgba(255, 107, 107, 0.6), 0 0 25px rgba(255, 107, 107, 0.4); }
+            33% { box-shadow: 0 0 0 3px #ff8e53, 0 0 15px rgba(255, 142, 83, 0.6), 0 0 25px rgba(255, 142, 83, 0.4); }
+            66% { box-shadow: 0 0 0 3px #c92a2a, 0 0 15px rgba(201, 42, 42, 0.6), 0 0 25px rgba(201, 42, 42, 0.4); }
+            100% { box-shadow: 0 0 0 3px #ff6b6b, 0 0 15px rgba(255, 107, 107, 0.6), 0 0 25px rgba(255, 107, 107, 0.4); }
+        }
+        @keyframes iconShake {
+            0%, 100% { transform: rotate(0deg); }
+            2% { transform: rotate(2deg); }
+            4% { transform: rotate(-2deg); }
+            6% { transform: rotate(0deg); }
+        }
+        @keyframes fireFloat {
+            0%, 100% { transform: translateY(0) scale(1); opacity: 1; }
+            50% { transform: translateY(-8px) scale(1.2); opacity: 0.8; }
+        }
+
+        .message.effect-sparkle .icon-container {
+            position: relative;
+        }
+        .message.effect-sparkle .icon-container .icon {
+            box-shadow: 
+                0 0 0 3px #ffd700,
+                0 0 20px rgba(255, 215, 0, 0.7),
+                0 0 35px rgba(255, 215, 0, 0.5);
+            animation: sparkleIconGlow 3s ease infinite;
+        }
+        .message.effect-sparkle .icon-container::before {
+            content: '✨';
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 20px;
+            animation: sparkleFloat 2s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+        @keyframes sparkleIconGlow {
+            0% { box-shadow: 0 0 0 3px #ffd700, 0 0 20px rgba(255, 215, 0, 0.7), 0 0 35px rgba(255, 215, 0, 0.5); }
+            33% { box-shadow: 0 0 0 3px #ffed4e, 0 0 25px rgba(255, 237, 78, 0.8), 0 0 40px rgba(255, 237, 78, 0.6); }
+            66% { box-shadow: 0 0 0 3px #f59f00, 0 0 20px rgba(245, 159, 0, 0.7), 0 0 35px rgba(245, 159, 0, 0.5); }
+            100% { box-shadow: 0 0 0 3px #ffd700, 0 0 20px rgba(255, 215, 0, 0.7), 0 0 35px rgba(255, 215, 0, 0.5); }
+        }
+        @keyframes sparkleFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            50% { transform: translateY(-8px) rotate(180deg); opacity: 0.7; }
+        }
+
+        .message.effect-lightning .icon-container {
+            position: relative;
+        }
+        .message.effect-lightning .icon-container .icon {
+            box-shadow: 
+                0 0 0 3px #4dabf7,
+                0 0 15px rgba(77, 171, 247, 0.6),
+                0 0 25px rgba(77, 171, 247, 0.4);
+            animation: lightningIconGlow 2.5s ease infinite;
+        }
+        .message.effect-lightning .icon-container::before {
+            content: '⚡';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 22px;
+            animation: lightningBolt 2s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 10;
+            filter: drop-shadow(0 0 5px rgba(77, 171, 247, 1));
+        }
+        @keyframes lightningIconGlow {
+            0%, 100% { box-shadow: 0 0 0 3px #4dabf7, 0 0 15px rgba(77, 171, 247, 0.6), 0 0 25px rgba(77, 171, 247, 0.4); }
+            25% { box-shadow: 0 0 0 3px #748ffc, 0 0 15px rgba(116, 143, 252, 0.6), 0 0 25px rgba(116, 143, 252, 0.4); }
+            50% { box-shadow: 0 0 0 3px #339af0, 0 0 15px rgba(51, 154, 240, 0.6), 0 0 25px rgba(51, 154, 240, 0.4); }
+            75% { box-shadow: 0 0 0 3px #748ffc, 0 0 15px rgba(116, 143, 252, 0.6), 0 0 25px rgba(116, 143, 252, 0.4); }
+            85%, 90% { box-shadow: 0 0 0 4px #ffffff, 0 0 30px rgba(255, 255, 255, 1), 0 0 50px rgba(77, 171, 247, 0.8); }
+        }
+        @keyframes lightningBolt {
+            0%, 90%, 100% { transform: scale(1); opacity: 1; }
+            92% { transform: scale(1.3); opacity: 1; }
+            94% { transform: scale(0.8); opacity: 0.5; }
+        }
+
         /* --- 入力エリア --- */
         .input-area-container { 
             background: var(--bg-2b); border-top: 1px solid #222; width: 100%; flex-shrink: 0; transition: 0.2s; 
@@ -338,9 +476,8 @@
                 <span id="headerTitle">パブリックチャット</span>
             </div>
             <div style="display:flex; gap:15px; align-items:center;">
-                <span id="notifyBtn" class="material-symbols-outlined op-btn" style="opacity:0.5;" title="通知ON/OFF">notifications_off</span>
-                <span id="headerCallBtn" class="material-symbols-outlined op-btn" style="color:var(--success); opacity:1;">call</span>
-                <span id="openOtherSettings" class="material-symbols-outlined op-btn" style="opacity:1;">settings</span>
+                <span id="openShopBtnHeader" class="material-symbols-outlined op-btn" style="color:#f093fb; opacity:1; font-size:24px;" title="ショップ">shopping_bag</span>
+                <span id="openOtherSettings" class="material-symbols-outlined op-btn" style="opacity:1;" title="設定">settings</span>
             </div>
         </header>
 
@@ -472,6 +609,26 @@
             <label style="font-size:11px; color:var(--txt-m);">自己紹介</label>
             <textarea id="editBio" class="settings-input" placeholder="自己紹介" style="height:60px;"></textarea>
 
+            <!-- アイテム装備設定 -->
+            <div style="margin-top:20px; padding-top:20px; border-top:1px solid var(--bg-38);">
+                <h4 style="margin:0 0 15px 0; color:var(--txt); font-size:14px;">🎨 アイテム設定</h4>
+                
+                <label style="font-size:11px; color:var(--txt-m); display:block; margin-bottom:5px;">バッジ</label>
+                <select id="editEquippedBadge" class="settings-input" style="margin-bottom:15px;">
+                    <option value="">なし</option>
+                </select>
+
+                <label style="font-size:11px; color:var(--txt-m); display:block; margin-bottom:5px;">テーマ</label>
+                <select id="editEquippedTheme" class="settings-input" style="margin-bottom:15px;">
+                    <option value="">デフォルト</option>
+                </select>
+
+                <label style="font-size:11px; color:var(--txt-m); display:block; margin-bottom:5px;">エフェクト</label>
+                <select id="editEquippedEffect" class="settings-input">
+                    <option value="">なし</option>
+                </select>
+            </div>
+
             <div id="profile-upload-status" class="hidden">
                 <span id="profile-upload-text">画像をアップロード中</span><span class="dot-ani">.</span><span class="dot-ani">.</span><span class="dot-ani">.</span>
             </div>
@@ -483,16 +640,19 @@
 
     <div id="other-settings-modal" class="modal-overlay hidden">
         <div class="responsive-card" style="padding:25px; text-align:center; max-width: 300px;">
-            <h3>メニュー</h3>
+            <h3>設定</h3>
 
             <button id="toggleSoundBtn" class="btn-toggle-on" style="width:100%; padding:12px; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size:16px; display:flex; align-items:center; justify-content:center; gap:8px;">
                 <span class="material-symbols-outlined">volume_up</span>
                 <span id="soundBtnText">通知音: ON</span>
             </button>
 
-            <button id="openUserListBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size:16px;">ユーザーを探す / フレンド</button>
-            <button id="startCallBtn" style="width:100%; padding:12px; background:var(--success); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size:16px;">通話を開始</button>
-            <button id="logoutBtn" style="width:100%; padding:10px; background:var(--danger); color:#fff; border:none; border-radius:5px; font-weight:bold; font-size:16px;">ログアウト</button>
+            <button id="toggleNotificationBtn" class="btn-toggle-on" style="width:100%; padding:12px; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size:16px; display:flex; align-items:center; justify-content:center; gap:8px;">
+                <span class="material-symbols-outlined">notifications</span>
+                <span id="notificationBtnText">通知: ON</span>
+            </button>
+
+            <button id="logoutBtn" style="width:100%; padding:12px; background:var(--danger); color:#fff; border:none; border-radius:5px; font-weight:bold; font-size:16px; margin-top:10px;">ログアウト</button>
             <button onclick="$('#other-settings-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:10px; cursor:pointer; padding:10px;">閉じる</button>
         </div>
     </div>
@@ -507,6 +667,38 @@
             </div>
             <div id="user-list-container" style="flex:1; overflow-y:auto;"></div>
             <button onclick="$('#user-list-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:15px; cursor:pointer; padding:10px;">閉じる</button>
+        </div>
+    </div>
+
+    <!-- 管理者権限テストモーダル -->
+    <!-- ショップモーダル -->
+    <div id="shop-modal" class="modal-overlay hidden">
+        <div class="responsive-card" style="padding:20px; max-height:85vh; max-width:600px; display:flex; flex-direction:column;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0;">🎁 ショップ</h3>
+                <button onclick="$('#shop-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:24px; cursor:pointer; padding:5px;">✕</button>
+            </div>
+            
+            <!-- コイン表示 -->
+            <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:15px; border-radius:10px; text-align:center; margin-bottom:20px;">
+                <div style="font-size:14px; color:rgba(255,255,255,0.8); margin-bottom:5px;">所持コイン</div>
+                <div style="font-size:32px; font-weight:bold; color:white;">
+                    💰 <span id="user-coins">0</span>
+                </div>
+                <div style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:5px;">
+                    ログインボーナス: 毎日 <span style="color:#ffd700; font-weight:bold;">+100</span> コイン
+                </div>
+            </div>
+
+            <!-- アイテム一覧 -->
+            <div style="flex:1; overflow-y:auto;">
+                <h4 style="margin:10px 0; color:var(--txt-m); font-size:14px;">アイテム</h4>
+                <div id="shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px;">
+                    <!-- JavaScriptで動的に追加 -->
+                </div>
+            </div>
+
+            <button onclick="$('#shop-modal').addClass('hidden')" style="width:100%; background:var(--bg-38); color:var(--txt); border:none; margin-top:15px; cursor:pointer; padding:12px; border-radius:5px;">閉じる</button>
         </div>
     </div>
 
@@ -531,6 +723,45 @@
         }
         .reaction-emoji:active {
             transform: scale(0.95);
+        }
+        
+        .shop-item {
+            background: var(--bg-38);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .shop-item:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent);
+            box-shadow: 0 5px 15px rgba(88, 101, 242, 0.3);
+        }
+        .shop-item.owned {
+            background: linear-gradient(135deg, rgba(59, 165, 92, 0.2) 0%, rgba(59, 165, 92, 0.1) 100%);
+            border-color: var(--success);
+        }
+        .shop-item-icon {
+            font-size: 40px;
+            margin-bottom: 8px;
+        }
+        .shop-item-name {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--txt);
+        }
+        .shop-item-price {
+            font-size: 16px;
+            color: #ffd700;
+            font-weight: bold;
+        }
+        .shop-item-owned {
+            color: var(--success);
+            font-size: 12px;
+            font-weight: bold;
         }
     </style>
 
@@ -801,10 +1032,9 @@
 
         onAuthStateChanged(auth, async (user) => {
             $("#init-loader").fadeOut();
+            $("#app-wrapper").addClass("visible");
+            
             if (user) {
-                // 通知ボタンの状態を復元
-                updateNotifyIcon();
-                
                 // ページロード時に既読状態を復元
                 const keys = Object.keys(localStorage);
                 keys.forEach(key => {
@@ -841,6 +1071,17 @@
                 if (user.displayName === "ゲスト" || !user.displayName) {
                     $("#guest-warning-banner").show();
                 }
+                
+                // ログインボーナスチェック（匿名ユーザーは除く）
+                if (!user.isAnonymous) {
+                    checkLoginBonus();
+                }
+                
+                // テーマを適用
+                applyUserTheme();
+                
+                // 通知ボタンのUIを初期化
+                updateNotificationButtonUI();
                 
                 const unsubFriends = onSnapshot(collection(db, "friendRequests"), (snap) => {
                     friendIds = [];
@@ -1085,6 +1326,29 @@
             const reactions = d.reactions || {};
             const userStatus = usersCache[d.uid]?.status || "offline";
             const isStamp = !!d.stamp;
+            
+            // ユーザーの装備アイテムを取得
+            const userData = usersCache[d.uid] || {};
+            const equipped = userData.equipped || {};
+            
+            // 装備されたバッジのみを表示
+            let badgeHtml = '';
+            const badgeMap = {
+                'vip_badge': { icon: '👑', title: 'VIP' },
+                'star_badge': { icon: '⭐', title: 'スター' },
+                'crown_badge': { icon: '👸', title: 'プレミアム' }
+            };
+            if (equipped.badge && badgeMap[equipped.badge]) {
+                const badge = badgeMap[equipped.badge];
+                badgeHtml = `<span class="user-badge" title="${badge.title}">${badge.icon}</span>`;
+            }
+            
+            // 装備されたエフェクトのみを適用（メッセージ全体に）
+            let effectClass = '';
+            if (equipped.effect === 'fire_effect') effectClass = 'effect-fire';
+            else if (equipped.effect === 'sparkle_effect') effectClass = 'effect-sparkle';
+            else if (equipped.effect === 'lightning_effect') effectClass = 'effect-lightning';
+            
             let rHtml = '';
             for (const [emoji, uids] of Object.entries(reactions)) {
                 if (uids.length > 0) rHtml += `<div class="reaction-badge ${uids.includes(auth.currentUser.uid)?'active':''}" onclick="react('${id}','${emoji}',${JSON.stringify(reactions).replace(/"/g, '&quot;')})">${emoji} ${uids.length}</div>`;
@@ -1096,13 +1360,13 @@
             const replyName = d.replyTo ? escapeHTML(d.replyTo.name) : "";
             const replyText = d.replyTo ? escapeHTML(d.replyTo.text) : "";
 
-            return `<div class="message ${isMe?'me':''} ${isStamp?'is-stamp':''} ${isFriend?'is-friend':''}" id="msg-${id}" data-uid="${d.uid}">
+            return `<div class="message ${isMe?'me':''} ${isStamp?'is-stamp':''} ${isFriend?'is-friend':''} ${effectClass}" id="msg-${id}" data-uid="${d.uid}">
                 <div class="icon-container" onclick="showProfile('${d.uid}')">
                     <img src="${d.photo || DEFAULT_AVATAR}" class="icon">
                     <div class="status-dot ${userStatus === 'online' ? 'online' : 'offline'}"></div>
                 </div>
                 <div class="msg-body">
-                    <div class="user-info">${safeName}</div>
+                    <div class="user-info">${safeName}${badgeHtml}</div>
                     <div class="bubble">
                         ${d.replyTo ? `<div class="reply-in-bubble" onclick="scrollToMsg('${d.replyTo.id}')">@${replyName} ${replyText}</div>` : ''}
                         ${d.text ? `<div>${safeText}${d.isEdited ? '<span class="edited-mark">(編集済)</span>' : ''}</div>` : ''}
@@ -1304,6 +1568,230 @@
             STAMP_LIST.forEach(url => { $list.append(`<img src="${url}" class="stamp-item" onclick="sendStamp('${url}')">`); });
         };
 
+        // ========== アイテム効果適用 ==========
+        
+        // ユーザーのテーマを適用
+        async function applyUserTheme() {
+            try {
+                const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+                const userData = userDoc.data();
+                const equipped = userData.equipped || {};
+                
+                // 既存のテーマクラスを削除
+                $('body').removeClass('rainbow-theme heart-theme');
+                
+                // 装備しているテーマを適用
+                if (equipped.theme === 'rainbow_theme') {
+                    $('body').addClass('rainbow-theme');
+                    console.log('🌈 Rainbow theme applied');
+                } else if (equipped.theme === 'heart_theme') {
+                    $('body').addClass('heart-theme');
+                    console.log('💕 Heart theme applied');
+                }
+            } catch (error) {
+                console.error('Theme application error:', error);
+            }
+        }
+
+        // ========== ショップシステム ==========
+        
+        // 🔐 管理者メールアドレスリスト（全アイテム自動解放 + 無限コイン）
+        // ⚠️ 本番環境では必ず実際のメールアドレスに変更してください
+        const ADMIN_EMAILS = [
+            // 'your-email@example.com',  // ← ここに管理者のメールアドレスを追加
+            // 'admin@example.com'
+        ];
+        
+        const shopItems = [
+            { id: 'vip_badge', name: 'VIPバッジ', icon: '👑', price: 300, description: '名前の横にVIPバッジが表示されます' },
+            { id: 'rainbow_theme', name: 'レインボーテーマ', icon: '🌈', price: 250, description: 'チャット背景が虹色に' },
+            { id: 'fire_effect', name: '炎エフェクト', icon: '🔥', price: 200, description: 'メッセージに炎エフェクト' },
+            { id: 'star_badge', name: 'スターバッジ', icon: '⭐', price: 150, description: '名前の横にスターが表示' },
+            { id: 'heart_theme', name: 'ハートテーマ', icon: '💕', price: 180, description: 'ピンク色のテーマ' },
+            { id: 'sparkle_effect', name: 'キラキラエフェクト', icon: '✨', price: 220, description: 'メッセージがキラキラ' },
+            { id: 'crown_badge', name: 'クラウンバッジ', icon: '👸', price: 350, description: 'プレミアムクラウン' },
+            { id: 'lightning_effect', name: '稲妻エフェクト', icon: '⚡', price: 280, description: 'メッセージに稲妻' }
+        ];
+
+        // 管理者かどうかチェック
+        function isAdmin(email) {
+            return ADMIN_EMAILS.includes(email);
+        }
+
+        // 管理者に全アイテムを自動解放
+        async function unlockAllItemsForAdmin() {
+            if (!auth.currentUser || !auth.currentUser.email) return;
+            
+            if (isAdmin(auth.currentUser.email)) {
+                const allItemIds = shopItems.map(item => item.id);
+                
+                await setDoc(doc(db, "users", auth.currentUser.uid), {
+                    ownedItems: allItemIds,
+                    isAdmin: true,
+                    coins: 999999  // 管理者には無限コイン
+                }, { merge: true });
+                
+                console.log('🔓 Admin detected: All items unlocked');
+            }
+        }
+
+        // ログインボーナスのチェック
+        async function checkLoginBonus() {
+            const today = new Date().toDateString();
+            const lastLogin = localStorage.getItem('last_login_date');
+            
+            // 管理者チェック
+            await unlockAllItemsForAdmin();
+            
+            if (lastLogin !== today) {
+                // ログインボーナス付与
+                const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+                const currentCoins = userDoc.data().coins || 0;
+                const isAdminUser = userDoc.data().isAdmin || false;
+                
+                // 管理者は既に999999コインあるのでボーナス不要
+                if (!isAdminUser) {
+                    await setDoc(doc(db, "users", auth.currentUser.uid), {
+                        coins: currentCoins + 100,
+                        lastLogin: serverTimestamp()
+                    }, { merge: true });
+                    
+                    localStorage.setItem('last_login_date', today);
+                    
+                    // 通知
+                    setTimeout(() => {
+                        alert('🎁 ログインボーナス: +100コイン獲得！');
+                        loadShopData();
+                    }, 1000);
+                } else {
+                    localStorage.setItem('last_login_date', today);
+                }
+            }
+        }
+
+        // ショップデータ読み込み
+        async function loadShopData() {
+            const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+            const userData = userDoc.data();
+            const userCoins = userData.coins || 0;
+            const ownedItems = userData.ownedItems || [];
+            const isAdminUser = userData.isAdmin || false;
+            
+            // 管理者表示
+            if (isAdminUser) {
+                $('#user-coins').html('∞ <span style="font-size:14px; color:rgba(255,255,255,0.7);">(管理者)</span>');
+            } else {
+                $('#user-coins').text(userCoins);
+            }
+            
+            const $container = $('#shop-items').empty();
+            shopItems.forEach(item => {
+                const owned = ownedItems.includes(item.id);
+                const canAfford = userCoins >= item.price;
+                
+                $container.append(`
+                    <div class="shop-item ${owned ? 'owned' : ''}" onclick="${owned ? '' : `purchaseItem('${item.id}')`}">
+                        <div class="shop-item-icon">${item.icon}</div>
+                        <div class="shop-item-name">${item.name}</div>
+                        ${owned ? 
+                            '<div class="shop-item-owned">✅ 所持中</div>' :
+                            `<div class="shop-item-price">💰 ${item.price}</div>`
+                        }
+                    </div>
+                `);
+            });
+        }
+
+        // アイテム購入
+        window.purchaseItem = async (itemId) => {
+            const item = shopItems.find(i => i.id === itemId);
+            if (!item) return;
+            
+            if (!confirm(`${item.icon} ${item.name}\n${item.description}\n\n💰 ${item.price}コインで購入しますか？`)) {
+                return;
+            }
+            
+            try {
+                const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+                const userData = userDoc.data();
+                const userCoins = userData.coins || 0;
+                const ownedItems = userData.ownedItems || [];
+                
+                if (userCoins < item.price) {
+                    alert('❌ コインが足りません！');
+                    return;
+                }
+                
+                if (ownedItems.includes(itemId)) {
+                    alert('✅ すでに所持しています！');
+                    return;
+                }
+                
+                // 購入処理
+                await setDoc(doc(db, "users", auth.currentUser.uid), {
+                    coins: userCoins - item.price,
+                    ownedItems: arrayUnion(itemId)
+                }, { merge: true });
+                
+                alert(`🎉 ${item.name}を購入しました！`);
+                
+                // テーマアイテムを購入した場合、即座に適用
+                if (itemId === 'rainbow_theme' || itemId === 'heart_theme') {
+                    applyUserTheme();
+                    alert(`✨ テーマが適用されました！\n\n※ 複数のテーマを持っている場合、\n最後に購入したものが優先されます。`);
+                }
+                
+                loadShopData();
+                
+            } catch (error) {
+                console.error('Purchase error:', error);
+                alert('❌ 購入に失敗しました');
+            }
+        };
+
+        // ショップボタン（ヘッダー + 旧メニュー内）
+        $('#openShopBtnHeader, #openShopBtn').on('click', () => {
+            $('#other-settings-modal').addClass('hidden');
+            $('#shop-modal').removeClass('hidden');
+            loadShopData();
+        });
+
+        // 通知ボタン（設定モーダル内）
+        $('#toggleNotificationBtn').on('click', async () => {
+            if ('Notification' in window) {
+                if (Notification.permission === 'granted') {
+                    notificationsEnabled = !notificationsEnabled;
+                    localStorage.setItem('chat_notifications_enabled', notificationsEnabled);
+                    updateNotificationButtonUI();
+                } else if (Notification.permission === 'default') {
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        notificationsEnabled = true;
+                        localStorage.setItem('chat_notifications_enabled', 'true');
+                        updateNotificationButtonUI();
+                    }
+                } else {
+                    alert('ブラウザの設定で通知を許可してください');
+                }
+            }
+        });
+
+        function updateNotificationButtonUI() {
+            const $btn = $('#toggleNotificationBtn');
+            const $text = $('#notificationBtnText');
+            const $icon = $btn.find('.material-symbols-outlined');
+            
+            if (notificationsEnabled) {
+                $btn.removeClass('btn-toggle-off').addClass('btn-toggle-on');
+                $text.text('通知: ON');
+                $icon.text('notifications');
+            } else {
+                $btn.removeClass('btn-toggle-on').addClass('btn-toggle-off');
+                $text.text('通知: OFF');
+                $icon.text('notifications_off');
+            }
+        }
+
         window.react = async (id, emoji, currentJson) => {
             const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
             const users = (currentJson && currentJson[emoji]) || [];
@@ -1437,14 +1925,67 @@
 
         $("#my-profile-trigger").on("click", async () => {
             const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
-            if (snap.exists()) { const d = snap.data(); $("#editName").val(d.name); $("#editPhoto").val(d.photo); $("#editBanner").val(d.banner); $("#editBio").val(d.bio); }
-            syncProfilePreview(); $("#settings-modal").removeClass("hidden");
+            if (snap.exists()) { 
+                const d = snap.data(); 
+                $("#editName").val(d.name); 
+                $("#editPhoto").val(d.photo); 
+                $("#editBanner").val(d.banner); 
+                $("#editBio").val(d.bio);
+                
+                // アイテム装備の選択肢を読み込む
+                await loadEquipmentOptions(d);
+            }
+            syncProfilePreview(); 
+            $("#settings-modal").removeClass("hidden");
         });
 
+        // アイテム装備の選択肢を読み込む
+        async function loadEquipmentOptions(userData) {
+            const ownedItems = userData.ownedItems || [];
+            const equipped = userData.equipped || {};
+            
+            // バッジの選択肢
+            const $badgeSelect = $('#editEquippedBadge').empty();
+            $badgeSelect.append('<option value="">なし</option>');
+            if (ownedItems.includes('vip_badge')) $badgeSelect.append('<option value="vip_badge">👑 VIPバッジ</option>');
+            if (ownedItems.includes('star_badge')) $badgeSelect.append('<option value="star_badge">⭐ スターバッジ</option>');
+            if (ownedItems.includes('crown_badge')) $badgeSelect.append('<option value="crown_badge">👸 クラウンバッジ</option>');
+            $badgeSelect.val(equipped.badge || '');
+            
+            // テーマの選択肢
+            const $themeSelect = $('#editEquippedTheme').empty();
+            $themeSelect.append('<option value="">デフォルト</option>');
+            if (ownedItems.includes('rainbow_theme')) $themeSelect.append('<option value="rainbow_theme">🌈 レインボーテーマ</option>');
+            if (ownedItems.includes('heart_theme')) $themeSelect.append('<option value="heart_theme">💕 ハートテーマ</option>');
+            $themeSelect.val(equipped.theme || '');
+            
+            // エフェクトの選択肢
+            const $effectSelect = $('#editEquippedEffect').empty();
+            $effectSelect.append('<option value="">なし</option>');
+            if (ownedItems.includes('fire_effect')) $effectSelect.append('<option value="fire_effect">🔥 炎エフェクト</option>');
+            if (ownedItems.includes('sparkle_effect')) $effectSelect.append('<option value="sparkle_effect">✨ キラキラエフェクト</option>');
+            if (ownedItems.includes('lightning_effect')) $effectSelect.append('<option value="lightning_effect">⚡ 稲妻エフェクト</option>');
+            $effectSelect.val(equipped.effect || '');
+        }
+
         $("#saveProfile").on("click", async () => {
-            const data = { name: $("#editName").val(), photo: $("#editPhoto").val(), banner: $("#editBanner").val(), bio: $("#editBio").val() };
+            const data = { 
+                name: $("#editName").val(), 
+                photo: $("#editPhoto").val(), 
+                banner: $("#editBanner").val(), 
+                bio: $("#editBio").val(),
+                equipped: {
+                    badge: $("#editEquippedBadge").val(),
+                    theme: $("#editEquippedTheme").val(),
+                    effect: $("#editEquippedEffect").val()
+                }
+            };
             await updateProfile(auth.currentUser, { displayName: data.name, photoURL: data.photo });
             await setDoc(doc(db, "users", auth.currentUser.uid), data, { merge: true });
+            
+            // テーマを即座に適用
+            applyUserTheme();
+            
             location.reload();
         });
 
@@ -1642,45 +2183,6 @@
                 });
             });
         }
-        $("#headerCallBtn, #startCallBtn").on("click", startCall);
-        $("#hangupBtn").on("click", async () => {
-            if (localStream) localStream.getTracks().forEach(t => t.stop());
-            if (pc) pc.close();
-            if (currentCallId) await deleteDoc(doc(db, "calls", currentCallId));
-            $("#call-overlay").addClass("hidden");
-        });
-
-        $("#notifyBtn").on("click", async () => {
-            if (!("Notification" in window)) {
-                alert("このブラウザは通知に対応していません。");
-                return;
-            }
-            if (!notificationsEnabled) {
-                const permission = await Notification.requestPermission();
-                if (permission === "granted") {
-                    notificationsEnabled = true;
-                    localStorage.setItem("chat_notifications_enabled", "true");
-                    updateNotifyIcon();
-                    new Notification("ゆきちゃっと", { body: "通知がオンになりました！" });
-                } else {
-                    alert("通知権限が拒否されました。");
-                }
-            } else {
-                notificationsEnabled = false;
-                localStorage.setItem("chat_notifications_enabled", "false");
-                updateNotifyIcon();
-            }
-        });
-
-        function updateNotifyIcon() {
-            const $btn = $("#notifyBtn");
-            if (notificationsEnabled) {
-                $btn.text("notifications").css({ opacity: "1", color: "var(--accent)" });
-            } else {
-                $btn.text("notifications_off").css({ opacity: "0.5", color: "" });
-            }
-        }
-
         const setOnline = async () => {
             if (auth.currentUser) {
                 try {
@@ -1716,34 +2218,78 @@
 
         $("#logoutBtn, #logoutBtnSide").on("click", doLogout);
         $("#openOtherSettings").on("click", () => $("#other-settings-modal").removeClass("hidden"));
-        $("#openUserListBtn").on("click", () => { $("#other-settings-modal").addClass("hidden"); $("#user-list-modal").removeClass("hidden"); switchUserTab('all'); });
 
         // --- イベント監視追加: タブ表示時・フォーカス時、ユーザー操作時に未読クリア ---
+        // iOS対応: オフライン検知の強化
+        let onlineStatusInterval;
+        
+        const ensureOnlineStatus = () => {
+            if (auth.currentUser && document.visibilityState === "visible") {
+                setOnline();
+            }
+        };
+        
+        const ensureOfflineStatus = () => {
+            if (auth.currentUser) {
+                setOffline();
+            }
+        };
+
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
                 setOnline();
+                // 5秒ごとにオンライン状態を更新（iOS対策）
+                if (onlineStatusInterval) clearInterval(onlineStatusInterval);
+                onlineStatusInterval = setInterval(ensureOnlineStatus, 5000);
+                
                 // 表示されただけではクリアしない（見ていない可能性があるため）
                 if (document.hasFocus()) clearUnread();
             } else {
+                // バックグラウンドに入ったらすぐオフライン
+                if (onlineStatusInterval) clearInterval(onlineStatusInterval);
                 setOffline();
             }
         });
+        
         window.addEventListener("focus", () => {
+            setOnline();
             clearUnread();
         });
+        
+        window.addEventListener("blur", () => {
+            // フォーカスを失ったら念のためオフライン（iOS Safari対策）
+            setTimeout(() => {
+                if (document.visibilityState === "hidden") {
+                    setOffline();
+                }
+            }, 300);
+        });
+        
         // ユーザーが何らかのアクション（マウス移動、クリック、キー入力）をしたら「見た」とみなしてクリア
         window.addEventListener("mousemove", () => { if(document.hasFocus()) clearUnread(); });
         window.addEventListener("click", () => { clearUnread(); });
         window.addEventListener("keydown", () => { clearUnread(); });
+        
+        // タッチイベント（モバイル対応）
+        window.addEventListener("touchstart", () => { 
+            setOnline(); 
+            clearUnread(); 
+        });
         // --------------------------------------------------------
 
-        window.addEventListener("pagehide", () => {
-            setOffline();
-        });
+        // iOS Safari対策: これらのイベントで確実にオフラインに
+        window.addEventListener("pagehide", (e) => {
+            ensureOfflineStatus();
+        }, { capture: true });
         
-        window.addEventListener("beforeunload", () => {
-            setOffline();
-        });
+        window.addEventListener("beforeunload", (e) => {
+            ensureOfflineStatus();
+        }, { capture: true });
+        
+        // iOS Safari: フリーズ前のイベント
+        window.addEventListener("freeze", () => {
+            ensureOfflineStatus();
+        }, { capture: true });
 
     </script>
 </body>
