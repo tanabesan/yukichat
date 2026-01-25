@@ -2220,7 +2220,7 @@
         $("#openOtherSettings").on("click", () => $("#other-settings-modal").removeClass("hidden"));
 
         // --- イベント監視追加: タブ表示時・フォーカス時、ユーザー操作時に未読クリア ---
-        // iOS対応: オフライン検知の強化
+        // モバイル対応: オフライン検知の強化（iOS & Android）
         let onlineStatusInterval;
         
         const ensureOnlineStatus = () => {
@@ -2238,14 +2238,13 @@
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
                 setOnline();
-                // 5秒ごとにオンライン状態を更新（iOS対策）
+                // アクティブな間は定期的にオンライン状態を更新
                 if (onlineStatusInterval) clearInterval(onlineStatusInterval);
                 onlineStatusInterval = setInterval(ensureOnlineStatus, 5000);
                 
-                // 表示されただけではクリアしない（見ていない可能性があるため）
                 if (document.hasFocus()) clearUnread();
             } else {
-                // バックグラウンドに入ったらすぐオフライン
+                // バックグラウンドに入ったらオフライン
                 if (onlineStatusInterval) clearInterval(onlineStatusInterval);
                 setOffline();
             }
@@ -2257,39 +2256,51 @@
         });
         
         window.addEventListener("blur", () => {
-            // フォーカスを失ったら念のためオフライン（iOS Safari対策）
+            // フォーカスを失った時の処理（iOS対策）
+            // Androidでは即座にオフラインにならないよう少し待つ
             setTimeout(() => {
-                if (document.visibilityState === "hidden") {
+                if (document.visibilityState === "hidden" && !document.hasFocus()) {
                     setOffline();
                 }
-            }, 300);
+            }, 500);
         });
         
-        // ユーザーが何らかのアクション（マウス移動、クリック、キー入力）をしたら「見た」とみなしてクリア
+        // ユーザーアクションで未読クリア
         window.addEventListener("mousemove", () => { if(document.hasFocus()) clearUnread(); });
         window.addEventListener("click", () => { clearUnread(); });
         window.addEventListener("keydown", () => { clearUnread(); });
         
         // タッチイベント（モバイル対応）
-        window.addEventListener("touchstart", () => { 
-            setOnline(); 
-            clearUnread(); 
+        let lastTouchTime = 0;
+        window.addEventListener("touchstart", () => {
+            const now = Date.now();
+            // タッチイベントの重複を防ぐ
+            if (now - lastTouchTime > 100) {
+                setOnline();
+                clearUnread();
+                lastTouchTime = now;
+            }
         });
         // --------------------------------------------------------
 
-        // iOS Safari対策: これらのイベントで確実にオフラインに
+        // ページ離脱時の処理
         window.addEventListener("pagehide", (e) => {
+            if (onlineStatusInterval) clearInterval(onlineStatusInterval);
             ensureOfflineStatus();
-        }, { capture: true });
+        });
         
         window.addEventListener("beforeunload", (e) => {
+            if (onlineStatusInterval) clearInterval(onlineStatusInterval);
             ensureOfflineStatus();
-        }, { capture: true });
+        });
         
-        // iOS Safari: フリーズ前のイベント
-        window.addEventListener("freeze", () => {
-            ensureOfflineStatus();
-        }, { capture: true });
+        // iOS Safari専用: フリーズイベント
+        if ('onfreeze' in window) {
+            window.addEventListener("freeze", () => {
+                if (onlineStatusInterval) clearInterval(onlineStatusInterval);
+                ensureOfflineStatus();
+            });
+        }
 
     </script>
 </body>
