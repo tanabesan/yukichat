@@ -848,15 +848,6 @@
             lastSeenTimestamps[readKey] = Date.now();
             localStorage.setItem('chat_last_seen_' + readKey, lastSeenTimestamps[readKey].toString());
             
-            // Firestoreにも同期（他のデバイスと共有）
-            if (auth.currentUser) {
-                const lastSeenData = {};
-                lastSeenData[`lastSeen.${readKey}`] = serverTimestamp();
-                
-                setDoc(doc(db, "users", auth.currentUser.uid), lastSeenData, { merge: true })
-                    .catch(err => console.log('Failed to sync lastSeen:', err));
-            }
-            
             // このチャットの未読をクリア
             if(unreadRooms[readKey]) {
                 delete unreadRooms[readKey];
@@ -1077,37 +1068,14 @@
             $("#app-wrapper").addClass("visible");
             
             if (user) {
-                // Firestoreから既読状態を復元（他のデバイスと同期）
-                try {
-                    const userDoc = await getDoc(doc(db, "users", user.uid));
-                    if (userDoc.exists() && userDoc.data().lastSeen) {
-                        const firestoreLastSeen = userDoc.data().lastSeen;
-                        
-                        // Firestoreのタイムスタンプをローカルに反映
-                        Object.keys(firestoreLastSeen).forEach(roomKey => {
-                            const timestamp = firestoreLastSeen[roomKey];
-                            if (timestamp && timestamp.toMillis) {
-                                lastSeenTimestamps[roomKey] = timestamp.toMillis();
-                                localStorage.setItem('chat_last_seen_' + roomKey, timestamp.toMillis().toString());
-                            }
-                        });
-                        console.log("Restored lastSeen from Firestore:", lastSeenTimestamps);
-                    }
-                } catch (error) {
-                    console.log("Failed to load lastSeen from Firestore:", error);
-                }
-                
-                // localStorageからもバックアップ復元
+                // ページロード時に既読状態を復元
                 const keys = Object.keys(localStorage);
                 keys.forEach(key => {
                     if(key.startsWith('chat_last_seen_')) {
                         const roomKey = key.replace('chat_last_seen_', '');
                         const timestamp = parseInt(localStorage.getItem(key));
                         if(!isNaN(timestamp)) {
-                            // Firestoreの方が新しければそちらを優先
-                            if (!lastSeenTimestamps[roomKey] || lastSeenTimestamps[roomKey] < timestamp) {
-                                lastSeenTimestamps[roomKey] = timestamp;
-                            }
+                            lastSeenTimestamps[roomKey] = timestamp;
                         }
                     }
                 });
@@ -1151,8 +1119,8 @@
                 // テーマを適用
                 applyUserTheme();
                 
-                // 通知設定をFirestoreから読み込み
-                await loadNotificationSettings();
+                // 通知ボタンのUIを初期化
+                updateNotificationButtonUI();
                 
                 const unsubFriends = onSnapshot(collection(db, "friendRequests"), (snap) => {
                     friendIds = [];
@@ -1456,44 +1424,13 @@
 
         $("#messages").on("scroll", function() { if ($(this).scrollTop() === 0) loadMoreMessages(); });
 
-        let notificationsEnabled = false;
+        let notificationsEnabled = localStorage.getItem("chat_notifications_enabled") === "true";
 
-        // 通知設定をFirestoreから読み込む
-        async function loadNotificationSettings() {
-            if (!auth.currentUser) return;
-            
-            try {
-                const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-                if (userDoc.exists() && userDoc.data().notificationsEnabled !== undefined) {
-                    notificationsEnabled = userDoc.data().notificationsEnabled;
-                } else {
-                    // Firestoreにない場合はlocalStorageから復元
-                    if ('Notification' in window && Notification.permission === 'granted') {
-                        notificationsEnabled = localStorage.getItem("chat_notifications_enabled") !== "false";
-                    } else {
-                        notificationsEnabled = false;
-                    }
-                }
-                updateNotificationButtonUI();
-            } catch (error) {
-                console.log('Failed to load notification settings:', error);
-            }
-        }
-
-        // 通知設定をFirestoreに保存
-        async function saveNotificationSettings(enabled) {
-            if (!auth.currentUser) return;
-            
-            try {
-                await setDoc(doc(db, "users", auth.currentUser.uid), {
-                    notificationsEnabled: enabled
-                }, { merge: true });
-                
-                // localStorageにもバックアップ
-                localStorage.setItem("chat_notifications_enabled", enabled);
-            } catch (error) {
-                console.log('Failed to save notification settings:', error);
-            }
+        // ページ読み込み時に通知権限をチェックして状態を復元
+        if ('Notification' in window && Notification.permission === 'granted') {
+            notificationsEnabled = localStorage.getItem("chat_notifications_enabled") !== "false";
+        } else {
+            notificationsEnabled = false;
         }
 
         function triggerBadge(roomId = null) {
@@ -1943,13 +1880,13 @@
             if ('Notification' in window) {
                 if (Notification.permission === 'granted') {
                     notificationsEnabled = !notificationsEnabled;
-                    await saveNotificationSettings(notificationsEnabled);
+                    localStorage.setItem('chat_notifications_enabled', notificationsEnabled);
                     updateNotificationButtonUI();
                 } else if (Notification.permission === 'default') {
                     const permission = await Notification.requestPermission();
                     if (permission === 'granted') {
                         notificationsEnabled = true;
-                        await saveNotificationSettings(true);
+                        localStorage.setItem('chat_notifications_enabled', 'true');
                         updateNotificationButtonUI();
                     }
                 } else {
