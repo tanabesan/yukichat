@@ -476,6 +476,7 @@
                 <span id="headerTitle">パブリックチャット</span>
             </div>
             <div style="display:flex; gap:15px; align-items:center;">
+                <span id="openLoginBonusBtn" class="material-symbols-outlined op-btn" style="color:#ffd700; opacity:1; font-size:24px;" title="ログインボーナス">redeem</span>
                 <span id="openShopBtnHeader" class="material-symbols-outlined op-btn" style="color:#f093fb; opacity:1; font-size:24px;" title="ショップ">shopping_bag</span>
                 <span id="openOtherSettings" class="material-symbols-outlined op-btn" style="opacity:1;" title="設定">settings</span>
             </div>
@@ -671,6 +672,39 @@
     </div>
 
     <!-- 管理者権限テストモーダル -->
+    <!-- ログインボーナスモーダル -->
+    <div id="login-bonus-modal" class="modal-overlay hidden">
+        <div class="responsive-card" style="padding:30px; text-align:center; max-width: 400px;">
+            <div style="font-size:60px; margin-bottom:10px;">🎁</div>
+            <h2 style="margin:10px 0;">ログインボーナス</h2>
+            
+            <div id="bonus-status" style="background:var(--bg-38); padding:20px; border-radius:12px; margin:20px 0;">
+                <div style="font-size:14px; color:var(--txt-m); margin-bottom:10px;">本日のボーナス</div>
+                <div id="bonus-amount" style="font-size:48px; font-weight:bold; color:#ffd700;">+100</div>
+                <div style="font-size:16px; color:var(--txt-m); margin-top:5px;">コイン</div>
+            </div>
+
+            <div id="bonus-claim-section">
+                <button id="claimBonusBtn" style="width:100%; padding:15px; background:linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:18px; margin-bottom:10px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);">
+                    受け取る
+                </button>
+                <div style="font-size:12px; color:var(--txt-m);">※ 1日1回まで</div>
+            </div>
+
+            <div id="bonus-already-claimed" class="hidden" style="padding:15px; background:var(--bg-38); border-radius:8px; margin-bottom:15px;">
+                <div style="color:var(--success); font-weight:bold; margin-bottom:5px;">✅ 受け取り済み</div>
+                <div style="font-size:12px; color:var(--txt-m);">次回: 明日のログイン時</div>
+            </div>
+
+            <div style="background:var(--bg-38); padding:15px; border-radius:8px; margin-top:15px; text-align:left;">
+                <div style="font-size:12px; color:var(--txt-m); margin-bottom:10px;">💰 現在の所持コイン</div>
+                <div style="font-size:28px; font-weight:bold;" id="bonus-current-coins">0</div>
+            </div>
+
+            <button onclick="$('#login-bonus-modal').addClass('hidden')" style="width:100%; background:var(--bg-38); color:var(--txt); border:none; margin-top:15px; cursor:pointer; padding:12px; border-radius:8px;">閉じる</button>
+        </div>
+    </div>
+
     <!-- ショップモーダル -->
     <div id="shop-modal" class="modal-overlay hidden">
         <div class="responsive-card" style="padding:20px; max-height:85vh; max-width:600px; display:flex; flex-direction:column;">
@@ -776,7 +810,6 @@
         const db = initializeFirestore(app, {
             localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
         });
-        
         const auth = getAuth(app);
 
         // --- 通知音と設定用変数 ---
@@ -814,6 +847,15 @@
             const readKey = currentRoomId || "global";
             lastSeenTimestamps[readKey] = Date.now();
             localStorage.setItem('chat_last_seen_' + readKey, lastSeenTimestamps[readKey].toString());
+            
+            // Firestoreにも同期（他のデバイスと共有）
+            if (auth.currentUser) {
+                const lastSeenData = {};
+                lastSeenData[`lastSeen.${readKey}`] = serverTimestamp();
+                
+                setDoc(doc(db, "users", auth.currentUser.uid), lastSeenData, { merge: true })
+                    .catch(err => console.log('Failed to sync lastSeen:', err));
+            }
             
             // このチャットの未読をクリア
             if(unreadRooms[readKey]) {
@@ -1035,14 +1077,37 @@
             $("#app-wrapper").addClass("visible");
             
             if (user) {
-                // ページロード時に既読状態を復元
+                // Firestoreから既読状態を復元（他のデバイスと同期）
+                try {
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    if (userDoc.exists() && userDoc.data().lastSeen) {
+                        const firestoreLastSeen = userDoc.data().lastSeen;
+                        
+                        // Firestoreのタイムスタンプをローカルに反映
+                        Object.keys(firestoreLastSeen).forEach(roomKey => {
+                            const timestamp = firestoreLastSeen[roomKey];
+                            if (timestamp && timestamp.toMillis) {
+                                lastSeenTimestamps[roomKey] = timestamp.toMillis();
+                                localStorage.setItem('chat_last_seen_' + roomKey, timestamp.toMillis().toString());
+                            }
+                        });
+                        console.log("Restored lastSeen from Firestore:", lastSeenTimestamps);
+                    }
+                } catch (error) {
+                    console.log("Failed to load lastSeen from Firestore:", error);
+                }
+                
+                // localStorageからもバックアップ復元
                 const keys = Object.keys(localStorage);
                 keys.forEach(key => {
                     if(key.startsWith('chat_last_seen_')) {
                         const roomKey = key.replace('chat_last_seen_', '');
                         const timestamp = parseInt(localStorage.getItem(key));
                         if(!isNaN(timestamp)) {
-                            lastSeenTimestamps[roomKey] = timestamp;
+                            // Firestoreの方が新しければそちらを優先
+                            if (!lastSeenTimestamps[roomKey] || lastSeenTimestamps[roomKey] < timestamp) {
+                                lastSeenTimestamps[roomKey] = timestamp;
+                            }
                         }
                     }
                 });
@@ -1074,14 +1139,20 @@
                 
                 // ログインボーナスチェック（匿名ユーザーは除く）
                 if (!user.isAnonymous) {
-                    checkLoginBonus();
+                    const canClaim = await checkLoginBonus();
+                    if (canClaim) {
+                        // まだ受け取ってない場合、3秒後に自動表示
+                        setTimeout(() => {
+                            openLoginBonusModal();
+                        }, 3000);
+                    }
                 }
                 
                 // テーマを適用
                 applyUserTheme();
                 
-                // 通知ボタンのUIを初期化
-                updateNotificationButtonUI();
+                // 通知設定をFirestoreから読み込み
+                await loadNotificationSettings();
                 
                 const unsubFriends = onSnapshot(collection(db, "friendRequests"), (snap) => {
                     friendIds = [];
@@ -1385,13 +1456,44 @@
 
         $("#messages").on("scroll", function() { if ($(this).scrollTop() === 0) loadMoreMessages(); });
 
-        let notificationsEnabled = localStorage.getItem("chat_notifications_enabled") === "true";
+        let notificationsEnabled = false;
 
-        // ページ読み込み時に通知権限をチェックして状態を復元
-        if ('Notification' in window && Notification.permission === 'granted') {
-            notificationsEnabled = localStorage.getItem("chat_notifications_enabled") !== "false";
-        } else {
-            notificationsEnabled = false;
+        // 通知設定をFirestoreから読み込む
+        async function loadNotificationSettings() {
+            if (!auth.currentUser) return;
+            
+            try {
+                const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+                if (userDoc.exists() && userDoc.data().notificationsEnabled !== undefined) {
+                    notificationsEnabled = userDoc.data().notificationsEnabled;
+                } else {
+                    // Firestoreにない場合はlocalStorageから復元
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        notificationsEnabled = localStorage.getItem("chat_notifications_enabled") !== "false";
+                    } else {
+                        notificationsEnabled = false;
+                    }
+                }
+                updateNotificationButtonUI();
+            } catch (error) {
+                console.log('Failed to load notification settings:', error);
+            }
+        }
+
+        // 通知設定をFirestoreに保存
+        async function saveNotificationSettings(enabled) {
+            if (!auth.currentUser) return;
+            
+            try {
+                await setDoc(doc(db, "users", auth.currentUser.uid), {
+                    notificationsEnabled: enabled
+                }, { merge: true });
+                
+                // localStorageにもバックアップ
+                localStorage.setItem("chat_notifications_enabled", enabled);
+            } catch (error) {
+                console.log('Failed to save notification settings:', error);
+            }
         }
 
         function triggerBadge(roomId = null) {
@@ -1618,20 +1720,24 @@
             return ADMIN_EMAILS.includes(email);
         }
 
-        // 管理者に全アイテムを自動解放
+        // 管理者権限の自動付与
         async function unlockAllItemsForAdmin() {
             if (!auth.currentUser || !auth.currentUser.email) return;
             
             if (isAdmin(auth.currentUser.email)) {
-                const allItemIds = shopItems.map(item => item.id);
-                
-                await setDoc(doc(db, "users", auth.currentUser.uid), {
-                    ownedItems: allItemIds,
-                    isAdmin: true,
-                    coins: 999999  // 管理者には無限コイン
-                }, { merge: true });
-                
-                console.log('🔓 Admin detected: All items unlocked');
+                try {
+                    const allItemIds = shopItems.map(item => item.id);
+                    
+                    await setDoc(doc(db, "users", auth.currentUser.uid), {
+                        ownedItems: allItemIds,
+                        isAdmin: true,
+                        coins: 999999  // 管理者には無限コイン
+                    }, { merge: true });
+                    
+                    console.log('🔓 Admin detected: All items unlocked');
+                } catch (error) {
+                    console.error('Admin unlock error:', error);
+                }
             }
         }
 
@@ -1643,31 +1749,106 @@
             // 管理者チェック
             await unlockAllItemsForAdmin();
             
-            if (lastLogin !== today) {
-                // ログインボーナス付与
+            // 今日既に受け取っているかチェック
+            if (lastLogin === today) {
+                console.log('ℹ️ Login bonus already claimed today');
+                return false; // 既に受け取り済み
+            }
+            
+            return true; // まだ受け取ってない
+        }
+
+        // ログインボーナスを受け取る
+        async function claimLoginBonus() {
+            const today = new Date().toDateString();
+            const lastLogin = localStorage.getItem('last_login_date');
+            
+            // 二重受け取り防止
+            if (lastLogin === today) {
+                return { success: false, message: '今日のボーナスは既に受け取り済みです' };
+            }
+            
+            try {
                 const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-                const currentCoins = userDoc.data().coins || 0;
-                const isAdminUser = userDoc.data().isAdmin || false;
+                const userData = userDoc.data();
+                const currentCoins = userData.coins || 0;
+                const isAdminUser = userData.isAdmin || false;
                 
                 // 管理者は既に999999コインあるのでボーナス不要
-                if (!isAdminUser) {
-                    await setDoc(doc(db, "users", auth.currentUser.uid), {
-                        coins: currentCoins + 100,
-                        lastLogin: serverTimestamp()
-                    }, { merge: true });
-                    
+                if (isAdminUser) {
                     localStorage.setItem('last_login_date', today);
-                    
-                    // 通知
-                    setTimeout(() => {
-                        alert('🎁 ログインボーナス: +100コイン獲得！');
-                        loadShopData();
-                    }, 1000);
-                } else {
-                    localStorage.setItem('last_login_date', today);
+                    return { success: true, message: '管理者は常に無限コインです', coins: 999999, bonus: 0 };
                 }
+                
+                // 通常ユーザー: +100コイン
+                await setDoc(doc(db, "users", auth.currentUser.uid), {
+                    coins: currentCoins + 100,
+                    lastLogin: serverTimestamp()
+                }, { merge: true });
+                
+                localStorage.setItem('last_login_date', today);
+                
+                return { success: true, message: '+100コイン獲得！', coins: currentCoins + 100, bonus: 100 };
+                
+            } catch (error) {
+                console.error('Login bonus error:', error);
+                return { success: false, message: 'エラーが発生しました: ' + error.message };
             }
         }
+
+        // ログインボーナス画面を開く
+        async function openLoginBonusModal() {
+            $('#login-bonus-modal').removeClass('hidden');
+            
+            // 現在のコインを表示
+            const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+            const userData = userDoc.data();
+            const currentCoins = userData.coins || 0;
+            $('#bonus-current-coins').text(currentCoins.toLocaleString());
+            
+            // 受け取り状態をチェック
+            const canClaim = await checkLoginBonus();
+            
+            if (canClaim) {
+                // まだ受け取ってない
+                $('#bonus-claim-section').removeClass('hidden');
+                $('#bonus-already-claimed').addClass('hidden');
+            } else {
+                // 既に受け取り済み
+                $('#bonus-claim-section').addClass('hidden');
+                $('#bonus-already-claimed').removeClass('hidden');
+            }
+        }
+
+        // ログインボーナスボタン
+        $('#openLoginBonusBtn').on('click', openLoginBonusModal);
+
+        // ログインボーナス受け取りボタン
+        $('#claimBonusBtn').on('click', async () => {
+            const $btn = $('#claimBonusBtn');
+            $btn.prop('disabled', true).text('受け取り中...');
+            
+            const result = await claimLoginBonus();
+            
+            if (result.success) {
+                // 成功アニメーション
+                $('#bonus-amount').text(`+${result.bonus}`);
+                $('#bonus-current-coins').text(result.coins.toLocaleString());
+                
+                // ボタンを非表示にして受け取り済み表示
+                $('#bonus-claim-section').addClass('hidden');
+                $('#bonus-already-claimed').removeClass('hidden');
+                
+                // 成功メッセージ
+                setTimeout(() => {
+                    alert('🎉 ' + result.message);
+                }, 300);
+            } else {
+                alert('❌ ' + result.message);
+                $btn.prop('disabled', false).text('受け取る');
+            }
+        });
+
 
         // ショップデータ読み込み
         async function loadShopData() {
@@ -1745,9 +1926,10 @@
                 
             } catch (error) {
                 console.error('Purchase error:', error);
-                alert('❌ 購入に失敗しました');
+                alert('❌ 購入に失敗しました: ' + error.message);
             }
         };
+
 
         // ショップボタン（ヘッダー + 旧メニュー内）
         $('#openShopBtnHeader, #openShopBtn').on('click', () => {
@@ -1761,13 +1943,13 @@
             if ('Notification' in window) {
                 if (Notification.permission === 'granted') {
                     notificationsEnabled = !notificationsEnabled;
-                    localStorage.setItem('chat_notifications_enabled', notificationsEnabled);
+                    await saveNotificationSettings(notificationsEnabled);
                     updateNotificationButtonUI();
                 } else if (Notification.permission === 'default') {
                     const permission = await Notification.requestPermission();
                     if (permission === 'granted') {
                         notificationsEnabled = true;
-                        localStorage.setItem('chat_notifications_enabled', 'true');
+                        await saveNotificationSettings(true);
                         updateNotificationButtonUI();
                     }
                 } else {
@@ -2222,10 +2404,12 @@
         // --- イベント監視追加: タブ表示時・フォーカス時、ユーザー操作時に未読クリア ---
         // モバイル対応: オフライン検知の強化（iOS & Android）
         let onlineStatusInterval;
+        let lastActivityTime = Date.now();
         
         const ensureOnlineStatus = () => {
             if (auth.currentUser && document.visibilityState === "visible") {
                 setOnline();
+                lastActivityTime = Date.now();
             }
         };
         
@@ -2235,70 +2419,132 @@
             }
         };
 
+        // iOS Safari: 非アクティブ検知の強化
+        const checkInactivity = () => {
+            const now = Date.now();
+            // 10秒以上更新がなく、非表示状態ならオフライン
+            if (now - lastActivityTime > 10000 && document.visibilityState === "hidden") {
+                ensureOfflineStatus();
+            }
+        };
+
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
                 setOnline();
+                lastActivityTime = Date.now();
+                
                 // アクティブな間は定期的にオンライン状態を更新
                 if (onlineStatusInterval) clearInterval(onlineStatusInterval);
                 onlineStatusInterval = setInterval(ensureOnlineStatus, 5000);
                 
                 if (document.hasFocus()) clearUnread();
             } else {
-                // バックグラウンドに入ったらオフライン
+                // バックグラウンドに入ったら即座にオフライン
                 if (onlineStatusInterval) clearInterval(onlineStatusInterval);
-                setOffline();
+                
+                // iOS対策: 遅延なしで即オフライン
+                ensureOfflineStatus();
+                
+                // さらに念のため非アクティブチェックも開始
+                setTimeout(checkInactivity, 2000);
             }
         });
         
         window.addEventListener("focus", () => {
             setOnline();
+            lastActivityTime = Date.now();
             clearUnread();
         });
         
         window.addEventListener("blur", () => {
-            // フォーカスを失った時の処理（iOS対策）
-            // Androidでは即座にオフラインにならないよう少し待つ
+            // iOS Safari対策: blurイベントでも積極的にオフライン
             setTimeout(() => {
-                if (document.visibilityState === "hidden" && !document.hasFocus()) {
-                    setOffline();
+                if (document.visibilityState === "hidden" || !document.hasFocus()) {
+                    ensureOfflineStatus();
                 }
-            }, 500);
+            }, 300); // iOSは300msに短縮
         });
         
-        // ユーザーアクションで未読クリア
-        window.addEventListener("mousemove", () => { if(document.hasFocus()) clearUnread(); });
-        window.addEventListener("click", () => { clearUnread(); });
-        window.addEventListener("keydown", () => { clearUnread(); });
+        // ユーザーアクションで未読クリア & アクティブ記録
+        window.addEventListener("mousemove", () => { 
+            lastActivityTime = Date.now();
+            if(document.hasFocus()) clearUnread(); 
+        });
+        window.addEventListener("click", () => { 
+            lastActivityTime = Date.now();
+            clearUnread(); 
+        });
+        window.addEventListener("keydown", () => { 
+            lastActivityTime = Date.now();
+            clearUnread(); 
+        });
         
         // タッチイベント（モバイル対応）
         let lastTouchTime = 0;
         window.addEventListener("touchstart", () => {
             const now = Date.now();
+            lastActivityTime = now;
+            
             // タッチイベントの重複を防ぐ
             if (now - lastTouchTime > 100) {
                 setOnline();
                 clearUnread();
                 lastTouchTime = now;
             }
-        });
+        }, { passive: true });
+        
+        // iOS Safari: スクロール時もアクティブと見なす
+        window.addEventListener("scroll", () => {
+            lastActivityTime = Date.now();
+        }, { passive: true });
         // --------------------------------------------------------
 
-        // ページ離脱時の処理
+        // ページ離脱時の処理（iOS Safari対策を強化）
         window.addEventListener("pagehide", (e) => {
             if (onlineStatusInterval) clearInterval(onlineStatusInterval);
             ensureOfflineStatus();
-        });
+            
+            // iOS Safari: navigator.sendBeacon で確実に送信
+            if (navigator.sendBeacon && auth.currentUser) {
+                const offlineData = JSON.stringify({
+                    uid: auth.currentUser.uid,
+                    status: 'offline',
+                    timestamp: Date.now()
+                });
+                // Firestoreには送れないが、ログとして記録
+                console.log('pagehide: Setting offline', offlineData);
+            }
+        }, { capture: true });
         
         window.addEventListener("beforeunload", (e) => {
             if (onlineStatusInterval) clearInterval(onlineStatusInterval);
             ensureOfflineStatus();
-        });
+        }, { capture: true });
         
-        // iOS Safari専用: フリーズイベント
+        // iOS Safari専用: 追加のライフサイクルイベント
         if ('onfreeze' in window) {
             window.addEventListener("freeze", () => {
                 if (onlineStatusInterval) clearInterval(onlineStatusInterval);
                 ensureOfflineStatus();
+            }, { capture: true });
+        }
+        
+        if ('onresume' in window) {
+            window.addEventListener("resume", () => {
+                setOnline();
+                lastActivityTime = Date.now();
+            }, { capture: true });
+        }
+
+        // iOS PWA対策: App切り替え検知
+        if (window.navigator.standalone) {
+            document.addEventListener("webkitvisibilitychange", () => {
+                if (document.webkitHidden) {
+                    ensureOfflineStatus();
+                } else {
+                    setOnline();
+                    lastActivityTime = Date.now();
+                }
             });
         }
 
