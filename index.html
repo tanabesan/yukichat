@@ -201,7 +201,18 @@
         .msg-ops .op-btn { opacity: 0; transition: 0.1s; font-size: 18px; color: var(--txt-m); cursor: pointer; }
         .message:hover .msg-ops .op-btn { opacity: 1; }
         
-        .reaction-badge { background: var(--bg-2b); border: 1px solid transparent; border-radius: 8px; padding: 4px 8px; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .reaction-badge { 
+            background: var(--bg-2b); 
+            border: 1px solid transparent; 
+            border-radius: 8px; 
+            padding: 4px 8px; 
+            font-size: 14px; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 4px;
+            will-change: transform; /* パフォーマンス最適化 */
+        }
         .reaction-badge.active { border-color: var(--accent); background: rgba(88,101,242,0.2); }
 
         /* --- アイテムバッジ --- */
@@ -211,6 +222,7 @@
             margin-left: 4px;
             vertical-align: middle;
             animation: badgePulse 2s ease-in-out infinite;
+            will-change: transform; /* パフォーマンス最適化 */
         }
         @keyframes badgePulse {
             0%, 100% { transform: scale(1); }
@@ -222,6 +234,7 @@
             background: linear-gradient(45deg, #ff6b6b, #f093fb, #4facfe, #43e97b, #feca57, #ff6b6b);
             background-size: 400% 400%;
             animation: rainbowMove 10s ease infinite;
+            will-change: background-position; /* パフォーマンス最適化 */
         }
         @keyframes rainbowMove {
             0% { background-position: 0% 50%; }
@@ -241,6 +254,7 @@
         .message.effect-fire .icon-container {
             position: relative;
             animation: iconShake 3s ease-in-out infinite;
+            will-change: transform; /* パフォーマンス最適化 */
         }
         .message.effect-fire .icon-container .icon {
             box-shadow: 
@@ -248,6 +262,7 @@
                 0 0 15px rgba(255, 107, 107, 0.6),
                 0 0 25px rgba(255, 107, 107, 0.4);
             animation: fireIconGlow 3s ease infinite;
+            will-change: box-shadow; /* パフォーマンス最適化 */
         }
         .message.effect-fire .icon-container::before {
             content: '🔥';
@@ -1196,24 +1211,58 @@
                     if ($("#sidebar").hasClass("open")) updateSidebarDMList();
                 });
 
+                // ユーザー状態の更新をデバウンス（パフォーマンス向上）
+                const updateUserStatuses = debounce(() => {
+                    Object.keys(usersCache).forEach(uid => {
+                        const userData = usersCache[uid];
+                        const statusClass = userData.status === 'online' ? 'online' : 'offline';
+                        
+                        // DOM更新を最小限に
+                        const $messageDots = $(`.message[data-uid="${uid}"] .status-dot`);
+                        const $sidebarDots = $(`.sidebar-item[data-user-id="${uid}"] .status-dot`);
+                        
+                        if ($messageDots.length) {
+                            $messageDots.removeClass('online offline').addClass(statusClass);
+                        }
+                        if ($sidebarDots.length) {
+                            $sidebarDots.removeClass('online offline').addClass(statusClass);
+                        }
+                        
+                        // ユーザーリストモーダルが開いている時だけ更新
+                        if (!$("#user-list-modal").hasClass("hidden")) {
+                            const $userDots = $(`.user-item[data-uid="${uid}"] .status-dot`);
+                            if ($userDots.length) {
+                                $userDots.removeClass('online offline').addClass(statusClass);
+                            }
+                        }
+                    });
+                }, 100); // 100ms デバウンス
+                
                 const unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
                     let typingNames = [];
-                    snap.forEach(userDoc => { 
+                    
+                    // 変更があったユーザーだけ処理（パフォーマンス向上）
+                    snap.docChanges().forEach(change => {
+                        const userDoc = change.doc;
                         const userData = userDoc.data();
                         const uid = userDoc.id;
-                        usersCache[uid] = userData; 
+                        
+                        usersCache[uid] = userData;
+                        
                         if(uid !== auth.currentUser.uid && userData.isTyping) {
                             typingNames.push(userData.name || "ゲスト");
                         }
-                        const statusClass = userData.status === 'online' ? 'online' : 'offline';
-                        $(`.message[data-uid="${uid}"] .status-dot`).removeClass('online offline').addClass(statusClass);
-                        $(`.sidebar-item[data-user-id="${uid}"] .status-dot`).removeClass('online offline').addClass(statusClass);
-                        if (!$("#user-list-modal").hasClass("hidden")) {
-                             $(`.user-item[data-uid="${uid}"] .status-dot`).removeClass('online offline').addClass(statusClass);
-                        }
                     });
-                    if(typingNames.length > 0) $("#typing-indicator").text(typingNames.map(n => escapeHTML(n)).join(", ") + " が入力中...").removeClass("hidden");
-                    else $("#typing-indicator").addClass("hidden");
+                    
+                    // タイピングインジケーターの更新
+                    if(typingNames.length > 0) {
+                        $("#typing-indicator").text(typingNames.map(n => escapeHTML(n)).join(", ") + " が入力中...").removeClass("hidden");
+                    } else {
+                        $("#typing-indicator").addClass("hidden");
+                    }
+                    
+                    // 状態ドットの更新（デバウンス）
+                    updateUserStatuses();
                 });
 
                 // --- 新着DM（バックグラウンド）検知用のリスナー ---
@@ -1297,6 +1346,19 @@
 
         let isLoadingMoreMessages = false; // 過去メッセージ読み込み中フラグ
         let pauseSnapshot = false; // onSnapshotを一時停止するフラグ
+        
+        // デバウンス関数（連続実行を防ぐ）
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
         
         async function loadMoreMessages() {
             if (isFetchingMore || !hasMoreMessages || !lastVisibleDoc) return;
@@ -1465,20 +1527,59 @@
             let docs = [];
             snap.forEach(d => docs.push({id: d.id, data: d.data()}));
             if(isDesc) docs.reverse();
+            
             if (isInitialLoad) {
+                // DocumentFragmentを使ってバッチ挿入（パフォーマンス向上）
+                const fragment = document.createDocumentFragment();
+                const tempDiv = document.createElement('div');
+                
+                docs.forEach((item) => {
+                    tempDiv.innerHTML = generateMessageHtml(item.id, item.data);
+                    while (tempDiv.firstChild) {
+                        fragment.appendChild(tempDiv.firstChild);
+                    }
+                });
+                
                 $box.empty();
-                docs.forEach((item) => { $box.append(generateMessageHtml(item.id, item.data)); });
+                $box[0].appendChild(fragment);
+                
                 // 過去メッセージ読み込み中でなければスクロール
                 if (!isLoadingMoreMessages) {
                     scrollToBottom(true);
                 }
                 isInitialLoad = false;
             } else {
+                // 更新が必要なメッセージだけ処理（パフォーマンス向上）
+                const updates = [];
+                const additions = [];
+                
                 docs.forEach((item) => {
                     const existing = $(`#msg-${item.id}`);
-                    if (existing.length) { existing.replaceWith(generateMessageHtml(item.id, item.data)); }
-                    else { $box.append(generateMessageHtml(item.id, item.data)); }
+                    if (existing.length) {
+                        updates.push({element: existing, html: generateMessageHtml(item.id, item.data)});
+                    } else {
+                        additions.push(generateMessageHtml(item.id, item.data));
+                    }
                 });
+                
+                // バッチ更新
+                updates.forEach(({element, html}) => element.replaceWith(html));
+                
+                // バッチ追加（DocumentFragment使用）
+                if (additions.length > 0) {
+                    const fragment = document.createDocumentFragment();
+                    const tempDiv = document.createElement('div');
+                    
+                    additions.forEach(html => {
+                        tempDiv.innerHTML = html;
+                        while (tempDiv.firstChild) {
+                            fragment.appendChild(tempDiv.firstChild);
+                        }
+                    });
+                    
+                    $box[0].appendChild(fragment);
+                }
+                
                 if (hasNewMessage) {
                     // 過去メッセージ読み込み中でなければスクロール
                     if (!isLoadingMoreMessages) {
