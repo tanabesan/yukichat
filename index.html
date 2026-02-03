@@ -229,6 +229,104 @@
             50% { transform: scale(1.1); }
         }
 
+        /* --- スロットマシン --- */
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0.3; }
+        }
+        
+        @keyframes reachPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.15); opacity: 0.8; }
+        }
+
+        .slot-reel-container {
+            width: 120px;
+            height: 150px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.3) 50%, rgba(255,255,255,0.1) 100%);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .slot-reel {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slot-symbols-strip {
+            position: absolute;
+            width: 100%;
+            top: 0;
+            left: 0;
+            transition: none;
+        }
+
+        .slot-symbols-strip.spinning {
+            animation: none;
+        }
+
+        .slot-symbol-item {
+            width: 100%;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+            user-select: none;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .slot-spin-btn {
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+            color: #fff;
+            border: 4px solid #ffd700;
+            border-radius: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(255,0,0,0.6), inset 0 -3px 10px rgba(0,0,0,0.3);
+            transition: transform 0.1s, box-shadow 0.1s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slot-spin-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(255,0,0,0.8), inset 0 -3px 10px rgba(0,0,0,0.3);
+        }
+
+        .slot-spin-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 4px 15px rgba(255,0,0,0.4), inset 0 3px 10px rgba(0,0,0,0.5);
+        }
+
+        .slot-spin-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .bet-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+        }
+
+        .bet-btn.active {
+            border-color: #ffd700 !important;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(255, 255, 255, 0.8); }
+        }
+
         /* --- テーマ適用 --- */
         body.rainbow-theme {
             background: linear-gradient(45deg, #ff6b6b, #f093fb, #4facfe, #43e97b, #feca57, #ff6b6b);
@@ -491,6 +589,7 @@
                 <span id="headerTitle">パブリックチャット</span>
             </div>
             <div style="display:flex; gap:15px; align-items:center;">
+                <span id="openSlotBtn" class="material-symbols-outlined op-btn" style="color:#ff4757; opacity:1; font-size:24px;" title="スロット">casino</span>
                 <span id="openLoginBonusBtn" class="material-symbols-outlined op-btn" style="color:#ffd700; opacity:1; font-size:24px;" title="ログインボーナス">redeem</span>
                 <span id="openShopBtnHeader" class="material-symbols-outlined op-btn" style="color:#f093fb; opacity:1; font-size:24px;" title="ショップ">shopping_bag</span>
                 <span id="openOtherSettings" class="material-symbols-outlined op-btn" style="opacity:1;" title="設定">settings</span>
@@ -687,6 +786,117 @@
     </div>
 
     <!-- 管理者権限テストモーダル -->
+    <!-- スロットマシンモーダル -->
+    <div id="slot-modal" class="modal-overlay hidden">
+        <div class="responsive-card" style="padding:30px; text-align:center; max-width: 600px;">
+            <h2 style="margin:10px 0 5px 0; font-family: 'Impact', sans-serif; color:#ffd700; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">🎰 LUCKY SLOT 🎰</h2>
+            <div style="font-size:12px; color:var(--txt-m); margin-bottom:20px;">1 PLAY = 10 COINS</div>
+            
+            <!-- スロット台本体 -->
+            <div style="background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); padding: 30px 20px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.8), inset 0 0 50px rgba(255,215,0,0.1); border: 4px solid #ffd700; position: relative;">
+                
+                <!-- 装飾ライト -->
+                <div style="display: flex; justify-content: space-around; margin-bottom: 15px;">
+                    <div class="slot-light" style="width: 12px; height: 12px; border-radius: 50%; background: #ff0000; box-shadow: 0 0 10px #ff0000; animation: blink 1s infinite;"></div>
+                    <div class="slot-light" style="width: 12px; height: 12px; border-radius: 50%; background: #00ff00; box-shadow: 0 0 10px #00ff00; animation: blink 1s infinite 0.33s;"></div>
+                    <div class="slot-light" style="width: 12px; height: 12px; border-radius: 50%; background: #0000ff; box-shadow: 0 0 10px #0000ff; animation: blink 1s infinite 0.66s;"></div>
+                    <div class="slot-light" style="width: 12px; height: 12px; border-radius: 50%; background: #ffff00; box-shadow: 0 0 10px #ffff00; animation: blink 1s infinite;"></div>
+                    <div class="slot-light" style="width: 12px; height: 12px; border-radius: 50%; background: #ff00ff; box-shadow: 0 0 10px #ff00ff; animation: blink 1s infinite 0.33s;"></div>
+                </div>
+
+                <!-- リール窓 -->
+                <div style="background: #000; padding: 25px 15px; border-radius: 15px; border: 3px solid #333; box-shadow: inset 0 0 30px rgba(0,0,0,0.9); margin-bottom: 20px; position: relative; overflow: hidden;">
+                    
+                    <!-- 中央ライン -->
+                    <div style="position: absolute; left: 0; right: 0; top: 50%; height: 3px; background: linear-gradient(90deg, transparent, #ffd700, transparent); transform: translateY(-50%); z-index: 10; box-shadow: 0 0 10px #ffd700;"></div>
+                    
+                    <div style="display:flex; gap:20px; justify-content:center;">
+                        <!-- リール1 -->
+                        <div class="slot-reel-container">
+                            <div class="slot-reel" id="reel1">
+                                <div class="slot-symbols-strip" id="strip1"></div>
+                            </div>
+                        </div>
+                        <!-- リール2 -->
+                        <div class="slot-reel-container">
+                            <div class="slot-reel" id="reel2">
+                                <div class="slot-symbols-strip" id="strip2"></div>
+                            </div>
+                        </div>
+                        <!-- リール3 -->
+                        <div class="slot-reel-container">
+                            <div class="slot-reel" id="reel3">
+                                <div class="slot-symbols-strip" id="strip3"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- リーチ演出 -->
+                <div id="reach-effect" class="hidden" style="font-size:28px; font-weight:bold; color:#ffd700; text-shadow: 0 0 20px #ffd700, 0 0 40px #ffd700; animation: reachPulse 0.3s infinite; margin-bottom: 15px;">
+                    🔥 REACH! 🔥
+                </div>
+
+                <!-- コイン表示 -->
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.5); padding: 15px 20px; border-radius: 10px; border: 2px solid #444;">
+                    <div style="text-align: left;">
+                        <div style="font-size: 10px; color: #888; text-transform: uppercase;">Credits</div>
+                        <div id="slot-coins" style="font-size: 28px; font-weight: bold; color: #ffd700; font-family: 'Courier New', monospace; text-shadow: 0 0 10px #ffd700;">0000</div>
+                    </div>
+                    <div id="slot-result-display" class="hidden" style="text-align: right;">
+                        <div style="font-size: 10px; color: #888; text-transform: uppercase;">Win</div>
+                        <div id="slot-win-amount" style="font-size: 28px; font-weight: bold; color: #00ff00; font-family: 'Courier New', monospace; text-shadow: 0 0 10px #00ff00;">+0000</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- スペシャルスピン表示 -->
+            <div id="special-spin-indicator" class="hidden" style="margin: 15px 0; padding: 15px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 12px; animation: shimmer 1s infinite; border: 2px solid #fff;">
+                <div style="font-size: 18px; font-weight: bold; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+                    ✨ SPECIAL SPIN ACTIVE! ✨
+                </div>
+                <div style="font-size: 12px; color: #fff; margin-top: 5px;">Next payout x2</div>
+            </div>
+
+            <!-- ベット選択 -->
+            <div style="margin-bottom: 15px;">
+                <div style="font-size: 12px; color: #888; text-transform: uppercase; margin-bottom: 8px;">BET</div>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button class="bet-btn active" data-bet="1" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%); color: #fff; border: 2px solid #ffd700; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s;">
+                        ×1<br><span style="font-size: 10px;">10 COINS</span>
+                    </button>
+                    <button class="bet-btn" data-bet="10" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%); color: #fff; border: 2px solid #666; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s;">
+                        ×10<br><span style="font-size: 10px;">100 COINS</span>
+                    </button>
+                    <button class="bet-btn" data-bet="100" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%); color: #fff; border: 2px solid #666; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s;">
+                        ×100<br><span style="font-size: 10px;">1000 COINS</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- スピンボタン -->
+            <button id="spin-btn" class="slot-spin-btn">
+                <div style="font-size: 24px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">🎰 SPIN</div>
+                <div id="spin-btn-cost" style="font-size: 12px; margin-top: 5px; opacity: 0.9;">- 10 COINS -</div>
+            </button>
+            
+            <button onclick="$('#slot-modal').addClass('hidden')" style="width:100%; background:var(--bg-38); color:var(--txt); border:none; cursor:pointer; padding:12px; border-radius:8px; margin-top: 10px;">EXIT</button>
+
+            <!-- 配当表 -->
+            <div style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.5); border-radius:12px; border: 2px solid #333;">
+                <div style="font-size:14px; font-weight:bold; margin-bottom:10px; color: #ffd700; text-transform: uppercase;">💰 Pay Table <span id="bet-multiplier-text" style="color: #fff;">(×1)</span></div>
+                <div id="pay-table" style="font-size:12px; line-height:2; color:#ccc; font-family: 'Courier New', monospace;">
+                    🍒🍒🍒 → ×5  ( 50)<br>
+                    🍋🍋🍋 → ×8  ( 80)<br>
+                    🍊🍊🍊 → ×12 (120)<br>
+                    🍇🍇🍇 → ×20 (200)<br>
+                    ⭐⭐⭐ → ×40 (400)<br>
+                    💎💎💎 → ×100 (1000) + SPECIAL!
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ログインボーナスモーダル -->
     <div id="login-bonus-modal" class="modal-overlay hidden">
         <div class="responsive-card" style="padding:30px; text-align:center; max-width: 400px;">
@@ -722,7 +932,7 @@
 
     <!-- ショップモーダル -->
     <div id="shop-modal" class="modal-overlay hidden">
-        <div class="responsive-card" style="padding:20px; max-height:85vh; max-width:600px; display:flex; flex-direction:column;">
+        <div class="responsive-card" style="padding:20px; max-height:85vh; max-width:800px; display:flex; flex-direction:column;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                 <h3 style="margin:0;">🎁 ショップ</h3>
                 <button onclick="$('#shop-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:24px; cursor:pointer; padding:5px;">✕</button>
@@ -742,8 +952,32 @@
             <!-- アイテム一覧 -->
             <div style="flex:1; overflow-y:auto;">
                 <h4 style="margin:10px 0; color:var(--txt-m); font-size:14px;">アイテム</h4>
-                <div id="shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px;">
+                <div id="shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; margin-bottom:15px;">
                     <!-- JavaScriptで動的に追加 -->
+                </div>
+
+                <!-- プレビューエリア（アイテム一覧の下） -->
+                <div id="item-preview" class="hidden" style="background:var(--bg-38); padding:20px; border-radius:12px; margin-top:15px; border:2px solid #667eea; position:sticky; bottom:0;">
+                    <div style="font-size:12px; color:var(--txt-m); margin-bottom:10px; text-transform:uppercase;">👁️ Preview</div>
+                    <div style="display:flex; align-items:center; gap:20px;">
+                        <!-- プレビュー用メッセージ -->
+                        <div id="preview-message" class="message" style="margin:0; max-width:none;">
+                            <div class="icon-container" id="preview-icon-container">
+                                <img class="icon" id="preview-icon" src="" alt="">
+                            </div>
+                            <div class="bubble">
+                                <div class="msg-head">
+                                    <span class="sender" id="preview-name"></span>
+                                    <span id="preview-badge"></span>
+                                </div>
+                                <div class="msg-body">プレビュー表示</div>
+                            </div>
+                        </div>
+                        <div style="flex:1;">
+                            <div id="preview-item-name" style="font-size:18px; font-weight:bold; margin-bottom:5px;"></div>
+                            <div id="preview-item-desc" style="font-size:12px; color:var(--txt-m);"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1069,11 +1303,18 @@
             
             const $box = $("#messages");
             if ($box.length === 0) return;
+            
             const threshold = 150;
             const isAtBottom = ($box[0].scrollHeight - $box.scrollTop() <= $box[0].clientHeight + threshold);
+            
             if (force || isAtBottom) {
-                setTimeout(() => { $box.scrollTop($box[0].scrollHeight); }, 50);
-                setTimeout(() => { $box.animate({ scrollTop: $box[0].scrollHeight }, 100); }, 150);
+                // アニメーションなしで即座に一番下へ移動（確実に届く）
+                $box[0].scrollTop = $box[0].scrollHeight;
+                
+                // さらに念押しで確実に一番下へ
+                requestAnimationFrame(() => {
+                    $box[0].scrollTop = $box[0].scrollHeight;
+                });
             }
         }
         window.scrollToBottom = scrollToBottom;
@@ -1545,7 +1786,22 @@
                 
                 // 過去メッセージ読み込み中でなければスクロール
                 if (!isLoadingMoreMessages) {
-                    scrollToBottom(true);
+                    // 即座に一番下へ
+                    $box[0].scrollTop = $box[0].scrollHeight;
+                    
+                    // 画像読み込み待ちで何度も試行（確実に一番下へ）
+                    requestAnimationFrame(() => {
+                        $box[0].scrollTop = $box[0].scrollHeight;
+                    });
+                    setTimeout(() => {
+                        $box[0].scrollTop = $box[0].scrollHeight;
+                    }, 50);
+                    setTimeout(() => {
+                        $box[0].scrollTop = $box[0].scrollHeight;
+                    }, 100);
+                    setTimeout(() => {
+                        $box[0].scrollTop = $box[0].scrollHeight;
+                    }, 200);
                 }
                 isInitialLoad = false;
             } else {
@@ -1781,32 +2037,57 @@
 
         // ログインボーナスのチェック
         async function checkLoginBonus() {
-            const today = new Date().toDateString();
-            const lastLogin = localStorage.getItem('last_login_date');
-            
-            // 管理者チェック
-            await unlockAllItemsForAdmin();
-            
-            // 今日既に受け取っているかチェック
-            if (lastLogin === today) {
-                console.log('ℹ️ Login bonus already claimed today');
-                return false; // 既に受け取り済み
+            try {
+                // 管理者チェック
+                await unlockAllItemsForAdmin();
+                
+                // Firestoreから最終ログイン日を取得
+                const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+                if (!userDoc.exists()) {
+                    return true; // 初回ログイン
+                }
+                
+                const userData = userDoc.data();
+                const lastLogin = userData.lastLogin;
+                
+                if (!lastLogin) {
+                    return true; // lastLoginがない場合は受け取り可能
+                }
+                
+                // Firestoreのタイムスタンプから日付を取得（UTC）
+                const lastLoginDate = lastLogin.toDate();
+                const now = new Date();
+                
+                // 日付を比較（年-月-日のみ）
+                const lastLoginDay = new Date(lastLoginDate.getFullYear(), lastLoginDate.getMonth(), lastLoginDate.getDate());
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                
+                // 最終ログインが今日より前なら受け取り可能
+                const canClaim = lastLoginDay.getTime() < today.getTime();
+                
+                console.log('Login bonus check:', {
+                    lastLoginDate: lastLoginDay.toISOString(),
+                    today: today.toISOString(),
+                    canClaim
+                });
+                
+                return canClaim;
+                
+            } catch (error) {
+                console.error('Check login bonus error:', error);
+                return false;
             }
-            
-            return true; // まだ受け取ってない
         }
 
         // ログインボーナスを受け取る
         async function claimLoginBonus() {
-            const today = new Date().toDateString();
-            const lastLogin = localStorage.getItem('last_login_date');
-            
-            // 二重受け取り防止
-            if (lastLogin === today) {
-                return { success: false, message: '今日のボーナスは既に受け取り済みです' };
-            }
-            
             try {
+                // 再度チェック（二重受け取り防止）
+                const canClaim = await checkLoginBonus();
+                if (!canClaim) {
+                    return { success: false, message: '今日のボーナスは既に受け取り済みです' };
+                }
+                
                 const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
                 const userData = userDoc.data();
                 const currentCoins = userData.coins || 0;
@@ -1814,22 +2095,24 @@
                 
                 // 管理者は既に999999コインあるのでボーナス不要
                 if (isAdminUser) {
-                    localStorage.setItem('last_login_date', today);
+                    // lastLoginだけ更新
+                    await setDoc(doc(db, "users", auth.currentUser.uid), {
+                        lastLogin: serverTimestamp()
+                    }, { merge: true });
+                    
                     return { success: true, message: '管理者は常に無限コインです', coins: 999999, bonus: 0 };
                 }
                 
-                // 通常ユーザー: +100コイン
+                // 通常ユーザー: +100コイン + lastLogin更新
                 await setDoc(doc(db, "users", auth.currentUser.uid), {
                     coins: currentCoins + 100,
                     lastLogin: serverTimestamp()
                 }, { merge: true });
                 
-                localStorage.setItem('last_login_date', today);
-                
                 return { success: true, message: '+100コイン獲得！', coins: currentCoins + 100, bonus: 100 };
                 
             } catch (error) {
-                console.error('Login bonus error:', error);
+                console.error('Claim login bonus error:', error);
                 return { success: false, message: 'エラーが発生しました: ' + error.message };
             }
         }
@@ -1856,6 +2139,295 @@
                 $('#bonus-claim-section').addClass('hidden');
                 $('#bonus-already-claimed').removeClass('hidden');
             }
+        }
+
+        // ========== スロットマシン ==========
+        const slotSymbols = ['🍒', '🍋', '🍊', '🍇', '⭐', '💎'];
+        const slotPayouts = {
+            '🍒': 5,
+            '🍋': 8,
+            '🍊': 12,
+            '🍇': 20,
+            '⭐': 40,
+            '💎': 100
+        };
+        let isSpinning = false;
+        let hasSpecialSpin = false;
+        let currentBet = 1; // ベット倍率
+
+        // ベット選択
+        $('.bet-btn').on('click', function() {
+            if (isSpinning) return;
+            
+            $('.bet-btn').removeClass('active').css('border-color', '#666');
+            $(this).addClass('active');
+            currentBet = parseInt($(this).data('bet'));
+            
+            const cost = 10 * currentBet;
+            $('#spin-btn-cost').text(`- ${cost} COINS -`);
+            $('#bet-multiplier-text').text(`(×${currentBet})`);
+            
+            // 配当表を更新
+            updatePayTable();
+        });
+
+        function updatePayTable() {
+            const payouts = {
+                '🍒': 5 * currentBet,
+                '🍋': 8 * currentBet,
+                '🍊': 12 * currentBet,
+                '🍇': 20 * currentBet,
+                '⭐': 40 * currentBet,
+                '💎': 100 * currentBet
+            };
+            
+            $('#pay-table').html(`
+                🍒🍒🍒 → ×${5 * currentBet}  (${payouts['🍒'] * 10})<br>
+                🍋🍋🍋 → ×${8 * currentBet}  (${payouts['🍋'] * 10})<br>
+                🍊🍊🍊 → ×${12 * currentBet}  (${payouts['🍊'] * 10})<br>
+                🍇🍇🍇 → ×${20 * currentBet}  (${payouts['🍇'] * 10})<br>
+                ⭐⭐⭐ → ×${40 * currentBet}  (${payouts['⭐'] * 10})<br>
+                💎💎💎 → ×${100 * currentBet}  (${payouts['💎'] * 10}) + SPECIAL!
+            `);
+        }
+
+        // リールストリップを初期化
+        function initReelStrips() {
+            for (let i = 1; i <= 3; i++) {
+                const strip = $(`#strip${i}`);
+                strip.empty();
+                
+                // 20個のシンボルを生成（ループ用）
+                for (let j = 0; j < 20; j++) {
+                    const symbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+                    strip.append(`<div class="slot-symbol-item">${symbol}</div>`);
+                }
+                
+                // 初期位置
+                strip.css('top', '0px');
+            }
+        }
+
+        // スロット画面を開く
+        $('#openSlotBtn').on('click', async () => {
+            $('#slot-modal').removeClass('hidden');
+            initReelStrips();
+            
+            // コイン残高を更新
+            const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+            const coins = userDoc.data().coins || 0;
+            $('#slot-coins').text(String(coins).padStart(4, '0'));
+            $('#slot-result-display').addClass('hidden');
+            
+            if (hasSpecialSpin) {
+                $('#special-spin-indicator').removeClass('hidden');
+            } else {
+                $('#special-spin-indicator').addClass('hidden');
+            }
+        });
+
+        // スロットモーダルを閉じる（背景クリック）
+        $('#slot-modal').on('click', function(e) {
+            if (e.target === this) {
+                $(this).addClass('hidden');
+            }
+        });
+
+        // リールを回す（滑らかなアニメーション）
+        function spinReel(reelId, targetSymbol, duration, hasReverse = false) {
+            return new Promise((resolve) => {
+                const strip = $(`#strip${reelId}`);
+                const symbolHeight = 150;
+                
+                // ターゲットシンボルをストリップの適切な位置に配置
+                const symbols = strip.find('.slot-symbol-item');
+                const targetIndex = 10; // 真ん中あたり
+                $(symbols[targetIndex]).text(targetSymbol);
+                
+                // 高速スピン開始
+                let currentTop = 0;
+                const spinSpeed = 50; // ms per frame
+                const totalSpins = duration / spinSpeed;
+                let frame = 0;
+                
+                const animate = () => {
+                    frame++;
+                    currentTop -= symbolHeight;
+                    
+                    // ループ処理
+                    if (currentTop <= -symbolHeight * 15) {
+                        currentTop = 0;
+                    }
+                    
+                    // 停止前の演出
+                    if (frame >= totalSpins - 10) {
+                        // スローダウン
+                        const slowFactor = (totalSpins - frame) / 10;
+                        
+                        if (hasReverse && frame === totalSpins - 5) {
+                            // 通り過ぎて戻る演出
+                            currentTop -= symbolHeight * 2;
+                            setTimeout(() => {
+                                const finalTop = -symbolHeight * targetIndex;
+                                strip.css({
+                                    'top': `${finalTop}px`,
+                                    'transition': 'top 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                                });
+                                setTimeout(() => {
+                                    strip.css('transition', 'none');
+                                    resolve();
+                                }, 500);
+                            }, 100);
+                            return;
+                        }
+                    }
+                    
+                    if (frame < totalSpins) {
+                        strip.css('top', `${currentTop}px`);
+                        requestAnimationFrame(animate);
+                    } else {
+                        // 最終停止位置
+                        const finalTop = -symbolHeight * targetIndex;
+                        strip.css({
+                            'top': `${finalTop}px`,
+                            'transition': 'top 0.3s ease-out'
+                        });
+                        setTimeout(() => {
+                            strip.css('transition', 'none');
+                            resolve();
+                        }, 300);
+                    }
+                };
+                
+                strip.css('transition', 'none');
+                animate();
+            });
+        }
+
+        // スピンボタン
+        $('#spin-btn').on('click', async () => {
+            if (isSpinning) return;
+            
+            const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+            const currentCoins = userDoc.data().coins || 0;
+            const betCost = 10 * currentBet;
+            
+            if (currentCoins < betCost) {
+                alert(`❌ コインが足りません！（必要: ${betCost}コイン）`);
+                return;
+            }
+            
+            isSpinning = true;
+            $('#spin-btn').prop('disabled', true).html('<div style="font-size:20px;">⏳ SPINNING...</div>');
+            $('#reach-effect').addClass('hidden');
+            $('#slot-result-display').addClass('hidden');
+            
+            // コイン消費
+            await setDoc(doc(db, "users", auth.currentUser.uid), {
+                coins: currentCoins - betCost
+            }, { merge: true });
+            
+            $('#slot-coins').text(String(currentCoins - betCost).padStart(4, '0'));
+            
+            // 当たり確率（15%）+ リーチ外れ確率（10%）
+            const rand = Math.random();
+            const willWin = rand < 0.15;
+            const willReachMiss = !willWin && rand < 0.25; // 15%～25%の範囲
+            let results;
+            
+            if (willWin) {
+                // 当たり - シンボルは重み付け
+                const symbolRand = Math.random();
+                let winSymbol;
+                
+                if (symbolRand < 0.40) winSymbol = '🍒';      // 40%
+                else if (symbolRand < 0.70) winSymbol = '🍋'; // 30%
+                else if (symbolRand < 0.87) winSymbol = '🍊'; // 17%
+                else if (symbolRand < 0.95) winSymbol = '🍇'; // 8%
+                else if (symbolRand < 0.99) winSymbol = '⭐'; // 4%
+                else winSymbol = '💎';                         // 1%
+                
+                results = [winSymbol, winSymbol, winSymbol];
+            } else if (willReachMiss) {
+                // リーチ外れ（2つ揃って3つ目が外れる）
+                const reachSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+                let missSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+                while (missSymbol === reachSymbol) {
+                    missSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+                }
+                results = [reachSymbol, reachSymbol, missSymbol];
+            } else {
+                // バラバラ
+                results = [
+                    slotSymbols[Math.floor(Math.random() * slotSymbols.length)],
+                    slotSymbols[Math.floor(Math.random() * slotSymbols.length)],
+                    slotSymbols[Math.floor(Math.random() * slotSymbols.length)]
+                ];
+                // 完全に揃わないようにする
+                while (results[0] === results[1] && results[1] === results[2]) {
+                    results[2] = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+                }
+            }
+            
+            // リールを順番に止める
+            await spinReel(1, results[0], 1500, false);
+            
+            await new Promise(resolve => setTimeout(resolve, 200));
+            await spinReel(2, results[1], 1800, false);
+            
+            // リーチ判定
+            if (results[0] === results[1]) {
+                $('#reach-effect').removeClass('hidden');
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // 3つ目は演出強化（通り過ぎて戻る）
+            const hasReverse = results[0] === results[1];
+            await spinReel(3, results[2], 2200, hasReverse);
+            
+            $('#reach-effect').addClass('hidden');
+            
+            // 結果判定
+            await new Promise(resolve => setTimeout(resolve, 300));
+            checkSlotResult(results, currentCoins - betCost);
+        });
+
+        async function checkSlotResult(results, currentCoins) {
+            const [r1, r2, r3] = results;
+            
+            if (r1 === r2 && r2 === r3) {
+                let basePayout = slotPayouts[r1];
+                let payout = basePayout * 10 * currentBet; // ベット倍率を適用
+                
+                if (hasSpecialSpin) {
+                    payout *= 2;
+                    hasSpecialSpin = false;
+                    $('#special-spin-indicator').addClass('hidden');
+                }
+                
+                if (r1 === '💎') {
+                    hasSpecialSpin = true;
+                    $('#special-spin-indicator').removeClass('hidden');
+                }
+                
+                const newCoins = currentCoins + payout;
+                await setDoc(doc(db, "users", auth.currentUser.uid), {
+                    coins: newCoins
+                }, { merge: true });
+                
+                $('#slot-coins').text(String(newCoins).padStart(4, '0'));
+                $('#slot-win-amount').text(`+${String(payout).padStart(4, '0')}`);
+                $('#slot-result-display').removeClass('hidden');
+                
+            } else {
+                $('#slot-result-display').addClass('hidden');
+            }
+            
+            isSpinning = false;
+            const betCost = 10 * currentBet;
+            $('#spin-btn').prop('disabled', false).html(`<div style="font-size:24px; font-weight:bold;">🎰 SPIN</div><div style="font-size:12px; margin-top:5px;">- ${betCost} COINS -</div>`);
         }
 
         // ログインボーナスボタン
@@ -1896,6 +2468,10 @@
             const ownedItems = userData.ownedItems || [];
             const isAdminUser = userData.isAdmin || false;
             
+            // プレビュー用に現在のユーザー情報を保存
+            const currentUserName = userData.name || 'あなた';
+            const currentUserPhoto = userData.photo || DEFAULT_AVATAR;
+            
             // 管理者表示
             if (isAdminUser) {
                 $('#user-coins').html('∞ <span style="font-size:14px; color:rgba(255,255,255,0.7);">(管理者)</span>');
@@ -1904,12 +2480,14 @@
             }
             
             const $container = $('#shop-items').empty();
+            const $preview = $('#item-preview');
+            
             shopItems.forEach(item => {
                 const owned = ownedItems.includes(item.id);
                 const canAfford = userCoins >= item.price;
                 
-                $container.append(`
-                    <div class="shop-item ${owned ? 'owned' : ''}" onclick="${owned ? '' : `purchaseItem('${item.id}')`}">
+                const $item = $(`
+                    <div class="shop-item ${owned ? 'owned' : ''}" data-item-id="${item.id}" onclick="${owned ? '' : `purchaseItem('${item.id}')`}">
                         <div class="shop-item-icon">${item.icon}</div>
                         <div class="shop-item-name">${item.name}</div>
                         ${owned ? 
@@ -1918,7 +2496,74 @@
                         }
                     </div>
                 `);
+                
+                // ホバーでプレビュー表示
+                $item.on('mouseenter', function() {
+                    showItemPreview(item, currentUserName, currentUserPhoto);
+                });
+                
+                $container.append($item);
             });
+            
+            // プレビューエリアから出た時だけ非表示
+            let previewTimeout;
+            $container.on('mouseleave', function() {
+                previewTimeout = setTimeout(() => {
+                    if (!$preview.is(':hover')) {
+                        $preview.addClass('hidden');
+                    }
+                }, 200);
+            });
+            
+            $preview.on('mouseenter', function() {
+                clearTimeout(previewTimeout);
+            });
+            
+            $preview.on('mouseleave', function() {
+                $preview.addClass('hidden');
+            });
+        }
+
+        // アイテムプレビュー表示
+        function showItemPreview(item, userName, userPhoto) {
+            $('#item-preview').removeClass('hidden');
+            $('#preview-item-name').text(item.name);
+            $('#preview-item-desc').text(item.description);
+            $('#preview-name').text(userName);
+            $('#preview-icon').attr('src', userPhoto);
+            
+            // プレビューメッセージのクラスをリセット
+            $('#preview-message').removeClass('effect-fire effect-sparkle effect-lightning');
+            $('#preview-icon-container').removeClass('effect-fire effect-sparkle effect-lightning');
+            $('#preview-badge').empty();
+            
+            // アイテムタイプに応じてプレビュー
+            if (item.id === 'vip_badge' || item.id === 'star_badge' || item.id === 'crown_badge') {
+                // バッジプレビュー
+                const badgeMap = {
+                    'vip_badge': { icon: '👑', title: 'VIP' },
+                    'star_badge': { icon: '⭐', title: 'スター' },
+                    'crown_badge': { icon: '👸', title: 'プレミアム' }
+                };
+                const badge = badgeMap[item.id];
+                $('#preview-badge').html(`<span class="user-badge" title="${badge.title}">${badge.icon}</span>`);
+                
+            } else if (item.id === 'fire_effect') {
+                // 炎エフェクトプレビュー
+                $('#preview-message').addClass('effect-fire');
+                
+            } else if (item.id === 'sparkle_effect') {
+                // キラキラエフェクトプレビュー
+                $('#preview-message').addClass('effect-sparkle');
+                
+            } else if (item.id === 'lightning_effect') {
+                // 稲妻エフェクトプレビュー
+                $('#preview-message').addClass('effect-lightning');
+                
+            } else if (item.id === 'rainbow_theme' || item.id === 'heart_theme') {
+                // テーマプレビュー（説明のみ）
+                $('#preview-badge').html(`<span style="font-size:12px; color:var(--txt-m);">画面全体の背景が変わります</span>`);
+            }
         }
 
         // アイテム購入
