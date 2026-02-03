@@ -3003,6 +3003,11 @@
             if (ownedItems.includes('fire_effect')) $effectSelect.append('<option value="fire_effect">🔥 炎エフェクト</option>');
             if (ownedItems.includes('sparkle_effect')) $effectSelect.append('<option value="sparkle_effect">✨ キラキラエフェクト</option>');
             if (ownedItems.includes('lightning_effect')) $effectSelect.append('<option value="lightning_effect">⚡ 稲妻エフェクト</option>');
+            if (ownedItems.includes('rainbow_effect')) $effectSelect.append('<option value="rainbow_effect">🌟 虹色エフェクト</option>');
+            if (ownedItems.includes('shadow_effect')) $effectSelect.append('<option value="shadow_effect">🌑 シャドウエフェクト</option>');
+            if (ownedItems.includes('ice_effect')) $effectSelect.append('<option value="ice_effect">❄️ 氷エフェクト</option>');
+            if (ownedItems.includes('toxic_effect')) $effectSelect.append('<option value="toxic_effect">☠️ 毒エフェクト</option>');
+            if (ownedItems.includes('gold_effect')) $effectSelect.append('<option value="gold_effect">💛 ゴールドエフェクト</option>');
             $effectSelect.val(equipped.effect || '');
         }
 
@@ -3261,6 +3266,7 @@
         // モバイル対応: オフライン検知の強化（iOS & Android）
         let onlineStatusInterval;
         let lastActivityTime = Date.now();
+        let offlineCheckInterval;
         
         const ensureOnlineStatus = () => {
             if (auth.currentUser && document.visibilityState === "visible") {
@@ -3284,6 +3290,7 @@
             }
         };
 
+        // 全ブラウザ対応: visibilitychange（標準）
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
                 setOnline();
@@ -3297,15 +3304,42 @@
             } else {
                 // バックグラウンドに入ったら即座にオフライン
                 if (onlineStatusInterval) clearInterval(onlineStatusInterval);
-                
-                // iOS対策: 遅延なしで即オフライン
                 ensureOfflineStatus();
-                
-                // さらに念のため非アクティブチェックも開始
                 setTimeout(checkInactivity, 2000);
             }
         });
         
+        // Firefox対応: mozvisibilitychange
+        document.addEventListener("mozvisibilitychange", () => {
+            if (document.mozHidden) {
+                ensureOfflineStatus();
+            } else {
+                setOnline();
+                lastActivityTime = Date.now();
+            }
+        });
+        
+        // 古いIE/Edge対応: msvisibilitychange
+        document.addEventListener("msvisibilitychange", () => {
+            if (document.msHidden) {
+                ensureOfflineStatus();
+            } else {
+                setOnline();
+                lastActivityTime = Date.now();
+            }
+        });
+        
+        // WebKit系（Safari）対応: webkitvisibilitychange
+        document.addEventListener("webkitvisibilitychange", () => {
+            if (document.webkitHidden) {
+                ensureOfflineStatus();
+            } else {
+                setOnline();
+                lastActivityTime = Date.now();
+            }
+        });
+        
+        // focus/blur イベント
         window.addEventListener("focus", () => {
             setOnline();
             lastActivityTime = Date.now();
@@ -3313,12 +3347,11 @@
         });
         
         window.addEventListener("blur", () => {
-            // iOS Safari対策: blurイベントでも積極的にオフライン
             setTimeout(() => {
                 if (document.visibilityState === "hidden" || !document.hasFocus()) {
                     ensureOfflineStatus();
                 }
-            }, 300); // iOSは300msに短縮
+            }, 300);
         });
         
         // ユーザーアクションで未読クリア & アクティブ記録
@@ -3403,6 +3436,24 @@
                 }
             });
         }
+
+        // フォールバック: 定期的にチェック（全ブラウザ対応）
+        // イベントが発火しないブラウザ用の最終手段
+        offlineCheckInterval = setInterval(() => {
+            if (auth.currentUser) {
+                const now = Date.now();
+                const isHidden = document.hidden || document.mozHidden || document.webkitHidden || document.msHidden || document.visibilityState === "hidden";
+                const hasNoFocus = !document.hasFocus();
+                const isInactive = (now - lastActivityTime) > 30000; // 30秒以上操作なし
+                
+                // 非表示 または フォーカスなし かつ 30秒以上操作なし
+                if (isHidden || (hasNoFocus && isInactive)) {
+                    ensureOfflineStatus();
+                } else if (document.visibilityState === "visible" && document.hasFocus()) {
+                    ensureOnlineStatus();
+                }
+            }
+        }, 10000); // 10秒ごとにチェック
 
     </script>
 </body>
