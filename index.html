@@ -15,10 +15,30 @@
             --friend-gold: #faa61a; --sidebar-w: 260px;
         }
 
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            overflow-x: hidden;
+            overflow-y: auto;
+            width: 100%;
+        }
+
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif; margin: 0; height: 100dvh;
-            background: var(--bg-31); color: var(--txt); overflow: hidden;
+            background: var(--bg-31); color: var(--txt); 
+            overflow-x: hidden;
+            overflow-y: hidden;
             overscroll-behavior: none;
+            width: 100%;
+            max-width: 100vw;
+            position: relative;
+        }
+
+        #app-wrapper, .responsive-card, .modal-overlay > * {
+            max-width: 100%;
+            overflow-x: hidden;
         }
 
         .hidden { display: none !important; }
@@ -28,6 +48,9 @@
             cursor: pointer;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
         }
         .op-btn:active, .btn-sm:active, .sidebar-item:active, button:active, #sendBtn:active, .stamp-item:active {
             transform: scale(0.92);
@@ -65,8 +88,13 @@
 
         /* --- メインレイアウト --- */
         #app-wrapper { 
-            display: flex; flex-direction: column; height: 100vh; height: 100dvh;
-            opacity: 0; transition: opacity 0.3s; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            height: 100dvh;
+            width: 100%;
+            opacity: 0; 
+            transition: opacity 0.3s; 
         }
         #app-wrapper.visible { opacity: 1; }
 
@@ -106,12 +134,17 @@
 
         .icon-container { position: relative; display: inline-block; flex-shrink: 0; }
         .status-dot {
-            position: absolute; bottom: 2px; right: 2px;
-            width: 10px; height: 10px; border-radius: 50%;
-            border: 2px solid var(--bg-31);
+            position: absolute; 
+            bottom: 0px; 
+            right: 0px;
+            width: 16px; 
+            height: 16px; 
+            border-radius: 50%;
+            border: 3px solid var(--bg-31);
+            z-index: 10;
         }
-        .online { background-color: var(--success); }
-        .offline { background-color: var(--txt-m); }
+        .online { background-color: #00ff00; }
+        .offline { background-color: #666; }
         
         /* DM未読バッジ */
         .dm-unread-badge {
@@ -141,12 +174,38 @@
         .ctrl-btn.hangup { background: var(--danger); width: 46px; }
 
         /* --- メッセージエリア --- */
-        #messages-container { position: relative; flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
-        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+        #messages-container { 
+            position: relative; 
+            flex: 1; 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 0;
+            width: 100%;
+        }
+        #messages { 
+            flex: 1; 
+            overflow-y: auto; 
+            overflow-x: hidden;
+            padding: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 16px; 
+            scroll-behavior: smooth; 
+            -webkit-overflow-scrolling: touch;
+            width: 100%;
+            box-sizing: border-box;
+        }
         #typing-indicator { height: 20px; padding: 0 20px 5px; font-size: 12px; color: var(--txt-m); font-style: italic; }
 
         .message {
-            display: flex; gap: 10px; align-items: flex-start; max-width: 90%; position: relative;
+            display: flex; 
+            gap: 10px; 
+            align-items: flex-start; 
+            max-width: 90%; 
+            position: relative;
+            box-sizing: border-box;
+            min-width: 0;
         }
         .message.me { 
             flex-direction: row-reverse; 
@@ -166,13 +225,15 @@
             background: #4e5058; 
             font-size: 15px; 
             line-height: 1.4; 
-            word-break: break-all; 
+            word-break: break-word;
+            overflow-wrap: break-word;
             position: relative; 
             display: inline-block;
             color: #fff;
             width: fit-content;
             max-width: 100%;
             box-sizing: border-box;
+            overflow: hidden;
         }
         .message.me .bubble { background: var(--accent); }
 
@@ -192,8 +253,24 @@
         .message.is-stamp .bubble::before, .message.is-stamp .bubble::after { display: none; }
         .message.is-friend .user-info::after { content: "FRIEND"; font-size: 9px; background: var(--friend-gold); color: #000; padding: 1px 4px; border-radius: 3px; font-weight: bold; margin-left: 5px; }
 
-        .sent-img { display: block; margin-top: 8px; border-radius: 8px; max-width: 100%; max-height: 250px; cursor: pointer; }
-        .stamp-display { display: block; width: 140px; height: 140px; object-fit: contain; }
+        .sent-img { 
+            display: block; 
+            margin-top: 8px; 
+            border-radius: 8px; 
+            max-width: 100%; 
+            max-height: 250px; 
+            cursor: pointer;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+        .stamp-display { 
+            display: block; 
+            width: 140px; 
+            height: 140px; 
+            max-width: 100%;
+            object-fit: contain; 
+        }
         .reply-in-bubble { display: inline-block; background: rgba(0,0,0,0.15); padding: 4px 8px; margin-bottom: 6px; border-radius: 6px; font-size: 12px; cursor: pointer; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         .msg-ops { display: flex; gap: 8px; margin-top: 6px; align-items: center; flex-wrap: wrap; }
@@ -618,11 +695,46 @@
         .dot-ani { animation: blink 1.4s infinite both; }
         @keyframes blink { 0% { opacity: .2; } 20% { opacity: 1; } 100% { opacity: .2; } }
 
-        .input-wrapper { display: flex; align-items: center; gap: 8px; padding: 8px 10px; box-sizing: border-box; }
+        .input-wrapper { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            padding: 8px 10px; 
+            box-sizing: border-box;
+            width: 100%;
+        }
         #my-profile-trigger { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px; border-radius: 4px; transition: 0.2s; max-width: 140px; overflow: hidden; flex-shrink: 0; }
         #my-profile-trigger:active { background: rgba(255,255,255,0.1); }
         #myName { font-size: 13px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        #messageInput { flex: 1; background: var(--bg-38); border: none; padding: 10px 12px; border-radius: 20px; color: var(--txt); outline: none; resize: none; font-size: 16px; max-height: 120px; box-sizing: border-box; }
+        #messageInput { flex: 1; background: var(--bg-38); border: none; padding: 10px 12px; border-radius: 20px; color: var(--txt); outline: none; resize: none; font-size: 16px; max-height: 120px; box-sizing: border-box; min-width: 0; }
+        
+        /* オンラインバッジサイズ調整 */
+        /* オンラインバッジサイズ（統一） */
+        .status-dot {
+            width: 16px !important;
+            height: 16px !important;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 0px;
+            right: 0px;
+            border: 3px solid var(--bg-2b);
+            z-index: 10;
+        }
+        .status-dot.online { background: #00ff00; box-shadow: 0 0 8px #00ff00; }
+        .status-dot.offline { background: #666; }
+        
+        /* サイドバー（DMリスト）専用: 小さめ */
+        .sidebar-item .status-dot {
+            width: 10px !important;
+            height: 10px !important;
+            border: 2px solid var(--bg-2b);
+            bottom: 0px;
+            right: 0px;
+        }
+        .sidebar-item .status-dot.online { 
+            background: #00ff00; 
+            box-shadow: 0 0 4px #00ff00; 
+        }
         
         /* --- モーダル共通 --- */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px; box-sizing: border-box; }
@@ -640,6 +752,109 @@
         .prof-card { width: 100%; max-width: 320px; background: #111214; border-radius: 12px; overflow: hidden; position: relative; margin: auto; }
         .prof-banner { height: 80px; width: 100%; object-fit: cover; background: var(--accent); }
         .prof-avatar { width: 64px; height: 64px; border-radius: 50%; border: 4px solid #111214; position: absolute; top: 48px; left: 16px; background: #333; }
+        
+        /* プロフィールモーダルのエフェクト対応 */
+        .prof-card .effect-fire .icon-container,
+        .prof-card .effect-sparkle .icon-container,
+        .prof-card .effect-lightning .icon-container,
+        .prof-card .effect-rainbow .icon-container,
+        .prof-card .effect-shadow .icon-container,
+        .prof-card .effect-ice .icon-container,
+        .prof-card .effect-toxic .icon-container,
+        .prof-card .effect-gold .icon-container {
+            position: relative;
+        }
+        
+        .prof-card .effect-fire .icon { animation: fireIconGlow 3s ease infinite; }
+        .prof-card .effect-sparkle .icon { animation: sparkleIconGlow 3s ease infinite; }
+        .prof-card .effect-lightning .icon { animation: lightningIconGlow 3s ease infinite; }
+        .prof-card .effect-rainbow .icon { animation: rainbowIconGlow 4s ease infinite; }
+        .prof-card .effect-shadow .icon { animation: shadowGlow 3s ease infinite; }
+        .prof-card .effect-ice .icon { animation: iceGlow 3s ease infinite; }
+        .prof-card .effect-toxic .icon { animation: toxicGlow 2.5s ease infinite; }
+        .prof-card .effect-gold .icon { animation: goldShine 3s ease infinite; }
+        
+        /* エフェクト絵文字も表示 */
+        .prof-card .effect-fire .icon-container::before {
+            content: '🔥';
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 20px;
+            animation: fireFloat 3s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .prof-card .effect-sparkle .icon-container::before {
+            content: '✨';
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 20px;
+            animation: sparkleFloat 3s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .prof-card .effect-lightning .icon-container::before {
+            content: '⚡';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 22px;
+            animation: lightningBolt 2s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .prof-card .effect-rainbow .icon-container::before {
+            content: '🌟';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 22px;
+            animation: sparkleFloat 3s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .prof-card .effect-shadow .icon-container::before {
+            content: '🌑';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 22px;
+            animation: shadowFloat 2.5s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .prof-card .effect-ice .icon-container::before {
+            content: '❄️';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 22px;
+            animation: iceRotate 4s linear infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .prof-card .effect-toxic .icon-container::before {
+            content: '☠️';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 22px;
+            animation: toxicBubble 2s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .prof-card .effect-gold .icon-container::before {
+            content: '💛';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 22px;
+            animation: goldPulse 2s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
         .settings-input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #444; background:#1e1f22; color:#fff; box-sizing: border-box; font-size: 16px; }
         
         .settings-input-group { display: flex; gap: 8px; margin-bottom: 10px; }
@@ -685,6 +900,14 @@
             .msg-ops .op-btn { opacity: 0.6; }
             .prof-card, .responsive-card { width: 95%; }
             .header-left { font-size: 14px; }
+            
+            /* スマホ: プロフ編集を1カラムに */
+            #settings-modal .responsive-card > div {
+                grid-template-columns: 1fr !important;
+            }
+            #settings-modal .preview-box {
+                position: static !important;
+            }
         }
     </style>
 </head>
@@ -818,10 +1041,16 @@
     <div id="prof-modal" class="modal-overlay hidden" onclick="$(this).addClass('hidden')">
         <div class="prof-card" onclick="event.stopPropagation()">
             <img id="viewBanner" class="prof-banner" src="">
-            <div style="padding:15px; padding-top:40px; color:#fff;">
-                <img id="viewAvatar" class="prof-avatar" src="">
+            <div style="padding:15px; padding-top:40px; color:#fff; position:relative;">
+                <div class="icon-container" id="viewAvatarContainer" style="position:absolute; top:-32px; left:16px; width:64px; height:64px;">
+                    <img id="viewAvatar" class="icon" src="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:4px solid #111214;">
+                    <div id="viewStatusDot" class="status-dot offline"></div>
+                </div>
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                    <div><div id="viewName" style="font-size:18px; font-weight:bold;"></div></div>
+                    <div>
+                        <div id="viewName" style="font-size:18px; font-weight:bold;"></div>
+                        <div id="viewBadges" style="margin-top:5px;"></div>
+                    </div>
                     <div id="prof-action-box"></div>
                 </div>
                 <div id="viewBio" style="font-size:13px; color:var(--txt); margin-top:10px; white-space:pre-wrap;"></div>
@@ -830,77 +1059,88 @@
     </div>
 
     <div id="settings-modal" class="modal-overlay hidden">
-        <div class="responsive-card" style="padding:20px;">
+        <div class="responsive-card" style="padding:20px; max-width: 900px; max-height: 90vh; overflow-y: auto;">
             <h3 style="margin-top:0;">プロフィール編集</h3>
-            <div class="preview-box">
-                <div class="preview-label">Live Preview</div>
-                <div class="prof-card" style="width: 100%; background: #18191c; max-width: 100%;">
-                    <img id="editPreviewBanner" class="prof-banner" src="">
-                    <div class="banner-edit-overlay" onclick="$('#real_banner_input').click()">
-                        <span class="material-symbols-outlined">photo_camera</span>
-                    </div>
-                    <div style="padding:15px; padding-top:40px; position:relative;">
-                        <img id="editPreviewAvatar" class="prof-avatar" src="" style="position:absolute; top:-32px; left:16px;">
-                        <div class="avatar-edit-overlay" onclick="$('#real_avatar_input').click()">
-                            <span class="material-symbols-outlined">photo_camera</span>
+            
+            <!-- PC: 2カラムレイアウト -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- 左側: プレビュー -->
+                <div>
+                    <div class="preview-box" style="position: sticky; top: 0;">
+                        <div class="preview-label">Live Preview</div>
+                        <div class="prof-card" style="width: 100%; background: #18191c; max-width: 100%;">
+                            <img id="editPreviewBanner" class="prof-banner" src="">
+                            <div class="banner-edit-overlay" onclick="$('#real_banner_input').click()">
+                                <span class="material-symbols-outlined">photo_camera</span>
+                            </div>
+                            <div style="padding:15px; padding-top:40px; position:relative;">
+                                <div class="icon-container" id="editPreviewAvatarContainer" style="position:absolute; top:-32px; left:16px; width:64px; height:64px;">
+                                    <img id="editPreviewAvatar" class="icon" src="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:4px solid #18191c;">
+                                    <div id="editPreviewStatusDot" class="status-dot online"></div>
+                                </div>
+                                <div id="editPreviewName" style="font-size:18px; font-weight:bold; color:#fff;"></div>
+                                <div id="editPreviewBadge" style="margin-top:5px;"></div>
+                                <div id="editPreviewBio" style="font-size:12px; color:var(--txt); margin-top:10px; white-space:pre-wrap;"></div>
+                            </div>
                         </div>
-                        <div id="editPreviewName" style="font-size:18px; font-weight:bold; color:#fff;"></div>
-                        <div id="editPreviewBio" style="font-size:12px; color:var(--txt); margin-top:10px; white-space:pre-wrap;"></div>
                     </div>
                 </div>
+
+                <!-- 右側: フォーム -->
+                <div>
+                    <input type="file" id="real_avatar_input" class="hidden" accept="image/*">
+                    <input type="file" id="real_banner_input" class="hidden" accept="image/*">
+
+                    <label style="font-size:11px; color:var(--txt-m);">名前</label>
+                    <input type="text" id="editName" class="settings-input" placeholder="名前" style="margin-bottom: 12px;">
+                    
+                    <label style="font-size:11px; color:var(--txt-m);">アイコンURL</label>
+                    <div class="settings-input-group" style="margin-bottom: 12px;">
+                        <input type="text" id="editPhoto" class="settings-input" placeholder="https://...">
+                        <button type="button" class="btn-upload-small" onclick="$('#real_avatar_input').click()">
+                            <span class="material-symbols-outlined" style="font-size:18px;">upload</span>
+                        </button>
+                    </div>
+
+                    <label style="font-size:11px; color:var(--txt-m);">バナーURL</label>
+                    <div class="settings-input-group" style="margin-bottom: 12px;">
+                        <input type="text" id="editBanner" class="settings-input" placeholder="https://...">
+                        <button type="button" class="btn-upload-small" onclick="$('#real_banner_input').click()">
+                            <span class="material-symbols-outlined" style="font-size:18px;">upload</span>
+                        </button>
+                    </div>
+
+                    <label style="font-size:11px; color:var(--txt-m);">自己紹介</label>
+                    <textarea id="editBio" class="settings-input" placeholder="自己紹介" style="height:50px; margin-bottom: 15px;"></textarea>
+
+                    <!-- アイテム装備設定 -->
+                    <div style="padding-top:15px; border-top:1px solid var(--bg-38);">
+                        <h4 style="margin:0 0 12px 0; color:var(--txt); font-size:14px;">🎨 アイテム設定</h4>
+                        
+                        <label style="font-size:11px; color:var(--txt-m); display:block; margin-bottom:3px;">バッジ</label>
+                        <select id="editEquippedBadge" class="settings-input" style="margin-bottom:10px;">
+                            <option value="">なし</option>
+                        </select>
+
+                        <label style="font-size:11px; color:var(--txt-m); display:block; margin-bottom:3px;">テーマ</label>
+                        <select id="editEquippedTheme" class="settings-input" style="margin-bottom:10px;">
+                            <option value="">デフォルト</option>
+                        </select>
+
+                        <label style="font-size:11px; color:var(--txt-m); display:block; margin-bottom:3px;">エフェクト</label>
+                        <select id="editEquippedEffect" class="settings-input" style="margin-bottom:10px;">
+                            <option value="">なし</option>
+                        </select>
+                    </div>
+
+                    <div id="profile-upload-status" class="hidden" style="margin-top: 10px;">
+                        <span id="profile-upload-text">画像をアップロード中</span><span class="dot-ani">.</span><span class="dot-ani">.</span><span class="dot-ani">.</span>
+                    </div>
+
+                    <button id="saveProfile" style="width:100%; padding:10px; background:var(--accent); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:16px; margin-top: 10px;">保存して更新</button>
+                    <button onclick="$('#settings-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:8px; cursor:pointer; padding:8px;">キャンセル</button>
+                </div>
             </div>
-            
-            <input type="file" id="real_avatar_input" class="hidden" accept="image/*">
-            <input type="file" id="real_banner_input" class="hidden" accept="image/*">
-
-            <label style="font-size:11px; color:var(--txt-m);">名前</label>
-            <input type="text" id="editName" class="settings-input" placeholder="名前">
-            
-            <label style="font-size:11px; color:var(--txt-m);">アイコンURL</label>
-            <div class="settings-input-group">
-                <input type="text" id="editPhoto" class="settings-input" placeholder="https://...">
-                <button type="button" class="btn-upload-small" onclick="$('#real_avatar_input').click()">
-                    <span class="material-symbols-outlined" style="font-size:18px;">upload</span>
-                </button>
-            </div>
-
-            <label style="font-size:11px; color:var(--txt-m);">バナーURL</label>
-            <div class="settings-input-group">
-                <input type="text" id="editBanner" class="settings-input" placeholder="https://...">
-                <button type="button" class="btn-upload-small" onclick="$('#real_banner_input').click()">
-                    <span class="material-symbols-outlined" style="font-size:18px;">upload</span>
-                </button>
-            </div>
-
-            <label style="font-size:11px; color:var(--txt-m);">自己紹介</label>
-            <textarea id="editBio" class="settings-input" placeholder="自己紹介" style="height:60px;"></textarea>
-
-            <!-- アイテム装備設定 -->
-            <div style="margin-top:20px; padding-top:20px; border-top:1px solid var(--bg-38);">
-                <h4 style="margin:0 0 15px 0; color:var(--txt); font-size:14px;">🎨 アイテム設定</h4>
-                
-                <label style="font-size:11px; color:var(--txt-m); display:block; margin-bottom:5px;">バッジ</label>
-                <select id="editEquippedBadge" class="settings-input" style="margin-bottom:15px;">
-                    <option value="">なし</option>
-                </select>
-
-                <label style="font-size:11px; color:var(--txt-m); display:block; margin-bottom:5px;">テーマ</label>
-                <select id="editEquippedTheme" class="settings-input" style="margin-bottom:15px;">
-                    <option value="">デフォルト</option>
-                </select>
-
-                <label style="font-size:11px; color:var(--txt-m); display:block; margin-bottom:5px;">エフェクト</label>
-                <select id="editEquippedEffect" class="settings-input">
-                    <option value="">なし</option>
-                </select>
-            </div>
-
-            <div id="profile-upload-status" class="hidden">
-                <span id="profile-upload-text">画像をアップロード中</span><span class="dot-ani">.</span><span class="dot-ani">.</span><span class="dot-ani">.</span>
-            </div>
-
-            <button id="saveProfile" style="width:100%; padding:10px; background:var(--accent); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:16px;">保存して更新</button>
-            <button onclick="$('#settings-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:10px; cursor:pointer; padding:10px;">キャンセル</button>
         </div>
     </div>
 
@@ -1440,7 +1680,7 @@
                         ${badgeHtml}
                         <div class="icon-container">
                             <img src="${u.photo || DEFAULT_AVATAR}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;">
-                            <div class="status-dot ${statusClass}" style="width:8px; height:8px;"></div>
+                            <div class="status-dot ${statusClass}"></div>
                         </div>
                         <span style="font-size:14px;">${escapeHTML(u.name)}</span>
                     </div>
@@ -1701,8 +1941,33 @@
             $("#editPreviewAvatar").attr("src", $("#editPhoto").val() || DEFAULT_AVATAR);
             $("#editPreviewBanner").attr("src", $("#editBanner").val() || DEFAULT_BANNER);
             $("#editPreviewBio").text($("#editBio").val() || "自己紹介はまだありません。");
+            
+            // エフェクトプレビュー
+            const selectedEffect = $("#editEquippedEffect").val();
+            $("#editPreviewAvatarContainer").removeClass('effect-fire effect-sparkle effect-lightning effect-rainbow effect-shadow effect-ice effect-toxic effect-gold');
+            
+            if (selectedEffect === 'fire_effect') $("#editPreviewAvatarContainer").addClass('effect-fire');
+            else if (selectedEffect === 'sparkle_effect') $("#editPreviewAvatarContainer").addClass('effect-sparkle');
+            else if (selectedEffect === 'lightning_effect') $("#editPreviewAvatarContainer").addClass('effect-lightning');
+            else if (selectedEffect === 'rainbow_effect') $("#editPreviewAvatarContainer").addClass('effect-rainbow');
+            else if (selectedEffect === 'shadow_effect') $("#editPreviewAvatarContainer").addClass('effect-shadow');
+            else if (selectedEffect === 'ice_effect') $("#editPreviewAvatarContainer").addClass('effect-ice');
+            else if (selectedEffect === 'toxic_effect') $("#editPreviewAvatarContainer").addClass('effect-toxic');
+            else if (selectedEffect === 'gold_effect') $("#editPreviewAvatarContainer").addClass('effect-gold');
+            
+            // バッジプレビュー
+            const selectedBadge = $("#editEquippedBadge").val();
+            const $badgePreview = $("#editPreviewBadge").empty();
+            
+            if (selectedBadge === 'vip_badge') {
+                $badgePreview.html('<span class="user-badge" title="VIP">👑</span>');
+            } else if (selectedBadge === 'star_badge') {
+                $badgePreview.html('<span class="user-badge" title="スター">⭐</span>');
+            } else if (selectedBadge === 'crown_badge') {
+                $badgePreview.html('<span class="user-badge" title="プレミアム">👸</span>');
+            }
         };
-        $("#editName, #editPhoto, #editBanner, #editBio").on("input", syncProfilePreview);
+        $("#editName, #editPhoto, #editBanner, #editBio, #editEquippedEffect, #editEquippedBadge").on("input change", syncProfilePreview);
 
         window.switchChat = (roomId, otherName = null) => {
             currentRoomId = roomId;
@@ -2934,12 +3199,44 @@
         window.scrollToMsg = (id) => { document.getElementById(`msg-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
 
         window.showProfile = async (uid) => {
-            const snap = await getDoc(doc(db, "users", uid)); if (!snap.exists()) return;
+            const snap = await getDoc(doc(db, "users", uid)); 
+            if (!snap.exists()) return;
             const d = snap.data(); 
+            
+            // 基本情報
             $("#viewName").text(d.name || "ゲスト"); 
             $("#viewAvatar").attr("src", d.photo || DEFAULT_AVATAR); 
             $("#viewBanner").attr("src", d.banner || DEFAULT_BANNER); 
             $("#viewBio").text(d.bio || "No bio.");
+            
+            // オンライン状態
+            const statusClass = d.status === 'online' ? 'online' : 'offline';
+            $("#viewStatusDot").removeClass('online offline').addClass(statusClass);
+            
+            // エフェクト適用
+            const equipped = d.equipped || {};
+            $("#viewAvatarContainer").removeClass('effect-fire effect-sparkle effect-lightning effect-rainbow effect-shadow effect-ice effect-toxic effect-gold');
+            
+            if (equipped.effect === 'fire_effect') $("#viewAvatarContainer").addClass('effect-fire');
+            else if (equipped.effect === 'sparkle_effect') $("#viewAvatarContainer").addClass('effect-sparkle');
+            else if (equipped.effect === 'lightning_effect') $("#viewAvatarContainer").addClass('effect-lightning');
+            else if (equipped.effect === 'rainbow_effect') $("#viewAvatarContainer").addClass('effect-rainbow');
+            else if (equipped.effect === 'shadow_effect') $("#viewAvatarContainer").addClass('effect-shadow');
+            else if (equipped.effect === 'ice_effect') $("#viewAvatarContainer").addClass('effect-ice');
+            else if (equipped.effect === 'toxic_effect') $("#viewAvatarContainer").addClass('effect-toxic');
+            else if (equipped.effect === 'gold_effect') $("#viewAvatarContainer").addClass('effect-gold');
+            
+            // バッジ表示
+            const $badges = $("#viewBadges").empty();
+            if (equipped.badge === 'vip_badge') {
+                $badges.append('<span class="user-badge" title="VIP">👑</span>');
+            } else if (equipped.badge === 'star_badge') {
+                $badges.append('<span class="user-badge" title="スター">⭐</span>');
+            } else if (equipped.badge === 'crown_badge') {
+                $badges.append('<span class="user-badge" title="プレミアム">👸</span>');
+            }
+            
+            // アクションボックス
             const $actionBox = $("#prof-action-box").empty();
             if (uid !== auth.currentUser.uid) {
                 const reqId = [auth.currentUser.uid, uid].sort().join("_");
@@ -3305,9 +3602,44 @@
                 // バックグラウンドに入ったら即座にオフライン
                 if (onlineStatusInterval) clearInterval(onlineStatusInterval);
                 ensureOfflineStatus();
+                
+                // Windows Chrome対策: 複数回念押し
+                setTimeout(() => {
+                    if (document.visibilityState === "hidden" || document.hidden) {
+                        ensureOfflineStatus();
+                    }
+                }, 50);
+                
+                setTimeout(() => {
+                    if (document.visibilityState === "hidden" || document.hidden) {
+                        ensureOfflineStatus();
+                    }
+                }, 200);
+                
+                setTimeout(() => {
+                    if (document.visibilityState === "hidden" || document.hidden) {
+                        ensureOfflineStatus();
+                    }
+                }, 500);
+                
                 setTimeout(checkInactivity, 2000);
             }
-        });
+        }, true); // capture phase
+        
+        // Windows Chrome専用: document.hidden の直接監視
+        let lastHiddenState = document.hidden;
+        setInterval(() => {
+            const currentHidden = document.hidden;
+            if (currentHidden !== lastHiddenState) {
+                lastHiddenState = currentHidden;
+                if (currentHidden) {
+                    ensureOfflineStatus();
+                } else {
+                    setOnline();
+                    lastActivityTime = Date.now();
+                }
+            }
+        }, 500); // 0.5秒ごとに状態チェック
         
         // Firefox対応: mozvisibilitychange
         document.addEventListener("mozvisibilitychange", () => {
@@ -3347,12 +3679,22 @@
         });
         
         window.addEventListener("blur", () => {
+            // Windows Chrome: 即座にオフライン判定
+            ensureOfflineStatus();
+            
+            // 念のため複数回チェック
             setTimeout(() => {
-                if (document.visibilityState === "hidden" || !document.hasFocus()) {
+                if (document.visibilityState === "hidden" || !document.hasFocus() || document.hidden) {
+                    ensureOfflineStatus();
+                }
+            }, 100);
+            
+            setTimeout(() => {
+                if (document.visibilityState === "hidden" || !document.hasFocus() || document.hidden) {
                     ensureOfflineStatus();
                 }
             }, 300);
-        });
+        }, true); // capture phase
         
         // ユーザーアクションで未読クリア & アクティブ記録
         window.addEventListener("mousemove", () => { 
@@ -3407,7 +3749,21 @@
         
         window.addEventListener("beforeunload", (e) => {
             if (onlineStatusInterval) clearInterval(onlineStatusInterval);
+            if (offlineCheckInterval) clearInterval(offlineCheckInterval);
             ensureOfflineStatus();
+            
+            // 念押しでFirestoreに直接書き込み
+            if (auth.currentUser) {
+                const userRef = doc(db, "users", auth.currentUser.uid);
+                setDoc(userRef, { status: 'offline' }, { merge: true }).catch(() => {});
+            }
+        }, { capture: true });
+        
+        window.addEventListener("unload", (e) => {
+            if (auth.currentUser) {
+                const userRef = doc(db, "users", auth.currentUser.uid);
+                setDoc(userRef, { status: 'offline' }, { merge: true }).catch(() => {});
+            }
         }, { capture: true });
         
         // iOS Safari専用: 追加のライフサイクルイベント
@@ -3444,16 +3800,25 @@
                 const now = Date.now();
                 const isHidden = document.hidden || document.mozHidden || document.webkitHidden || document.msHidden || document.visibilityState === "hidden";
                 const hasNoFocus = !document.hasFocus();
-                const isInactive = (now - lastActivityTime) > 30000; // 30秒以上操作なし
+                const isInactive = (now - lastActivityTime) > 10000; // 10秒以上操作なし（さらに短縮）
                 
-                // 非表示 または フォーカスなし かつ 30秒以上操作なし
-                if (isHidden || (hasNoFocus && isInactive)) {
+                // Windows Chrome対策: より積極的にオフライン判定
+                if (isHidden) {
+                    // 非表示なら即オフライン（複数回確認）
+                    ensureOfflineStatus();
+                    setTimeout(() => ensureOfflineStatus(), 100);
+                } else if (hasNoFocus) {
+                    // フォーカスなしだけでもオフライン判定（Windows Chrome用）
+                    ensureOfflineStatus();
+                } else if (hasNoFocus && isInactive) {
+                    // フォーカスなし + 10秒以上操作なし
                     ensureOfflineStatus();
                 } else if (document.visibilityState === "visible" && document.hasFocus()) {
+                    // 表示中 + フォーカスあり
                     ensureOnlineStatus();
                 }
             }
-        }, 10000); // 10秒ごとにチェック
+        }, 3000); // 3秒ごとにチェック（さらに頻繁に）
 
     </script>
 </body>
