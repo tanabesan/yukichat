@@ -2214,6 +2214,27 @@
                 $box.empty();
                 $box[0].appendChild(fragment);
                 
+                // 画像の読み込み完了を待つ
+                const images = $box[0].querySelectorAll('img');
+                let loadedImages = 0;
+                const totalImages = images.length;
+                
+                const checkAllImagesLoaded = () => {
+                    loadedImages++;
+                    if (loadedImages >= totalImages && !isLoadingMoreMessages) {
+                        $box[0].scrollTop = $box[0].scrollHeight;
+                    }
+                };
+                
+                images.forEach(img => {
+                    if (img.complete) {
+                        checkAllImagesLoaded();
+                    } else {
+                        img.addEventListener('load', checkAllImagesLoaded);
+                        img.addEventListener('error', checkAllImagesLoaded);
+                    }
+                });
+                
                 // 過去メッセージ読み込み中でなければスクロール
                 if (!isLoadingMoreMessages) {
                     // 即座に一番下へ
@@ -2232,6 +2253,12 @@
                     setTimeout(() => {
                         $box[0].scrollTop = $box[0].scrollHeight;
                     }, 200);
+                    setTimeout(() => {
+                        $box[0].scrollTop = $box[0].scrollHeight;
+                    }, 400);
+                    setTimeout(() => {
+                        $box[0].scrollTop = $box[0].scrollHeight;
+                    }, 600);
                 }
                 isInitialLoad = false;
             } else {
