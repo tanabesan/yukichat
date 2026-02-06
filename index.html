@@ -1249,6 +1249,14 @@
                 <div style="font-size: 12px; color: #fff; margin-top: 5px;">Next payout x2</div>
             </div>
 
+            <!-- 強化スピンインジケーター -->
+            <div id="boosted-spins-indicator" class="hidden" style="margin: 15px 0; padding: 15px; background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%); border-radius: 12px; border: 2px solid #ffd700; text-align: center; box-shadow: 0 0 20px rgba(255, 107, 107, 0.6);">
+                <div style="font-size: 20px; font-weight: bold; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+                    🔥 BOOSTED SPINS 🔥
+                </div>
+                <div style="font-size: 12px; color: #fff; margin-top: 5px;">High win rate! (60%)</div>
+            </div>
+
             <!-- ベット選択 -->
             <div style="margin-bottom: 15px;">
                 <div style="font-size: 12px; color: #888; text-transform: uppercase; margin-bottom: 8px;">BET</div>
@@ -1282,7 +1290,8 @@
                     🍊🍊🍊 → ×12 (120)<br>
                     🍇🍇🍇 → ×20 (200)<br>
                     ⭐⭐⭐ → ×40 (400)<br>
-                    💎💎💎 → ×100 (1000) + SPECIAL!
+                    💎💎💎 → ×100 (1000) + SPECIAL!<br>
+                    🎁🎁🎁 → 🔥 BOOST x10 SPINS!
                 </div>
             </div>
         </div>
@@ -2568,26 +2577,40 @@
         }
 
         // ========== スロットマシン ==========
-        const slotSymbols = ['🍒', '🍋', '🍊', '🍇', '⭐', '💎'];
+        const slotSymbols = ['🍒', '🍋', '🍊', '🍇', '⭐', '💎', '🎁'];
         const slotPayouts = {
             '🍒': 5,
             '🍋': 8,
             '🍊': 12,
             '🍇': 20,
             '⭐': 40,
-            '💎': 100
+            '💎': 100,
+            '🎁': 0  // 強化スピン発動（配当なし）
         };
         let isSpinning = false;
         let hasSpecialSpin = false;
+        let boostedSpinsRemaining = 0; // 強化スピン残り回数
         let currentBet = 1; // ベット倍率
 
         // ベット選択
         $('.bet-btn').on('click', function() {
             if (isSpinning) return;
             
+            const newBet = parseInt($(this).data('bet'));
+            
+            // 強化スピン中にベット変更しようとした場合
+            if (boostedSpinsRemaining > 0 && newBet !== currentBet) {
+                if (!confirm(`🔥 強化スピン中です！\n\nベットを変更すると強化スピンが消えますがよろしいですか？\n\n残り: ${boostedSpinsRemaining}回`)) {
+                    return; // キャンセル
+                }
+                // 「はい」を押した場合、強化スピンをリセット
+                boostedSpinsRemaining = 0;
+                updateBoostedSpinsDisplay();
+            }
+            
             $('.bet-btn').removeClass('active').css('border-color', '#666');
             $(this).addClass('active');
-            currentBet = parseInt($(this).data('bet'));
+            currentBet = newBet;
             
             const cost = 10 * currentBet;
             $('#spin-btn-cost').text(`- ${cost} COINS -`);
@@ -2613,7 +2636,8 @@
                 🍊🍊🍊 → ×${12 * currentBet}  (${payouts['🍊'] * 10})<br>
                 🍇🍇🍇 → ×${20 * currentBet}  (${payouts['🍇'] * 10})<br>
                 ⭐⭐⭐ → ×${40 * currentBet}  (${payouts['⭐'] * 10})<br>
-                💎💎💎 → ×${100 * currentBet}  (${payouts['💎'] * 10}) + SPECIAL!
+                💎💎💎 → ×${100 * currentBet}  (${payouts['💎'] * 10}) + SPECIAL!<br>
+                🎁🎁🎁 → 🔥 BOOST x10 SPINS!
             `);
         }
 
@@ -2755,10 +2779,15 @@
             
             $('#slot-coins').text(String(currentCoins - betCost).padStart(4, '0'));
             
-            // 当たり確率（15%）+ リーチ外れ確率（10%）
+            // 強化スピン中かチェック
+            const isBoosted = boostedSpinsRemaining > 0;
+            
+            // 当たり確率
+            // 通常: 18% / 強化スピン: 60%
+            const winRate = isBoosted ? 0.60 : 0.18;
             const rand = Math.random();
-            const willWin = rand < 0.15;
-            const willReachMiss = !willWin && rand < 0.25; // 15%～25%の範囲
+            const willWin = rand < winRate;
+            const willReachMiss = !willWin && rand < (winRate + 0.10); // +10%リーチ外れ
             let results;
             
             if (willWin) {
@@ -2766,12 +2795,23 @@
                 const symbolRand = Math.random();
                 let winSymbol;
                 
-                if (symbolRand < 0.40) winSymbol = '🍒';      // 40%
-                else if (symbolRand < 0.70) winSymbol = '🍋'; // 30%
-                else if (symbolRand < 0.87) winSymbol = '🍊'; // 17%
-                else if (symbolRand < 0.95) winSymbol = '🍇'; // 8%
-                else if (symbolRand < 0.99) winSymbol = '⭐'; // 4%
-                else winSymbol = '💎';                         // 1%
+                // 強化スピン中はレアシンボルが出やすい
+                if (isBoosted) {
+                    if (symbolRand < 0.25) winSymbol = '🍒';      // 25%
+                    else if (symbolRand < 0.45) winSymbol = '🍋'; // 20%
+                    else if (symbolRand < 0.65) winSymbol = '🍊'; // 20%
+                    else if (symbolRand < 0.82) winSymbol = '🍇'; // 17%
+                    else if (symbolRand < 0.94) winSymbol = '⭐'; // 12%
+                    else winSymbol = '💎';                         // 6%
+                } else {
+                    if (symbolRand < 0.33) winSymbol = '🍒';      // 33%
+                    else if (symbolRand < 0.61) winSymbol = '🍋'; // 28%
+                    else if (symbolRand < 0.78) winSymbol = '🍊'; // 17%
+                    else if (symbolRand < 0.86) winSymbol = '🍇'; // 8%
+                    else if (symbolRand < 0.92) winSymbol = '⭐'; // 6%
+                    else if (symbolRand < 0.95) winSymbol = '💎'; // 3%
+                    else winSymbol = '🎁';                         // 5% (強化スピン発動！)
+                }
                 
                 results = [winSymbol, winSymbol, winSymbol];
             } else if (willReachMiss) {
@@ -2823,7 +2863,24 @@
         async function checkSlotResult(results, currentCoins) {
             const [r1, r2, r3] = results;
             
+            // 強化スピンカウントダウン
+            if (boostedSpinsRemaining > 0) {
+                boostedSpinsRemaining--;
+                updateBoostedSpinsDisplay();
+            }
+            
             if (r1 === r2 && r2 === r3) {
+                // 🎁🎁🎁 = 強化スピン発動（コイン増えない）
+                if (r1 === '🎁') {
+                    boostedSpinsRemaining = 10;
+                    updateBoostedSpinsDisplay();
+                    $('#slot-result-display').addClass('hidden');
+                    isSpinning = false;
+                    const betCost = 10 * currentBet;
+                    $('#spin-btn').prop('disabled', false).html(`<div style="font-size:24px; font-weight:bold;">🎰 SPIN</div><div style="font-size:12px; margin-top:5px;">- ${betCost} COINS -</div>`);
+                    return;
+                }
+                
                 let basePayout = slotPayouts[r1];
                 let payout = basePayout * 10 * currentBet; // ベット倍率を適用
                 
@@ -2847,6 +2904,10 @@
                 $('#slot-win-amount').text(`+${String(payout).padStart(4, '0')}`);
                 $('#slot-result-display').removeClass('hidden');
                 
+            } else if (r1 === r2 && r2 !== r3) {
+                // リーチ外れ（強化スピンは発動しない）
+                $('#slot-result-display').addClass('hidden');
+                
             } else {
                 $('#slot-result-display').addClass('hidden');
             }
@@ -2854,6 +2915,16 @@
             isSpinning = false;
             const betCost = 10 * currentBet;
             $('#spin-btn').prop('disabled', false).html(`<div style="font-size:24px; font-weight:bold;">🎰 SPIN</div><div style="font-size:12px; margin-top:5px;">- ${betCost} COINS -</div>`);
+        }
+        
+        // 強化スピン表示更新
+        function updateBoostedSpinsDisplay() {
+            const $indicator = $('#boosted-spins-indicator');
+            if (boostedSpinsRemaining > 0) {
+                $indicator.text(`🔥 BOOSTED ×${boostedSpinsRemaining}`).removeClass('hidden');
+            } else {
+                $indicator.addClass('hidden');
+            }
         }
 
         // ログインボーナスボタン
