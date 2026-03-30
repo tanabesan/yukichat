@@ -11,9 +11,32 @@ const db = initializeFirestore(app, {
 const auth = getAuth(app);
 
 // --- 通知音と設定用変数 ---
-const NOTIFY_SOUND_SRC = "data:audio/mp3;base64,SUQzBAAAAAABAFRYWFQAAAASAAADbWFqb3JfYnJhbmQAbXA0MgBUWFhQAAAAEQAAA21pbm9yX3ZlcnNpb24AMABUWFhQAAAAHAAAA2NvbXBhdGlibGVfYnJhbmRzAGlzb21tcDQyAFRTU0UAAAAOAAADTGF2ZjU4LjQ1LjEwMAAAAAAAAAAAAAAA//uQZAAAAAAAALAAAAABAAKQAAAAAAAASDsAAAPAAAAEAAKgAAA0b+45BAAAAAEmQAAAAAAZAAAAAAAAAAAAAA//uQZAAACtWbMGPQwABO5GYdfhgAAy1hSg5l4AIk6ilBzLwAAAE1FMy4xMDCqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQZAAAAAAAALAAAAABAAKQAAAAAAAASDsAAAPAAAAEAAKgAAA0b+45BAAAAAEmQAAAAAAZAAAAAAAAAAAAAA//uQZAAACtWbMGPQwABO5GYdfhgAAy1hSg5l4AIk6ilBzLwAAAE1FMy4xMDCqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
-const notifyAudio = new Audio(NOTIFY_SOUND_SRC);
-notifyAudio.volume = 0.5;
+// Web Audio APIで通知音を生成（ファイル依存なし・確実に鳴る）
+const _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playNotifySound() {
+    if (!isSoundEnabled) return;
+    try {
+        const ctx = _audioCtx;
+        if (ctx.state === 'suspended') ctx.resume();
+        // 2音の短いチャイム
+        [[880, 0, 0.12], [1100, 0.13, 0.12]].forEach(([freq, delay, dur]) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = freq;
+            osc.type = 'sine';
+            const t = ctx.currentTime + delay;
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.4, t + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+            osc.start(t);
+            osc.stop(t + dur);
+        });
+    } catch(e) { console.log('Audio error', e); }
+}
+// 後方互換: notifyAudio.play()を呼んでる箇所に対応
+const notifyAudio = { play: () => { playNotifySound(); return Promise.resolve(); }, currentTime: 0, volume: 0.5 };
 
 let unreadCount = 0;
 let unreadRooms = {}; // 各DM部屋の未読数を管理
@@ -1690,7 +1713,6 @@ function showItemPreview(item, userName, userPhoto) {
     $('#preview-badge').empty();
     // テーマプレビュー用リセット
     $('#item-preview').css('background', '');
-    $('#preview-theme-swatch').css('background', '').addClass('hidden');
     
     // アイテムタイプに応じてプレビュー
     if (item.id === 'vip_badge' || item.id === 'star_badge' || item.id === 'crown_badge') {
@@ -1728,11 +1750,10 @@ function showItemPreview(item, userName, userPhoto) {
         $('#preview-message').addClass('effect-gold');
         
     } else if (item.id === 'rainbow_theme') {
-        // テーマプレビュー: プレビューエリア内のサムネイルdivに背景を当てる
-        $('#preview-theme-swatch').css('background', 'linear-gradient(135deg, #ff6b6b, #f093fb, #4facfe, #43e97b, #feca57)').removeClass('hidden');
+        $('#item-preview').css('background', 'linear-gradient(135deg, #ff6b6b88, #f093fb88, #4facfe88, #43e97b88, #feca5788)');
         $('#preview-item-desc').text('チャット背景が虹色に変わります');
     } else if (item.id === 'heart_theme') {
-        $('#preview-theme-swatch').css('background', 'linear-gradient(135deg, #f5576c, #f093fb)').removeClass('hidden');
+        $('#item-preview').css('background', 'linear-gradient(135deg, #f5576c66, #f093fb66)');
         $('#preview-item-desc').text('チャット背景がピンク色に変わります');
     }
 }
