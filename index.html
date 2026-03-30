@@ -146,8 +146,10 @@
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <div>
-                        <div id="viewName" style="font-size:18px; font-weight:bold;"></div>
-                        <div id="viewBadges" style="margin-top:5px;"></div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <div id="viewName" style="font-size:18px; font-weight:bold;"></div>
+                            <div id="viewBadges" style="display:flex; gap:4px; align-items:center;"></div>
+                        </div>
                     </div>
                     <div id="prof-action-box"></div>
                 </div>
@@ -447,35 +449,35 @@
                 </div>
             </div>
 
+            <!-- プレビューエリア（アイテム一覧の上） -->
+            <div id="item-preview" class="hidden" style="background:var(--bg-38); padding:12px 15px; border-radius:10px; margin-bottom:12px; border:2px solid #667eea;">
+                <div style="font-size:11px; color:var(--txt-m); margin-bottom:8px; text-transform:uppercase;">👁️ Preview</div>
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:nowrap; min-width:0;">
+                    <!-- プレビュー用メッセージ -->
+                    <div id="preview-message" class="message" style="margin:0; flex-shrink:0; max-width:55%;">
+                        <div class="icon-container" id="preview-icon-container">
+                            <img class="icon" id="preview-icon" src="" alt="">
+                        </div>
+                        <div class="bubble" style="max-width:100%;">
+                            <div class="msg-head">
+                                <span class="sender" id="preview-name"></span>
+                                <span id="preview-badge"></span>
+                            </div>
+                            <div class="msg-body">プレビュー表示</div>
+                        </div>
+                    </div>
+                    <div style="flex:1; min-width:0; overflow:hidden;">
+                        <div id="preview-item-name" style="font-size:15px; font-weight:bold; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+                        <div id="preview-item-desc" style="font-size:12px; color:var(--txt-m); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- アイテム一覧 -->
             <div style="flex:1; overflow-y:auto;">
                 <h4 style="margin:10px 0; color:var(--txt-m); font-size:14px;">アイテム</h4>
                 <div id="shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; margin-bottom:15px;">
                     <!-- JavaScriptで動的に追加 -->
-                </div>
-
-                <!-- プレビューエリア（アイテム一覧の下） -->
-                <div id="item-preview" class="hidden" style="background:var(--bg-38); padding:20px; border-radius:12px; margin-top:15px; border:2px solid #667eea;">
-                    <div style="font-size:12px; color:var(--txt-m); margin-bottom:10px; text-transform:uppercase;">👁️ Preview</div>
-                    <div style="display:flex; align-items:center; gap:20px;">
-                        <!-- プレビュー用メッセージ -->
-                        <div id="preview-message" class="message" style="margin:0; max-width:none;">
-                            <div class="icon-container" id="preview-icon-container">
-                                <img class="icon" id="preview-icon" src="" alt="">
-                            </div>
-                            <div class="bubble">
-                                <div class="msg-head">
-                                    <span class="sender" id="preview-name"></span>
-                                    <span id="preview-badge"></span>
-                                </div>
-                                <div class="msg-body">プレビュー表示</div>
-                            </div>
-                        </div>
-                        <div style="flex:1;">
-                            <div id="preview-item-name" style="font-size:18px; font-weight:bold; margin-bottom:5px;"></div>
-                            <div id="preview-item-desc" style="font-size:12px; color:var(--txt-m);"></div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
