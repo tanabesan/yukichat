@@ -895,10 +895,12 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
     #messageInput { padding: 8px 10px; font-size: 16px; }
     #sendBtn { width: 32px; height: 32px; }
     .stamp-grid { grid-template-columns: repeat(3, 1fr); }
-    .msg-ops .op-btn { opacity: 0.6; }
     .prof-card, .responsive-card { width: 95%; }
     .header-left { font-size: 14px; }
-    
+
+    /* スマホ: msg-opsは長押しメニューで出すので常に非表示 */
+    .msg-ops { display: none !important; }
+
     /* スマホ: プロフ編集を1カラムに */
     #settings-modal .responsive-card > div {
         grid-template-columns: 1fr !important;
@@ -906,6 +908,77 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
     #settings-modal .preview-box {
         position: static !important;
     }
+
+    /* スマホ: スロット全体を縮小 */
+    .slot-reel-container {
+        width: 80px !important;
+        height: 100px !important;
+    }
+    .slot-symbol-item {
+        height: 100px !important;
+        font-size: 52px !important;
+    }
+    .slot-spin-btn {
+        padding: 14px !important;
+    }
+    .slot-spin-btn > div:first-child {
+        font-size: 18px !important;
+    }
+    #slot-coins, #slot-win-amount {
+        font-size: 20px !important;
+    }
+    #reach-effect {
+        font-size: 20px !important;
+    }
+    #slot-modal .responsive-card {
+        padding: 16px !important;
+        max-height: 95vh;
+        overflow-y: auto;
+    }
+    .bet-btn {
+        padding: 8px 4px !important;
+        font-size: 13px !important;
+    }
+}
+
+/* 長押しコンテキストメニュー */
+#msg-context-menu {
+    position: fixed;
+    background: var(--bg-2b);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    z-index: 9999;
+    min-width: 180px;
+    overflow: hidden;
+    border: 1px solid var(--bg-38);
+}
+#msg-context-menu .ctx-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--txt);
+    transition: background 0.15s;
+}
+#msg-context-menu .ctx-item:active {
+    background: var(--bg-38);
+}
+#msg-context-menu .ctx-item.danger {
+    color: var(--danger);
+}
+#msg-context-menu .ctx-item .material-symbols-outlined {
+    font-size: 18px;
+    color: var(--txt-m);
+}
+#msg-context-menu .ctx-item.danger .material-symbols-outlined {
+    color: var(--danger);
+}
+#msg-context-menu-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
 }
 .reaction-emoji {
     font-size: 28px;
