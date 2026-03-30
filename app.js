@@ -1238,14 +1238,11 @@ function initReelStrips() {
     for (let i = 1; i <= 3; i++) {
         const strip = $(`#strip${i}`);
         strip.empty();
-        
-        // 20個のシンボルを生成（ループ用）
         for (let j = 0; j < 20; j++) {
             const symbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
             strip.append(`<div class="slot-symbol-item">${symbol}</div>`);
         }
-        
-        // 初期位置
+        strip.css('transition', 'none');
         strip.css('top', '0px');
     }
 }
@@ -1279,12 +1276,18 @@ $('#slot-modal').on('click', function(e) {
 function spinReel(reelId, targetSymbol, duration, hasReverse = false) {
     return new Promise((resolve) => {
         const strip = $(`#strip${reelId}`);
-        const symbolHeight = 150;
+        const symbolHeight = strip.closest('.slot-reel-container').height() || 150;
         
-        // ターゲットシンボルをストリップの適切な位置に配置
-        const symbols = strip.find('.slot-symbol-item');
+        // 毎回ストリップを再生成して同じ絵柄が残らないようにする
+        strip.empty();
+        for (let j = 0; j < 20; j++) {
+            const sym = j === 10 ? targetSymbol : slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+            strip.append(`<div class="slot-symbol-item">${sym}</div>`);
+        }
+        strip.css('transition', 'none');
+        strip.css('top', '0px');
+        
         const targetIndex = 10; // 真ん中あたり
-        $(symbols[targetIndex]).text(targetSymbol);
         
         // 高速スピン開始
         let currentTop = 0;
@@ -1433,8 +1436,9 @@ $('#spin-btn').on('click', async () => {
     await new Promise(resolve => setTimeout(resolve, 200));
     await spinReel(2, results[1], 1800, false);
     
-    // リーチ判定
-    if (results[0] === results[1]) {
+    // リーチ判定: willReachMiss（意図的リーチ外れ）またはwillWin（当たり）のときのみ演出
+    const isReach = (willWin || willReachMiss) && results[0] === results[1];
+    if (isReach) {
         $('#reach-effect').removeClass('hidden');
         await new Promise(resolve => setTimeout(resolve, 500));
     }
@@ -1442,7 +1446,7 @@ $('#spin-btn').on('click', async () => {
     await new Promise(resolve => setTimeout(resolve, 200));
     
     // 3つ目は演出強化（通り過ぎて戻る）
-    const hasReverse = results[0] === results[1];
+    const hasReverse = isReach;
     await spinReel(3, results[2], 2200, hasReverse);
     
     $('#reach-effect').addClass('hidden');
