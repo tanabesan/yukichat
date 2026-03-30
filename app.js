@@ -247,22 +247,17 @@ async function updateSidebarDMList() {
 }
 
 function scrollToBottom(force = false) {
-    // 過去メッセージ読み込み中はスクロールしない
     if (isLoadingMoreMessages) return;
-    
     const $box = $("#messages");
     if ($box.length === 0) return;
-    
-    const threshold = 150;
+    const threshold = 200;
     const isAtBottom = ($box[0].scrollHeight - $box.scrollTop() <= $box[0].clientHeight + threshold);
-    
     if (force || isAtBottom) {
-        // アニメーションなしで即座に一番下へ移動（確実に届く）
-        $box[0].scrollTop = $box[0].scrollHeight;
-        
-        // さらに念押しで確実に一番下へ
+        // rAF2回で確実にDOM確定後にスクロール
         requestAnimationFrame(() => {
-            $box[0].scrollTop = $box[0].scrollHeight;
+            requestAnimationFrame(() => {
+                $box[0].scrollTop = $box[0].scrollHeight;
+            });
         });
     }
 }
@@ -850,18 +845,26 @@ function renderMessages(snap, isDesc = false) {
         }
         
         if (hasNewMessage) {
-            // 過去メッセージ読み込み中でなければスクロール
+            const lastDoc = docs[docs.length - 1];
+            const isMyMessage = auth.currentUser && lastDoc.data.uid === auth.currentUser.uid;
+
+            // DOM確定後にスクロール判定
             if (!isLoadingMoreMessages) {
-                scrollToBottom(true);
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        const isAtBottomNow = ($box[0].scrollHeight - $box.scrollTop() <= $box[0].clientHeight + 180);
+                        // 自分の送信 or 一番下付近にいるときだけ自動スクロール
+                        if (isMyMessage || isAtBottomNow) {
+                            $box[0].scrollTop = $box[0].scrollHeight;
+                        }
+                    });
+                });
             }
             
-            const lastDoc = docs[docs.length - 1];
             // --- 通知・バッジ処理（強化版） ---
             if (auth.currentUser && lastDoc.data.uid !== auth.currentUser.uid) {
                 
                 // バッジを表示すべきか判定
-                // 1. ページが非表示 または フォーカスがない
-                // 2. または、一番下までスクロールしていない（過去ログを見ていて新着に気づいていない）
                 const isAtBottom = ($box[0].scrollHeight - $box.scrollTop() <= $box[0].clientHeight + 150);
                 const isUnseen = document.visibilityState === 'hidden' || !document.hasFocus() || !isAtBottom;
 
@@ -1685,8 +1688,9 @@ function showItemPreview(item, userName, userPhoto) {
     $('#preview-message').removeClass('effect-fire effect-sparkle effect-lightning effect-rainbow effect-shadow effect-ice effect-toxic effect-gold');
     $('#preview-icon-container').removeClass('effect-fire effect-sparkle effect-lightning effect-rainbow effect-shadow effect-ice effect-toxic effect-gold');
     $('#preview-badge').empty();
-    // テーマプレビュー用の背景色リセット
+    // テーマプレビュー用リセット
     $('#item-preview').css('background', '');
+    $('#preview-theme-swatch').css('background', '').addClass('hidden');
     
     // アイテムタイプに応じてプレビュー
     if (item.id === 'vip_badge' || item.id === 'star_badge' || item.id === 'crown_badge') {
@@ -1724,12 +1728,12 @@ function showItemPreview(item, userName, userPhoto) {
         $('#preview-message').addClass('effect-gold');
         
     } else if (item.id === 'rainbow_theme') {
-        // テーマプレビュー: bodyには当てずプレビューエリアのみ
-        $('#item-preview').css('background', 'linear-gradient(135deg, #ff6b6b, #f093fb, #4facfe, #43e97b, #feca57)');
-        $('#preview-badge').html(`<span style="font-size:12px; color:#fff; background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px;">背景が虹色に変わります</span>`);
+        // テーマプレビュー: プレビューエリア内のサムネイルdivに背景を当てる
+        $('#preview-theme-swatch').css('background', 'linear-gradient(135deg, #ff6b6b, #f093fb, #4facfe, #43e97b, #feca57)').removeClass('hidden');
+        $('#preview-item-desc').text('チャット背景が虹色に変わります');
     } else if (item.id === 'heart_theme') {
-        $('#item-preview').css('background', 'linear-gradient(135deg, #f5576c, #f093fb)');
-        $('#preview-badge').html(`<span style="font-size:12px; color:#fff; background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px;">背景がピンク色に変わります</span>`);
+        $('#preview-theme-swatch').css('background', 'linear-gradient(135deg, #f5576c, #f093fb)').removeClass('hidden');
+        $('#preview-item-desc').text('チャット背景がピンク色に変わります');
     }
 }
 
