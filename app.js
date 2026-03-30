@@ -1586,23 +1586,31 @@ async function loadShopData() {
             </div>
         `);
         
-        // PC: ホバーでプレビュー表示 / スマホ: タップでプレビュー表示
+        // PC: ホバーでプレビュー / スマホ: タップ制御
         if (window.matchMedia('(max-width: 600px)').matches) {
+            // スマホはonclickを無効化してJS側で制御
+            $item.attr('onclick', '');
             $item.on('click', function(e) {
-                // 購入ボタンでない場合はプレビュートグル
-                if (!owned) {
-                    // タップ1回目: プレビュー表示、2回目: 購入
-                    if ($('#item-preview').hasClass('hidden') || $('#item-preview').data('previewId') !== item.id) {
-                        showItemPreview(item, currentUserName, currentUserPhoto);
-                        $('#item-preview').data('previewId', item.id);
-                        // スクロールしてプレビューを見せる
-                        setTimeout(() => { document.getElementById('item-preview').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }
-                    // 2回目タップは既存onclickのpurchaseItemに任せる
-                } else {
+                e.preventDefault();
+                e.stopPropagation();
+                if (owned) {
                     showItemPreview(item, currentUserName, currentUserPhoto);
+                    return;
+                }
+                const prevId = $('#item-preview').data('previewId');
+                const isVisible = !$('#item-preview').hasClass('hidden');
+                if (!isVisible || prevId !== item.id) {
+                    // 1回目タップ: プレビュー表示のみ（テーマ適用しない）
+                    showItemPreview(item, currentUserName, currentUserPhoto);
+                    $('#item-preview').data('previewId', item.id);
+                    setTimeout(() => {
+                        const el = document.getElementById('item-preview');
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 100);
+                } else {
+                    // 2回目タップ: 購入
+                    window.purchaseItem(item.id);
+                    $('#item-preview').addClass('hidden').data('previewId', null);
                 }
             });
         } else {
@@ -1645,6 +1653,8 @@ function showItemPreview(item, userName, userPhoto) {
     $('#preview-message').removeClass('effect-fire effect-sparkle effect-lightning effect-rainbow effect-shadow effect-ice effect-toxic effect-gold');
     $('#preview-icon-container').removeClass('effect-fire effect-sparkle effect-lightning effect-rainbow effect-shadow effect-ice effect-toxic effect-gold');
     $('#preview-badge').empty();
+    // テーマプレビュー用の背景色リセット
+    $('#item-preview').css('background', '');
     
     // アイテムタイプに応じてプレビュー
     if (item.id === 'vip_badge' || item.id === 'star_badge' || item.id === 'crown_badge') {
@@ -1681,9 +1691,13 @@ function showItemPreview(item, userName, userPhoto) {
     } else if (item.id === 'gold_effect') {
         $('#preview-message').addClass('effect-gold');
         
-    } else if (item.id === 'rainbow_theme' || item.id === 'heart_theme') {
-        // テーマプレビュー（説明のみ）
-        $('#preview-badge').html(`<span style="font-size:12px; color:var(--txt-m);">画面全体の背景が変わります</span>`);
+    } else if (item.id === 'rainbow_theme') {
+        // テーマプレビュー: bodyには当てずプレビューエリアのみ
+        $('#item-preview').css('background', 'linear-gradient(135deg, #ff6b6b, #f093fb, #4facfe, #43e97b, #feca57)');
+        $('#preview-badge').html(`<span style="font-size:12px; color:#fff; background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px;">背景が虹色に変わります</span>`);
+    } else if (item.id === 'heart_theme') {
+        $('#item-preview').css('background', 'linear-gradient(135deg, #f5576c, #f093fb)');
+        $('#preview-badge').html(`<span style="font-size:12px; color:#fff; background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px;">背景がピンク色に変わります</span>`);
     }
 }
 
