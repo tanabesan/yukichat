@@ -1276,76 +1276,68 @@ $('#slot-modal').on('click', function(e) {
 function spinReel(reelId, targetSymbol, duration, hasReverse = false) {
     return new Promise((resolve) => {
         const strip = $(`#strip${reelId}`);
-        const symbolHeight = strip.closest('.slot-reel-container').height() || 150;
-        
+
         // 毎回ストリップを再生成して同じ絵柄が残らないようにする
         strip.empty();
+        strip.css({ transition: 'none', top: '0px' });
         for (let j = 0; j < 20; j++) {
             const sym = j === 10 ? targetSymbol : slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
             strip.append(`<div class="slot-symbol-item">${sym}</div>`);
         }
-        strip.css('transition', 'none');
-        strip.css('top', '0px');
-        
-        const targetIndex = 10; // 真ん中あたり
-        
-        // 高速スピン開始
-        let currentTop = 0;
-        const spinSpeed = 50; // ms per frame
-        const totalSpins = duration / spinSpeed;
-        let frame = 0;
-        
-        const animate = () => {
-            frame++;
-            currentTop -= symbolHeight;
-            
-            // ループ処理
-            if (currentTop <= -symbolHeight * 15) {
-                currentTop = 0;
-            }
-            
-            // 停止前の演出
-            if (frame >= totalSpins - 10) {
-                // スローダウン
-                const slowFactor = (totalSpins - frame) / 10;
-                
-                if (hasReverse && frame === totalSpins - 5) {
-                    // 通り過ぎて戻る演出
-                    currentTop -= symbolHeight * 2;
-                    setTimeout(() => {
-                        const finalTop = -symbolHeight * targetIndex;
+
+        // slot-symbol-itemの実際の高さを取得（スマホ100px / PC150px どちらでも正確）
+        const symbolHeight = strip.find('.slot-symbol-item').first().outerHeight() || 150;
+        const targetIndex = 10;
+
+        // CSS transitionで一気にスクロール → 停止させる方式に変更（requestAnimationFrameの誤差を排除）
+        const totalScrollHeight = symbolHeight * (targetIndex + Math.floor(duration / 200));
+        const loopHeight = symbolHeight * 15;
+
+        // まず一瞬で遠い位置にセット（ループのため）
+        strip.css({ transition: 'none', top: '0px' });
+
+        // CSSアニメーションで高速スクロール
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                strip.css({
+                    transition: `top ${duration * 0.7}ms cubic-bezier(0.1, 0.0, 0.3, 1.0)`,
+                    top: `-${loopHeight}px`
+                });
+
+                setTimeout(() => {
+                    // 高速スクロール終了後、最終位置へ
+                    strip.css({ transition: 'none', top: '0px' });
+
+                    if (hasReverse) {
+                        // リーチ演出: 通り過ぎてから戻る
+                        const overshoot = -symbolHeight * (targetIndex + 2);
                         strip.css({
-                            'top': `${finalTop}px`,
-                            'transition': 'top 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                            transition: `top ${duration * 0.25}ms ease-in`,
+                            top: `${overshoot}px`
+                        });
+                        setTimeout(() => {
+                            strip.css({
+                                transition: 'top 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                                top: `-${symbolHeight * targetIndex}px`
+                            });
+                            setTimeout(() => {
+                                strip.css('transition', 'none');
+                                resolve();
+                            }, 500);
+                        }, duration * 0.25);
+                    } else {
+                        strip.css({
+                            transition: `top ${duration * 0.3}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`,
+                            top: `-${symbolHeight * targetIndex}px`
                         });
                         setTimeout(() => {
                             strip.css('transition', 'none');
                             resolve();
-                        }, 500);
-                    }, 100);
-                    return;
-                }
-            }
-            
-            if (frame < totalSpins) {
-                strip.css('top', `${currentTop}px`);
-                requestAnimationFrame(animate);
-            } else {
-                // 最終停止位置
-                const finalTop = -symbolHeight * targetIndex;
-                strip.css({
-                    'top': `${finalTop}px`,
-                    'transition': 'top 0.3s ease-out'
-                });
-                setTimeout(() => {
-                    strip.css('transition', 'none');
-                    resolve();
-                }, 300);
-            }
-        };
-        
-        strip.css('transition', 'none');
-        animate();
+                        }, duration * 0.3);
+                    }
+                }, duration * 0.7);
+            });
+        });
     });
 }
 
