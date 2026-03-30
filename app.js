@@ -671,7 +671,14 @@ function generateMessageHtml(id, d) {
     else if (equipped.effect === 'gold_effect') effectClass = 'effect-gold';
     
     let rHtml = '';
-    for (const [emoji, uids] of Object.entries(reactions)) {
+    // リアクションの表示順をreactionEmojisの順で固定（追加順で変わらないように）
+    const reactionOrder = ['👍','❤️','😂','😮','😢','😡','🙏','👏','🎉','🔥','✨','💯','👀','🤔','😅','😊','🥰','😎','🤩','😇','🤗','🙌','✅','❌','⭐','💪','👌','🎊','🎈','💕'];
+    const sortedReactions = Object.entries(reactions).sort((a, b) => {
+        const ai = reactionOrder.indexOf(a[0]);
+        const bi = reactionOrder.indexOf(b[0]);
+        return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
+    for (const [emoji, uids] of sortedReactions) {
         if (uids.length > 0) rHtml += `<div class="reaction-badge ${uids.includes(auth.currentUser.uid)?'active':''}" onclick="react('${id}','${emoji}',${JSON.stringify(reactions).replace(/"/g, '&quot;')})">${emoji} ${uids.length}</div>`;
     }
     const imgHtml = d.image ? `<img src="${d.image}" class="sent-img" onclick="window.open('${d.image}')">` : '';
@@ -1579,10 +1586,30 @@ async function loadShopData() {
             </div>
         `);
         
-        // ホバーでプレビュー表示
-        $item.on('mouseenter', function() {
-            showItemPreview(item, currentUserName, currentUserPhoto);
-        });
+        // PC: ホバーでプレビュー表示 / スマホ: タップでプレビュー表示
+        if (window.matchMedia('(max-width: 600px)').matches) {
+            $item.on('click', function(e) {
+                // 購入ボタンでない場合はプレビュートグル
+                if (!owned) {
+                    // タップ1回目: プレビュー表示、2回目: 購入
+                    if ($('#item-preview').hasClass('hidden') || $('#item-preview').data('previewId') !== item.id) {
+                        showItemPreview(item, currentUserName, currentUserPhoto);
+                        $('#item-preview').data('previewId', item.id);
+                        // スクロールしてプレビューを見せる
+                        setTimeout(() => { document.getElementById('item-preview').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                    // 2回目タップは既存onclickのpurchaseItemに任せる
+                } else {
+                    showItemPreview(item, currentUserName, currentUserPhoto);
+                }
+            });
+        } else {
+            $item.on('mouseenter', function() {
+                showItemPreview(item, currentUserName, currentUserPhoto);
+            });
+        }
         
         $container.append($item);
     });
@@ -1767,13 +1794,20 @@ const reactionEmojis = [
 ];
 
 window.openReactionPicker = (msgId, event, currentReactions) => {
-    event.stopPropagation();
+    if (event && event.stopPropagation) event.stopPropagation();
     const $picker = $('#reaction-picker');
     
     // 絵文字を配置
     $picker.empty();
     reactionEmojis.forEach(emoji => {
-        $picker.append(`<div class="reaction-emoji" onclick="react('${msgId}', '${emoji}', ${JSON.stringify(currentReactions).replace(/"/g, '&quot;')}); $('#reaction-picker').addClass('hidden');">${emoji}</div>`);
+        const $btn = $(`<div class="reaction-emoji">${emoji}</div>`);
+        $btn.on('click touchend', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            react(msgId, emoji, currentReactions);
+            $picker.addClass('hidden');
+        });
+        $picker.append($btn);
     });
     
     // 一旦表示して実際のサイズを取得
@@ -1782,32 +1816,31 @@ window.openReactionPicker = (msgId, event, currentReactions) => {
     const pickerHeight = $picker.outerHeight();
     $picker.addClass('hidden').css('visibility', 'visible');
     
-    // ピッカーの位置を計算
-    const rect = event.target.getBoundingClientRect();
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
-    const padding = 10; // 画面端からの余白
+    const padding = 10;
     
-    let left = rect.left;
-    let top = rect.bottom + 5;
+    // スマホ: タッチ座標 or クリック座標を使う
+    let anchorX, anchorY;
+    if (event && event.clientX != null && event.clientX !== 0) {
+        anchorX = event.clientX;
+        anchorY = event.clientY;
+    } else if (event && event.target && event.target.getBoundingClientRect) {
+        const rect = event.target.getBoundingClientRect();
+        anchorX = rect.left;
+        anchorY = rect.bottom;
+    } else {
+        anchorX = windowWidth / 2;
+        anchorY = windowHeight / 2;
+    }
     
-    // 右端チェック
-    if (left + pickerWidth > windowWidth - padding) {
-        left = windowWidth - pickerWidth - padding;
-    }
-    // 左端チェック
-    if (left < padding) {
-        left = padding;
-    }
+    let left = anchorX;
+    let top = anchorY + 5;
     
-    // 下端チェック（画面下に収まらない場合は上に表示）
-    if (top + pickerHeight > windowHeight - padding) {
-        top = rect.top - pickerHeight - 5;
-    }
-    // 上端チェック
-    if (top < padding) {
-        top = padding;
-    }
+    if (left + pickerWidth > windowWidth - padding) left = windowWidth - pickerWidth - padding;
+    if (left < padding) left = padding;
+    if (top + pickerHeight > windowHeight - padding) top = anchorY - pickerHeight - 5;
+    if (top < padding) top = padding;
     
     $picker.css({ left: left + 'px', top: top + 'px' }).removeClass('hidden');
 };
