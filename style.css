@@ -1115,18 +1115,13 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
     #shop-modal #user-coins {
         font-size: 24px !important;
     }
-    /* プレビューエリアの縦長を防ぐ */
+    /* プレビューエリア */
     #item-preview {
-        max-height: 100px !important;
-        padding: 10px 12px !important;
+        padding: 12px !important;
     }
     #preview-message {
         flex-shrink: 0 !important;
-        max-width: 50% !important;
-    }
-    #preview-message .bubble {
-        padding: 6px 10px !important;
-        font-size: 13px !important;
+        max-width: 55% !important;
     }
     /* リアクションピッカーをスマホで大きく・操作しやすく */
     #reaction-picker {
