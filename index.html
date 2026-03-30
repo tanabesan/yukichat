@@ -753,29 +753,29 @@
         .prof-banner { height: 80px; width: 100%; object-fit: cover; background: var(--accent); }
         .prof-avatar { width: 64px; height: 64px; border-radius: 50%; border: 4px solid #111214; position: absolute; top: 48px; left: 16px; background: #333; }
         
-        /* プロフィールモーダルのエフェクト対応 */
-        .prof-card .effect-fire .icon-container,
-        .prof-card .effect-sparkle .icon-container,
-        .prof-card .effect-lightning .icon-container,
-        .prof-card .effect-rainbow .icon-container,
-        .prof-card .effect-shadow .icon-container,
-        .prof-card .effect-ice .icon-container,
-        .prof-card .effect-toxic .icon-container,
-        .prof-card .effect-gold .icon-container {
-            position: relative;
+        /* プロフィールモーダルのエフェクト対応（icon-containerに直接） */
+        .prof-card .icon-container.effect-fire,
+        .prof-card .icon-container.effect-sparkle,
+        .prof-card .icon-container.effect-lightning,
+        .prof-card .icon-container.effect-rainbow,
+        .prof-card .icon-container.effect-shadow,
+        .prof-card .icon-container.effect-ice,
+        .prof-card .icon-container.effect-toxic,
+        .prof-card .icon-container.effect-gold {
+            position: absolute;
         }
         
-        .prof-card .effect-fire .icon { animation: fireIconGlow 3s ease infinite; }
-        .prof-card .effect-sparkle .icon { animation: sparkleIconGlow 3s ease infinite; }
-        .prof-card .effect-lightning .icon { animation: lightningIconGlow 3s ease infinite; }
-        .prof-card .effect-rainbow .icon { animation: rainbowIconGlow 4s ease infinite; }
-        .prof-card .effect-shadow .icon { animation: shadowGlow 3s ease infinite; }
-        .prof-card .effect-ice .icon { animation: iceGlow 3s ease infinite; }
-        .prof-card .effect-toxic .icon { animation: toxicGlow 2.5s ease infinite; }
-        .prof-card .effect-gold .icon { animation: goldShine 3s ease infinite; }
+        .prof-card .icon-container.effect-fire .icon { animation: fireIconGlow 3s ease infinite; }
+        .prof-card .icon-container.effect-sparkle .icon { animation: sparkleIconGlow 3s ease infinite; }
+        .prof-card .icon-container.effect-lightning .icon { animation: lightningIconGlow 3s ease infinite; }
+        .prof-card .icon-container.effect-rainbow .icon { animation: rainbowIconGlow 4s ease infinite; }
+        .prof-card .icon-container.effect-shadow .icon { animation: shadowGlow 3s ease infinite; }
+        .prof-card .icon-container.effect-ice .icon { animation: iceGlow 3s ease infinite; }
+        .prof-card .icon-container.effect-toxic .icon { animation: toxicGlow 2.5s ease infinite; }
+        .prof-card .icon-container.effect-gold .icon { animation: goldShine 3s ease infinite; }
         
         /* エフェクト絵文字も表示 */
-        .prof-card .effect-fire .icon-container::before {
+        .prof-card .icon-container.effect-fire::before {
             content: '🔥';
             position: absolute;
             top: -5px;
@@ -785,7 +785,7 @@
             pointer-events: none;
             z-index: 10;
         }
-        .prof-card .effect-sparkle .icon-container::before {
+        .prof-card .icon-container.effect-sparkle::before {
             content: '✨';
             position: absolute;
             top: -5px;
@@ -795,7 +795,7 @@
             pointer-events: none;
             z-index: 10;
         }
-        .prof-card .effect-lightning .icon-container::before {
+        .prof-card .icon-container.effect-lightning::before {
             content: '⚡';
             position: absolute;
             top: -8px;
@@ -805,7 +805,7 @@
             pointer-events: none;
             z-index: 10;
         }
-        .prof-card .effect-rainbow .icon-container::before {
+        .prof-card .icon-container.effect-rainbow::before {
             content: '🌟';
             position: absolute;
             top: -8px;
@@ -815,7 +815,7 @@
             pointer-events: none;
             z-index: 10;
         }
-        .prof-card .effect-shadow .icon-container::before {
+        .prof-card .icon-container.effect-shadow::before {
             content: '🌑';
             position: absolute;
             top: -8px;
@@ -825,7 +825,7 @@
             pointer-events: none;
             z-index: 10;
         }
-        .prof-card .effect-ice .icon-container::before {
+        .prof-card .icon-container.effect-ice::before {
             content: '❄️';
             position: absolute;
             top: -8px;
@@ -835,7 +835,7 @@
             pointer-events: none;
             z-index: 10;
         }
-        .prof-card .effect-toxic .icon-container::before {
+        .prof-card .icon-container.effect-toxic::before {
             content: '☠️';
             position: absolute;
             top: -8px;
@@ -845,9 +845,17 @@
             pointer-events: none;
             z-index: 10;
         }
-        .prof-card .effect-gold .icon-container::before {
+        .prof-card .icon-container.effect-gold::before {
             content: '💛';
             position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 22px;
+            animation: goldPulse 2s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 10;
+            filter: drop-shadow(0 0 8px rgba(255, 215, 0, 1));
+        }
             top: -8px;
             right: -8px;
             font-size: 22px;
@@ -2392,13 +2400,22 @@
             }
         };
 
+        let isCurrentlyTyping = false; // 現在の入力中状態を記録
+        
         const updateTypingStatus = async (isTyping) => {
             if(!auth.currentUser) return;
-            await updateDoc(doc(db, "users", auth.currentUser.uid), { isTyping: isTyping });
+            // 状態が変わった時だけFirestoreに書き込む
+            if (isCurrentlyTyping !== isTyping) {
+                isCurrentlyTyping = isTyping;
+                await updateDoc(doc(db, "users", auth.currentUser.uid), { isTyping: isTyping });
+            }
         };
 
         $("#messageInput").on("input", function() {
-            updateTypingStatus(true);
+            // 入力開始時のみFirestoreに書き込む（連続入力では書き込まない）
+            if (!isCurrentlyTyping) {
+                updateTypingStatus(true);
+            }
             clearTimeout(typingTimeout);
             typingTimeout = setTimeout(() => updateTypingStatus(false), 3000);
         });
@@ -3621,8 +3638,11 @@
                 });
             });
         }
+        let currentOnlineStatus = null; // 現在のステータスを記録（null, 'online', 'offline'）
+        
         const setOnline = async () => {
-            if (auth.currentUser) {
+            if (auth.currentUser && currentOnlineStatus !== 'online') {
+                currentOnlineStatus = 'online';
                 try {
                     await updateDoc(doc(db, "users", auth.currentUser.uid), { status: "online", lastSeen: serverTimestamp() });
                 } catch (e) { console.log("Status update error (online)"); }
@@ -3630,7 +3650,8 @@
         };
 
         const setOffline = async () => {
-            if (auth.currentUser) {
+            if (auth.currentUser && currentOnlineStatus !== 'offline') {
+                currentOnlineStatus = 'offline';
                 try {
                     await updateDoc(doc(db, "users", auth.currentUser.uid), { status: "offline", lastSeen: serverTimestamp(), isTyping: false });
                 } catch (e) { console.log("Status update error (offline)"); }
@@ -3693,32 +3714,13 @@
                 
                 // アクティブな間は定期的にオンライン状態を更新
                 if (onlineStatusInterval) clearInterval(onlineStatusInterval);
-                onlineStatusInterval = setInterval(ensureOnlineStatus, 5000);
+                onlineStatusInterval = setInterval(ensureOnlineStatus, 30000); // 30秒ごと
                 
                 if (document.hasFocus()) clearUnread();
             } else {
                 // バックグラウンドに入ったら即座にオフライン
                 if (onlineStatusInterval) clearInterval(onlineStatusInterval);
                 ensureOfflineStatus();
-                
-                // Windows Chrome対策: 複数回念押し
-                setTimeout(() => {
-                    if (document.visibilityState === "hidden" || document.hidden) {
-                        ensureOfflineStatus();
-                    }
-                }, 50);
-                
-                setTimeout(() => {
-                    if (document.visibilityState === "hidden" || document.hidden) {
-                        ensureOfflineStatus();
-                    }
-                }, 200);
-                
-                setTimeout(() => {
-                    if (document.visibilityState === "hidden" || document.hidden) {
-                        ensureOfflineStatus();
-                    }
-                }, 500);
                 
                 setTimeout(checkInactivity, 2000);
             }
@@ -3737,7 +3739,7 @@
                     lastActivityTime = Date.now();
                 }
             }
-        }, 500); // 0.5秒ごとに状態チェック
+        }, 2000); // 2秒ごとに状態チェック（0.5秒 → 2秒に変更）
         
         // Firefox対応: mozvisibilitychange
         document.addEventListener("mozvisibilitychange", () => {
@@ -3777,21 +3779,13 @@
         });
         
         window.addEventListener("blur", () => {
-            // Windows Chrome: 即座にオフライン判定
-            ensureOfflineStatus();
-            
-            // 念のため複数回チェック
+            // blurだけでは即座にオフラインにしない（入力欄クリックなどでも発火するため）
+            // hiddenになった場合のみオフライン
             setTimeout(() => {
-                if (document.visibilityState === "hidden" || !document.hasFocus() || document.hidden) {
+                if (document.visibilityState === "hidden" || document.hidden) {
                     ensureOfflineStatus();
                 }
-            }, 100);
-            
-            setTimeout(() => {
-                if (document.visibilityState === "hidden" || !document.hasFocus() || document.hidden) {
-                    ensureOfflineStatus();
-                }
-            }, 300);
+            }, 500); // 少し待ってから判定
         }, true); // capture phase
         
         // ユーザーアクションで未読クリア & アクティブ記録
@@ -3898,25 +3892,21 @@
                 const now = Date.now();
                 const isHidden = document.hidden || document.mozHidden || document.webkitHidden || document.msHidden || document.visibilityState === "hidden";
                 const hasNoFocus = !document.hasFocus();
-                const isInactive = (now - lastActivityTime) > 10000; // 10秒以上操作なし（さらに短縮）
+                const isInactive = (now - lastActivityTime) > 30000; // 30秒以上操作なし
                 
-                // Windows Chrome対策: より積極的にオフライン判定
+                // よりバランスの取れたオフライン判定
                 if (isHidden) {
-                    // 非表示なら即オフライン（複数回確認）
-                    ensureOfflineStatus();
-                    setTimeout(() => ensureOfflineStatus(), 100);
-                } else if (hasNoFocus) {
-                    // フォーカスなしだけでもオフライン判定（Windows Chrome用）
+                    // 非表示なら即オフライン
                     ensureOfflineStatus();
                 } else if (hasNoFocus && isInactive) {
-                    // フォーカスなし + 10秒以上操作なし
+                    // フォーカスなし + 30秒以上操作なし
                     ensureOfflineStatus();
                 } else if (document.visibilityState === "visible" && document.hasFocus()) {
                     // 表示中 + フォーカスあり
                     ensureOnlineStatus();
                 }
             }
-        }, 3000); // 3秒ごとにチェック（さらに頻繁に）
+        }, 10000); // 10秒ごとにチェック（3秒 → 10秒に変更）
 
     </script>
 </body>
