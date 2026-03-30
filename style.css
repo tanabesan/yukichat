@@ -1097,17 +1097,10 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
     
 /* ショッププレビュー */
 #item-preview {
-    position: sticky;
-    bottom: 0;
+    overflow: hidden;
 }
 
 @media screen and (max-width: 600px) {
-    /* スマホ: プレビューをstickyにせず通常フローに */
-    #item-preview {
-        position: static !important;
-        margin-top: 10px !important;
-        padding: 12px !important;
-    }
     /* ショップのアイテムグリッドをスマホ用に縮小 */
     #shop-items {
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
@@ -1121,6 +1114,19 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
     /* コイン表示を縮小 */
     #shop-modal #user-coins {
         font-size: 24px !important;
+    }
+    /* プレビューエリアの縦長を防ぐ */
+    #item-preview {
+        max-height: 100px !important;
+        padding: 10px 12px !important;
+    }
+    #preview-message {
+        flex-shrink: 0 !important;
+        max-width: 50% !important;
+    }
+    #preview-message .bubble {
+        padding: 6px 10px !important;
+        font-size: 13px !important;
     }
     /* リアクションピッカーをスマホで大きく・操作しやすく */
     #reaction-picker {
@@ -1138,4 +1144,28 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
         align-items: center;
         justify-content: center;
     }
+}
+
+/* --- input / textarea / select のグローバルスタイル（白いデフォルトを上書き） --- */
+input:not([type="file"]):not([type="range"]),
+textarea,
+select {
+    background: #1e1f22;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 5px;
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+    box-sizing: border-box;
+}
+input:not([type="file"]):not([type="range"]):focus,
+textarea:focus,
+select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(88,101,242,0.25);
+}
+select option {
+    background: #1e1f22;
+    color: #fff;
 }
