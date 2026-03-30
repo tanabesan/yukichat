@@ -1272,77 +1272,71 @@ $('#slot-modal').on('click', function(e) {
     }
 });
 
-// リールを回す（滑らかなアニメーション）
-function spinReel(reelId, targetSymbol, duration, hasReverse = false) {
+// リールをコマ送りで回す（上→下方向のみ、戻り動作なし）
+function spinReel(reelId, targetSymbol, duration) {
     return new Promise((resolve) => {
         const strip = $(`#strip${reelId}`);
 
-        // 毎回ストリップを再生成して同じ絵柄が残らないようにする
+        // ストリップを毎回完全再生成
         strip.empty();
         strip.css({ transition: 'none', top: '0px' });
-        for (let j = 0; j < 20; j++) {
-            const sym = j === 10 ? targetSymbol : slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+
+        // 40コマ生成（0〜38はランダム、39=停止シンボル）
+        const TOTAL = 40;
+        const stopIndex = TOTAL - 1;
+        for (let j = 0; j < TOTAL; j++) {
+            const sym = (j === stopIndex)
+                ? targetSymbol
+                : slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
             strip.append(`<div class="slot-symbol-item">${sym}</div>`);
         }
 
-        // slot-symbol-itemの実際の高さを取得（スマホ100px / PC150px どちらでも正確）
-        const symbolHeight = strip.find('.slot-symbol-item').first().outerHeight() || 150;
-        const targetIndex = 10;
+        // シンボル高さを実測
+        const symH = strip.find('.slot-symbol-item').first().outerHeight() || 150;
 
-        // CSS transitionで一気にスクロール → 停止させる方式に変更（requestAnimationFrameの誤差を排除）
-        const totalScrollHeight = symbolHeight * (targetIndex + Math.floor(duration / 200));
-        const loopHeight = symbolHeight * 15;
+        // 各フレームの間隔を加速→高速→減速で計算
+        const frames = [];
+        const accelFrames  = Math.floor(TOTAL * 0.15); // 加速
+        const decelFrames  = Math.floor(TOTAL * 0.25); // 減速
+        const constFrames  = TOTAL - accelFrames - decelFrames; // 高速
+        const minInterval  = 16;   // 高速時 (ms)
+        const maxInterval  = 120;  // 加速/減速時 (ms)
 
-        // まず一瞬で遠い位置にセット（ループのため）
-        strip.css({ transition: 'none', top: '0px' });
+        for (let i = 0; i < accelFrames; i++) {
+            frames.push(maxInterval - (maxInterval - minInterval) * (i / accelFrames));
+        }
+        for (let i = 0; i < constFrames; i++) {
+            frames.push(minInterval);
+        }
+        for (let i = 0; i < decelFrames; i++) {
+            frames.push(minInterval + (maxInterval - minInterval) * ((i + 1) / decelFrames));
+        }
 
-        // CSSアニメーションで高速スクロール
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                strip.css({
-                    transition: `top ${duration * 0.7}ms cubic-bezier(0.1, 0.0, 0.3, 1.0)`,
-                    top: `-${loopHeight}px`
-                });
+        let frame = 0;
+        let currentTop = 0;
 
-                setTimeout(() => {
-                    // 高速スクロール終了後、最終位置へ
-                    strip.css({ transition: 'none', top: '0px' });
+        function nextFrame() {
+            if (frame >= TOTAL) {
+                // 最終位置にぴったり合わせる
+                strip.css({ transition: 'none', top: `-${symH * stopIndex}px` });
+                resolve();
+                return;
+            }
+            currentTop -= symH;
+            strip.css({ transition: 'none', top: `${currentTop}px` });
+            const interval = frames[frame] || minInterval;
+            frame++;
+            setTimeout(nextFrame, interval);
+        }
 
-                    if (hasReverse) {
-                        // リーチ演出: 通り過ぎてから戻る
-                        const overshoot = -symbolHeight * (targetIndex + 2);
-                        strip.css({
-                            transition: `top ${duration * 0.25}ms ease-in`,
-                            top: `${overshoot}px`
-                        });
-                        setTimeout(() => {
-                            strip.css({
-                                transition: 'top 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                                top: `-${symbolHeight * targetIndex}px`
-                            });
-                            setTimeout(() => {
-                                strip.css('transition', 'none');
-                                resolve();
-                            }, 500);
-                        }, duration * 0.25);
-                    } else {
-                        strip.css({
-                            transition: `top ${duration * 0.3}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`,
-                            top: `-${symbolHeight * targetIndex}px`
-                        });
-                        setTimeout(() => {
-                            strip.css('transition', 'none');
-                            resolve();
-                        }, duration * 0.3);
-                    }
-                }, duration * 0.7);
-            });
-        });
+        // 少し待ってから開始（前のリールとの間隔演出）
+        setTimeout(nextFrame, 0);
     });
 }
 
 // スピンボタン
 $('#spin-btn').on('click', async () => {
+
     if (isSpinning) return;
     
     const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
@@ -1355,100 +1349,120 @@ $('#spin-btn').on('click', async () => {
     }
     
     isSpinning = true;
-    $('#spin-btn').prop('disabled', true).html('<div style="font-size:20px;">⏳ SPINNING...</div>');
+    $('#spin-btn').prop('disabled', true).html('<div style="font-size:20px;">🎰 SPINNING...</div>');
     $('#reach-effect').addClass('hidden');
     $('#slot-result-display').addClass('hidden');
-    
+    hideSlotEffect();
+
     // コイン消費
-    await setDoc(doc(db, "users", auth.currentUser.uid), {
-        coins: currentCoins - betCost
-    }, { merge: true });
-    
+    await setDoc(doc(db, "users", auth.currentUser.uid), { coins: currentCoins - betCost }, { merge: true });
     $('#slot-coins').text(String(currentCoins - betCost).padStart(4, '0'));
-    
-    // 強化スピン中かチェック
+
     const isBoosted = boostedSpinsRemaining > 0;
-    
-    // 当たり確率
-    // 通常: 18% / 強化スピン: 60%
-    const winRate = isBoosted ? 0.60 : 0.18;
-    const rand = Math.random();
-    const willWin = rand < winRate;
-    const willReachMiss = !willWin && rand < (winRate + 0.10); // +10%リーチ外れ
+    const winRate   = isBoosted ? 0.60 : 0.18;
+    const rand      = Math.random();
+    const willWin      = rand < winRate;
+    const willReachMiss = !willWin && rand < (winRate + 0.12);
     let results;
-    
+
     if (willWin) {
-        // 当たり - シンボルは重み付け
-        const symbolRand = Math.random();
+        const sr = Math.random();
         let winSymbol;
-        
-        // 強化スピン中はレアシンボルが出やすい
         if (isBoosted) {
-            if (symbolRand < 0.25) winSymbol = '🍒';      // 25%
-            else if (symbolRand < 0.45) winSymbol = '🍋'; // 20%
-            else if (symbolRand < 0.65) winSymbol = '🍊'; // 20%
-            else if (symbolRand < 0.82) winSymbol = '🍇'; // 17%
-            else if (symbolRand < 0.94) winSymbol = '⭐'; // 12%
-            else winSymbol = '💎';                         // 6%
+            if (sr < 0.20) winSymbol = '🍒';
+            else if (sr < 0.38) winSymbol = '🍋';
+            else if (sr < 0.56) winSymbol = '🍊';
+            else if (sr < 0.72) winSymbol = '🍇';
+            else if (sr < 0.86) winSymbol = '⭐';
+            else if (sr < 0.94) winSymbol = '💎';
+            else winSymbol = '🎁';
         } else {
-            if (symbolRand < 0.33) winSymbol = '🍒';      // 33%
-            else if (symbolRand < 0.61) winSymbol = '🍋'; // 28%
-            else if (symbolRand < 0.78) winSymbol = '🍊'; // 17%
-            else if (symbolRand < 0.86) winSymbol = '🍇'; // 8%
-            else if (symbolRand < 0.92) winSymbol = '⭐'; // 6%
-            else if (symbolRand < 0.95) winSymbol = '💎'; // 3%
-            else winSymbol = '🎁';                         // 5% (強化スピン発動！)
+            if (sr < 0.33) winSymbol = '🍒';
+            else if (sr < 0.58) winSymbol = '🍋';
+            else if (sr < 0.74) winSymbol = '🍊';
+            else if (sr < 0.83) winSymbol = '🍇';
+            else if (sr < 0.90) winSymbol = '⭐';
+            else if (sr < 0.95) winSymbol = '💎';
+            else winSymbol = '🎁';
         }
-        
         results = [winSymbol, winSymbol, winSymbol];
     } else if (willReachMiss) {
-        // リーチ外れ（2つ揃って3つ目が外れる）
         const reachSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
-        let missSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
-        while (missSymbol === reachSymbol) {
-            missSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
-        }
+        let missSymbol;
+        do { missSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)]; }
+        while (missSymbol === reachSymbol);
         results = [reachSymbol, reachSymbol, missSymbol];
     } else {
-        // バラバラ
-        results = [
-            slotSymbols[Math.floor(Math.random() * slotSymbols.length)],
-            slotSymbols[Math.floor(Math.random() * slotSymbols.length)],
-            slotSymbols[Math.floor(Math.random() * slotSymbols.length)]
-        ];
-        // 完全に揃わないようにする
-        while (results[0] === results[1] && results[1] === results[2]) {
-            results[2] = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
-        }
+        // バラバラ（1=2にも1=2=3にもならないよう保証）
+        do {
+            results = [
+                slotSymbols[Math.floor(Math.random() * slotSymbols.length)],
+                slotSymbols[Math.floor(Math.random() * slotSymbols.length)],
+                slotSymbols[Math.floor(Math.random() * slotSymbols.length)],
+            ];
+        } while (results[0] === results[1] || results[1] === results[2] || results[0] === results[2]);
     }
-    
-    // リールを順番に止める
-    await spinReel(1, results[0], 1500, false);
-    
-    await new Promise(resolve => setTimeout(resolve, 200));
-    await spinReel(2, results[1], 1800, false);
-    
-    // リーチ判定: willReachMiss（意図的リーチ外れ）またはwillWin（当たり）のときのみ演出
-    const isReach = (willWin || willReachMiss) && results[0] === results[1];
+
+    // ===== 演出判定（先にすべて決める） =====
+    const isWin       = willWin;
+    const isDiamond   = isWin && results[0] === '💎';
+    const isSevenStar = isWin && results[0] === '⭐';
+    const isJackpot   = isDiamond; // 確定演出
+    const isReach     = willReachMiss; // リーチ外れのみ
+
+    // 確定演出（当たり確定フラッシュ）
+    if (isJackpot) {
+        showSlotEffect('jackpot');
+        await wait(600);
+    } else if (isSevenStar) {
+        showSlotEffect('star');
+        await wait(400);
+    } else if (isWin) {
+        showSlotEffect('win');
+        await wait(300);
+    }
+
+    // リール1
+    await spinReel(1, results[0]);
+    await wait(250);
+
+    // リール2
+    await spinReel(2, results[1]);
+
+    // リーチ演出（2つ揃ったときのみ）
     if (isReach) {
+        await wait(200);
         $('#reach-effect').removeClass('hidden');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        showSlotEffect('reach');
+        await wait(800);
+        hideSlotEffect();
+    } else {
+        await wait(250);
     }
-    
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
-    // 3つ目は演出強化（通り過ぎて戻る）
-    const hasReverse = isReach;
-    await spinReel(3, results[2], 2200, hasReverse);
-    
+
+    // リール3
+    await spinReel(3, results[2]);
+
     $('#reach-effect').addClass('hidden');
-    
-    // 結果判定
-    await new Promise(resolve => setTimeout(resolve, 300));
-    checkSlotResult(results, currentCoins - betCost);
+    await wait(350);
+
+    checkSlotResult(results, currentCoins - betCost, isWin, willReachMiss);
 });
 
-async function checkSlotResult(results, currentCoins) {
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// 演出エフェクト表示
+function showSlotEffect(type) {
+    const $container = $('#slot-effect-container');
+    if (!$container.length) return;
+    $container.removeClass('hidden effect-jackpot effect-star effect-win effect-reach');
+    $container.addClass(`effect-${type}`).removeClass('hidden');
+}
+function hideSlotEffect() {
+    $('#slot-effect-container').addClass('hidden');
+}
+
+async function checkSlotResult(results, currentCoins, isWin, isReachMiss) {
     const [r1, r2, r3] = results;
     
     // 強化スピンカウントダウン
@@ -1457,52 +1471,67 @@ async function checkSlotResult(results, currentCoins) {
         updateBoostedSpinsDisplay();
     }
     
+    const betCost = 10 * currentBet;
+    const resetBtn = () => {
+        isSpinning = false;
+        $('#spin-btn').prop('disabled', false).html(`<div style="font-size:24px; font-weight:bold; text-shadow:2px 2px 4px rgba(0,0,0,0.3);">🎰 SPIN</div><div id="spin-btn-cost" style="font-size:12px; margin-top:5px; opacity:0.9;">- ${betCost} COINS -</div>`);
+    };
+
     if (r1 === r2 && r2 === r3) {
-        // 🎁🎁🎁 = 強化スピン発動（コイン増えない）
+        // 🎁🎁🎁 = 強化スピン発動
         if (r1 === '🎁') {
             boostedSpinsRemaining = 10;
             updateBoostedSpinsDisplay();
+            showSlotEffect('boosted');
+            await wait(1000);
+            hideSlotEffect();
             $('#slot-result-display').addClass('hidden');
-            isSpinning = false;
-            const betCost = 10 * currentBet;
-            $('#spin-btn').prop('disabled', false).html(`<div style="font-size:24px; font-weight:bold;">🎰 SPIN</div><div style="font-size:12px; margin-top:5px;">- ${betCost} COINS -</div>`);
+            resetBtn();
             return;
         }
-        
+
         let basePayout = slotPayouts[r1];
-        let payout = basePayout * 10 * currentBet; // ベット倍率を適用
-        
+        let payout = basePayout * 10 * currentBet;
+
         if (hasSpecialSpin) {
             payout *= 2;
             hasSpecialSpin = false;
             $('#special-spin-indicator').addClass('hidden');
         }
-        
         if (r1 === '💎') {
             hasSpecialSpin = true;
             $('#special-spin-indicator').removeClass('hidden');
         }
-        
+
         const newCoins = currentCoins + payout;
-        await setDoc(doc(db, "users", auth.currentUser.uid), {
-            coins: newCoins
-        }, { merge: true });
-        
+        await setDoc(doc(db, "users", auth.currentUser.uid), { coins: newCoins }, { merge: true });
         $('#slot-coins').text(String(newCoins).padStart(4, '0'));
         $('#slot-win-amount').text(`+${String(payout).padStart(4, '0')}`);
         $('#slot-result-display').removeClass('hidden');
-        
-    } else if (r1 === r2 && r2 !== r3) {
-        // リーチ外れ（強化スピンは発動しない）
+
+        // 当たり演出
+        if (r1 === '💎') {
+            showSlotEffect('jackpot');
+        } else if (r1 === '⭐') {
+            showSlotEffect('star');
+        } else {
+            showSlotEffect('win');
+        }
+        await wait(2000);
+        hideSlotEffect();
+
+    } else if (isReachMiss) {
+        // リーチ外れ演出
+        showSlotEffect('miss');
+        await wait(1000);
+        hideSlotEffect();
         $('#slot-result-display').addClass('hidden');
-        
+
     } else {
         $('#slot-result-display').addClass('hidden');
     }
-    
-    isSpinning = false;
-    const betCost = 10 * currentBet;
-    $('#spin-btn').prop('disabled', false).html(`<div style="font-size:24px; font-weight:bold;">🎰 SPIN</div><div style="font-size:12px; margin-top:5px;">- ${betCost} COINS -</div>`);
+
+    resetBtn();
 }
 
 // 強化スピン表示更新
