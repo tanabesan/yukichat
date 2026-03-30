@@ -469,15 +469,15 @@
             </div>
 
             <!-- プレビューエリア（アイテム一覧の上） -->
-            <div id="item-preview" class="hidden" style="background:var(--bg-38); padding:12px 15px; border-radius:10px; margin-bottom:12px; border:2px solid #667eea;">
-                <div style="font-size:11px; color:var(--txt-m); margin-bottom:8px; text-transform:uppercase;">👁️ Preview</div>
-                <div style="display:flex; align-items:center; gap:12px; flex-wrap:nowrap; min-width:0;">
+            <div id="item-preview" class="hidden" style="background:var(--bg-38); padding:14px 16px; border-radius:10px; margin-bottom:12px; border:2px solid #667eea;">
+                <div style="font-size:11px; color:var(--txt-m); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">👁️ Preview</div>
+                <div style="display:flex; align-items:flex-start; gap:14px;">
                     <!-- プレビュー用メッセージ -->
-                    <div id="preview-message" class="message" style="margin:0; flex-shrink:0; max-width:55%;">
+                    <div id="preview-message" class="message" style="margin:0; flex-shrink:0;">
                         <div class="icon-container" id="preview-icon-container">
                             <img class="icon" id="preview-icon" src="" alt="">
                         </div>
-                        <div class="bubble" style="max-width:100%;">
+                        <div class="bubble">
                             <div class="msg-head">
                                 <span class="sender" id="preview-name"></span>
                                 <span id="preview-badge"></span>
@@ -485,9 +485,9 @@
                             <div class="msg-body">プレビュー表示</div>
                         </div>
                     </div>
-                    <div style="flex:1; min-width:0; overflow:hidden;">
-                        <div id="preview-item-name" style="font-size:15px; font-weight:bold; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
-                        <div id="preview-item-desc" style="font-size:12px; color:var(--txt-m); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+                    <div style="flex:1; min-width:0; padding-top:4px;">
+                        <div id="preview-item-name" style="font-size:16px; font-weight:bold; margin-bottom:6px; color:#fff;"></div>
+                        <div id="preview-item-desc" style="font-size:12px; color:var(--txt-m); line-height:1.5;"></div>
                     </div>
                 </div>
             </div>
