@@ -1097,7 +1097,9 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
     
 /* ショッププレビュー */
 #item-preview {
-    overflow: hidden;
+    overflow: visible;
+    min-height: 80px;
+    box-sizing: border-box;
 }
 
 @media screen and (max-width: 600px) {
