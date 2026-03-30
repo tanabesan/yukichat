@@ -681,7 +681,7 @@ function generateMessageHtml(id, d) {
     const replyName = d.replyTo ? escapeHTML(d.replyTo.name) : "";
     const replyText = d.replyTo ? escapeHTML(d.replyTo.text) : "";
 
-    return `<div class="message ${isMe?'me':''} ${isStamp?'is-stamp':''} ${isFriend?'is-friend':''} ${effectClass}" id="msg-${id}" data-uid="${d.uid}">
+    return `<div class="message ${isMe?'me':''} ${isStamp?'is-stamp':''} ${isFriend?'is-friend':''} ${effectClass}" id="msg-${id}" data-uid="${d.uid}" data-msgid="${id}" data-is-me="${isMe}" data-is-stamp="${isStamp}" data-name="${safeName.replace(/"/g,'&quot;')}" data-text="${safeText.replace(/"/g,'&quot;').replace(/\n/g,' ')}">
         <div class="icon-container" onclick="showProfile('${d.uid}')">
             <img src="${d.photo || DEFAULT_AVATAR}" class="icon">
             <div class="status-dot ${userStatus === 'online' ? 'online' : 'offline'}"></div>
@@ -2448,3 +2448,145 @@ offlineCheckInterval = setInterval(() => {
         }
     }
 }, 10000); // 10秒ごとにチェック（3秒 → 10秒に変更）
+
+// ============================================================
+// スマホ長押しコンテキストメニュー
+// ============================================================
+(function() {
+    // メニューとオーバーレイをbodyに追加
+    const menuEl = document.createElement('div');
+    menuEl.id = 'msg-context-menu';
+    menuEl.classList.add('hidden');
+    document.body.appendChild(menuEl);
+
+    const overlayEl = document.createElement('div');
+    overlayEl.id = 'msg-context-menu-overlay';
+    overlayEl.classList.add('hidden');
+    document.body.appendChild(overlayEl);
+
+    let pressTimer = null;
+    let targetMsg = null;
+
+    function isMobile() {
+        return window.matchMedia('(max-width: 600px)').matches;
+    }
+
+    function closeMenu() {
+        menuEl.classList.add('hidden');
+        overlayEl.classList.add('hidden');
+        targetMsg = null;
+    }
+
+    overlayEl.addEventListener('click', closeMenu);
+    overlayEl.addEventListener('touchend', closeMenu);
+
+    function showMenu(msgEl, x, y) {
+        const id      = msgEl.dataset.msgid;
+        const isMe    = msgEl.dataset.isMe === 'true';
+        const isStamp = msgEl.dataset.isStamp === 'true';
+        const name    = msgEl.dataset.name || '';
+        const text    = msgEl.dataset.text || '';
+
+        // リアクションデータをop-btnから取得（既存のonclick属性から流用）
+        const reactionBtn = msgEl.querySelector('.op-btn[title="リアクション"]');
+
+        let items = [];
+
+        // リアクション
+        items.push(`<div class="ctx-item" data-action="reaction">
+            <span class="material-symbols-outlined">add_reaction</span> リアクション
+        </div>`);
+
+        // 返信
+        const replyLabel = isStamp ? 'スタンプ' : (text || '画像');
+        items.push(`<div class="ctx-item" data-action="reply" data-id="${id}" data-name="${name}" data-text="${replyLabel}">
+            <span class="material-symbols-outlined">reply</span> 返信
+        </div>`);
+
+        // 編集（自分のメッセージかつスタンプでない場合）
+        if (isMe && !isStamp) {
+            items.push(`<div class="ctx-item" data-action="edit" data-id="${id}" data-text="${text}">
+                <span class="material-symbols-outlined">edit</span> 編集
+            </div>`);
+        }
+
+        // 削除（自分のメッセージ）
+        if (isMe) {
+            items.push(`<div class="ctx-item danger" data-action="delete" data-id="${id}">
+                <span class="material-symbols-outlined">delete</span> 削除
+            </div>`);
+        }
+
+        menuEl.innerHTML = items.join('');
+        menuEl.classList.remove('hidden');
+        overlayEl.classList.remove('hidden');
+
+        // 位置調整（画面外に出ないように）
+        const menuW = 200;
+        const menuH = items.length * 46;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        let px = x;
+        let py = y;
+        if (px + menuW > vw) px = vw - menuW - 10;
+        if (py + menuH > vh) py = vh - menuH - 10;
+        if (py < 10) py = 10;
+        menuEl.style.left = px + 'px';
+        menuEl.style.top  = py + 'px';
+
+        // アイテムのクリックイベント
+        menuEl.querySelectorAll('.ctx-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const action = this.dataset.action;
+                const _id   = this.dataset.id || id;
+                if (action === 'reaction') {
+                    // リアクションピッカーを開く（既存関数流用）
+                    const fakeEvent = { clientX: px, clientY: py, target: menuEl, stopPropagation: () => {} };
+                    // reactions情報はop-btnから取得できないためmsgElから取得
+                    const existingReactions = {};
+                    msgEl.querySelectorAll('.reaction-badge').forEach(b => {
+                        const parts = b.textContent.trim().split(' ');
+                        if (parts.length === 2) existingReactions[parts[0]] = [];
+                    });
+                    if (typeof window.openReactionPicker === 'function') {
+                        window.openReactionPicker(id, fakeEvent, existingReactions);
+                    }
+                } else if (action === 'reply') {
+                    if (typeof window.setReply === 'function') window.setReply(_id, name, replyLabel);
+                } else if (action === 'edit') {
+                    if (typeof window.setEdit === 'function') window.setEdit(_id, text);
+                } else if (action === 'delete') {
+                    if (typeof window.deleteMsg === 'function') window.deleteMsg(_id);
+                }
+                closeMenu();
+            });
+        });
+    }
+
+    // イベント委譲: #messages上のタッチを監視
+    document.addEventListener('touchstart', function(e) {
+        if (!isMobile()) return;
+        const msgEl = e.target.closest('.message');
+        if (!msgEl) return;
+        // アイコンクリックや既存ボタンは除外
+        if (e.target.closest('.icon-container, .op-btn, .reaction-badge, .reply-in-bubble, .sent-img, .stamp-display')) return;
+
+        targetMsg = msgEl;
+        pressTimer = setTimeout(() => {
+            if (targetMsg) {
+                // 長押し振動フィードバック
+                if (navigator.vibrate) navigator.vibrate(30);
+                const touch = e.touches[0];
+                showMenu(msgEl, touch.clientX, touch.clientY);
+            }
+        }, 500);
+    }, { passive: true });
+
+    document.addEventListener('touchend', function() {
+        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function() {
+        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+    }, { passive: true });
+})();
