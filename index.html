@@ -193,54 +193,68 @@
                     <input type="file" id="real_avatar_input" class="hidden" accept="image/*">
                     <input type="file" id="real_banner_input" class="hidden" accept="image/*">
 
-                    <label style="font-size:11px; color:var(--txt-m);">名前</label>
-                    <input type="text" id="editName" class="settings-input" placeholder="名前" style="margin-bottom: 12px;">
-                    
-                    <label style="font-size:11px; color:var(--txt-m);">アイコンURL</label>
-                    <div class="settings-input-group" style="margin-bottom: 12px;">
-                        <input type="text" id="editPhoto" class="settings-input" placeholder="https://...">
-                        <button type="button" class="btn-upload-small" onclick="$('#real_avatar_input').click()">
-                            <span class="material-symbols-outlined" style="font-size:18px;">upload</span>
-                        </button>
+                    <div class="form-field">
+                        <label class="form-label">名前</label>
+                        <input type="text" id="editName" class="settings-input" placeholder="名前">
                     </div>
 
-                    <label style="font-size:11px; color:var(--txt-m);">バナーURL</label>
-                    <div class="settings-input-group" style="margin-bottom: 12px;">
-                        <input type="text" id="editBanner" class="settings-input" placeholder="https://...">
-                        <button type="button" class="btn-upload-small" onclick="$('#real_banner_input').click()">
-                            <span class="material-symbols-outlined" style="font-size:18px;">upload</span>
-                        </button>
+                    <div class="form-field">
+                        <label class="form-label">アイコンURL</label>
+                        <div class="settings-input-group">
+                            <input type="text" id="editPhoto" class="settings-input" placeholder="https://...">
+                            <button type="button" class="btn-upload-small" onclick="$('#real_avatar_input').click()">
+                                <span class="material-symbols-outlined" style="font-size:18px;">upload</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <label style="font-size:11px; color:var(--txt-m);">自己紹介</label>
-                    <textarea id="editBio" class="settings-input" placeholder="自己紹介" style="height:50px; margin-bottom: 15px;"></textarea>
+                    <div class="form-field">
+                        <label class="form-label">バナーURL</label>
+                        <div class="settings-input-group">
+                            <input type="text" id="editBanner" class="settings-input" placeholder="https://...">
+                            <button type="button" class="btn-upload-small" onclick="$('#real_banner_input').click()">
+                                <span class="material-symbols-outlined" style="font-size:18px;">upload</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label">自己紹介</label>
+                        <textarea id="editBio" class="settings-input" placeholder="自己紹介"></textarea>
+                    </div>
 
                     <!-- アイテム装備設定 -->
-                    <div style="padding-top:15px; border-top:1px solid var(--bg-38);">
-                        <h4 style="margin:0 0 12px 0; color:var(--txt); font-size:14px;">🎨 アイテム設定</h4>
-                        
-                        <label style="font-size:11px; color:var(--txt-m); display:block; margin-bottom:3px;">バッジ</label>
-                        <select id="editEquippedBadge" class="settings-input" style="margin-bottom:10px;">
-                            <option value="">なし</option>
-                        </select>
+                    <div style="padding-top:14px; border-top:1px solid var(--bg-38); margin-top:4px;">
+                        <h4 style="margin:0 0 14px 0; color:var(--txt); font-size:14px;">🎨 アイテム設定</h4>
 
-                        <label style="font-size:11px; color:var(--txt-m); display:block; margin-bottom:3px;">テーマ</label>
-                        <select id="editEquippedTheme" class="settings-input" style="margin-bottom:10px;">
-                            <option value="">デフォルト</option>
-                        </select>
+                        <div class="form-field">
+                            <label class="form-label">バッジ</label>
+                            <select id="editEquippedBadge" class="settings-input">
+                                <option value="">なし</option>
+                            </select>
+                        </div>
 
-                        <label style="font-size:11px; color:var(--txt-m); display:block; margin-bottom:3px;">エフェクト</label>
-                        <select id="editEquippedEffect" class="settings-input" style="margin-bottom:10px;">
-                            <option value="">なし</option>
-                        </select>
+                        <div class="form-field">
+                            <label class="form-label">テーマ</label>
+                            <select id="editEquippedTheme" class="settings-input">
+                                <option value="">デフォルト</option>
+                            </select>
+                        </div>
+
+                        <div class="form-field">
+                            <label class="form-label">エフェクト</label>
+                            <select id="editEquippedEffect" class="settings-input">
+                                <option value="">なし</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div id="profile-upload-status" class="hidden" style="margin-top: 10px;">
+                    <div id="profile-upload-status" class="hidden" style="margin-top:10px;">
                         <span id="profile-upload-text">画像をアップロード中</span><span class="dot-ani">.</span><span class="dot-ani">.</span><span class="dot-ani">.</span>
                     </div>
 
-                    <button id="saveProfile" style="width:100%; padding:10px; background:var(--accent); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:16px; margin-top: 10px;">保存して更新</button>
-                    <button onclick="$('#settings-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:8px; cursor:pointer; padding:8px;">キャンセル</button>
+                    <button id="saveProfile" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:16px; margin-top:14px;">保存して更新</button>
+                    <button onclick="$('#settings-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:8px; cursor:pointer; padding:8px; font-size:14px;">キャンセル</button>
                 </div>
             </div>
         </div>
@@ -324,6 +338,9 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 演出オーバーレイ -->
+                <div id="slot-effect-container" class="hidden"></div>
 
                 <!-- リーチ演出 -->
                 <div id="reach-effect" class="hidden" style="font-size:28px; font-weight:bold; color:#ffd700; text-shadow: 0 0 20px #ffd700, 0 0 40px #ffd700; animation: reachPulse 0.3s infinite; margin-bottom: 15px;">
