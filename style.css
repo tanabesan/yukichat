@@ -181,7 +181,6 @@ header {
     display: flex; 
     flex-direction: column; 
     gap: 16px; 
-    scroll-behavior: smooth; 
     -webkit-overflow-scrolling: touch;
     width: 100%;
     box-sizing: border-box;
@@ -1097,9 +1096,10 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
     
 /* ショッププレビュー */
 #item-preview {
-    overflow: visible;
+    overflow: hidden;
     min-height: 80px;
     box-sizing: border-box;
+    border-radius: 10px;
 }
 
 @media screen and (max-width: 600px) {
