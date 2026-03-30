@@ -866,7 +866,7 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
 .btn-sm { padding: 6px 12px; border-radius: 4px; border: none; color: #fff; cursor: pointer; font-size: 12px; font-weight: bold; margin-left: 5px; }
 
 #init-loader { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; background: var(--bg-31); z-index: 9999; }
-.preview-box { border: 1px solid #444; border-radius: 8px; overflow: hidden; margin-bottom: 15px; background: #111; padding-bottom: 10px; }
+.preview-box { border: 1px solid #444; border-radius: 8px; overflow: hidden; margin-bottom: 15px; background: #111; padding-bottom: 10px; min-height: 200px; }
 .preview-label { font-size: 10px; color: var(--txt-m); padding: 5px 10px; text-transform: uppercase; letter-spacing: 1px; }
 
 .stamp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px; }
@@ -1146,37 +1146,176 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
     }
 }
 
-/* --- input / textarea / select のグローバルスタイル（白いデフォルトを上書き） --- */
-input:not([type="file"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]),
-textarea,
-select {
-    background: #1e1f22 !important;
-    color: #fff !important;
-    border: 1px solid #444 !important;
+/* --- ダークテーマ: input/textarea/select --- */
+/* settings-input以外の生のinput（ログイン画面など）もダーク化 */
+#login-container input,
+#login-container select,
+#login-container textarea {
+    background: #1e1f22;
+    color: #fff;
+    border: 1px solid #444;
     border-radius: 5px;
     font-family: inherit;
     outline: none;
     box-sizing: border-box;
+}
+#login-container input:focus,
+#login-container select:focus,
+#login-container textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(88,101,242,0.25);
+}
+
+/* settings-input: プロフィール編集・各設定モーダル共通 */
+.settings-input {
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 0;
+    border-radius: 6px;
+    border: 1px solid #444;
+    background: #1e1f22;
+    color: #fff;
+    box-sizing: border-box;
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+    display: block;
     -webkit-appearance: none;
     appearance: none;
 }
-input:not([type="file"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]):focus,
-textarea:focus,
-select:focus {
-    border-color: var(--accent) !important;
+.settings-input:focus {
+    border-color: var(--accent);
     box-shadow: 0 0 0 2px rgba(88,101,242,0.25);
 }
-select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23949ba4' d='M1 1l5 5 5-5'/%3E%3C/svg%3E") !important;
-    background-repeat: no-repeat !important;
-    background-position: right 10px center !important;
-    padding-right: 30px !important;
+textarea.settings-input {
+    resize: vertical;
+    min-height: 70px;
+    line-height: 1.5;
 }
-select option {
+select.settings-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23949ba4' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+    cursor: pointer;
+}
+select.settings-input option {
     background: #1e1f22;
     color: #fff;
 }
-textarea {
-    resize: vertical;
-    min-height: 60px;
+
+/* フォームラベル共通 */
+.form-label {
+    display: block;
+    font-size: 11px;
+    color: var(--txt-m);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+/* フォームフィールド（ラベル+入力のセット） */
+.form-field {
+    margin-bottom: 14px;
+}
+
+/* ===== スロット演出エフェクト ===== */
+#slot-effect-container {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: 20px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: bold;
+    text-align: center;
+    transition: opacity 0.3s;
+}
+
+/* 当たり（通常） */
+#slot-effect-container.effect-win {
+    background: radial-gradient(ellipse at center, rgba(255,215,0,0.25) 0%, transparent 70%);
+    animation: effectPulse 0.4s ease infinite alternate;
+}
+#slot-effect-container.effect-win::after {
+    content: "✨ HIT! ✨";
+    color: #ffd700;
+    text-shadow: 0 0 20px #ffd700, 0 0 40px #ffa500;
+    animation: effectBounce 0.3s ease infinite alternate;
+}
+
+/* スター当たり */
+#slot-effect-container.effect-star {
+    background: radial-gradient(ellipse at center, rgba(255,200,0,0.35) 0%, transparent 70%);
+    animation: effectPulse 0.3s ease infinite alternate;
+}
+#slot-effect-container.effect-star::after {
+    content: "⭐ BIG WIN! ⭐";
+    color: #fff700;
+    text-shadow: 0 0 25px #ffd700, 0 0 50px #ff8800;
+    font-size: 36px;
+    animation: effectBounce 0.25s ease infinite alternate;
+}
+
+/* ダイヤ確定演出 */
+#slot-effect-container.effect-jackpot {
+    background: radial-gradient(ellipse at center, rgba(100,200,255,0.4) 0%, rgba(88,101,242,0.2) 60%, transparent 100%);
+    animation: jackpotFlash 0.2s ease infinite alternate;
+}
+#slot-effect-container.effect-jackpot::after {
+    content: "💎 JACKPOT!! 💎";
+    color: #fff;
+    text-shadow: 0 0 30px #74c0fc, 0 0 60px #5865f2, 0 0 90px #fff;
+    font-size: 38px;
+    animation: effectBounce 0.2s ease infinite alternate;
+}
+
+/* リーチ演出 */
+#slot-effect-container.effect-reach {
+    background: radial-gradient(ellipse at center, rgba(255,100,0,0.2) 0%, transparent 70%);
+    animation: effectPulse 0.15s ease infinite alternate;
+}
+#slot-effect-container.effect-reach::after {
+    content: "🔥 REACH!! 🔥";
+    color: #ff6b00;
+    text-shadow: 0 0 20px #ff6b00, 0 0 40px #ff0000;
+    animation: effectBounce 0.15s ease infinite alternate;
+}
+
+/* リーチ外れ */
+#slot-effect-container.effect-miss {
+    background: rgba(0,0,0,0.1);
+}
+#slot-effect-container.effect-miss::after {
+    content: "😭 MISS...";
+    color: #949ba4;
+    font-size: 28px;
+}
+
+/* BOOSTED発動 */
+#slot-effect-container.effect-boosted {
+    background: radial-gradient(ellipse at center, rgba(255,107,107,0.35) 0%, transparent 70%);
+    animation: jackpotFlash 0.25s ease infinite alternate;
+}
+#slot-effect-container.effect-boosted::after {
+    content: "🎁 BOOSTED SPIN! 🎁";
+    color: #fff;
+    text-shadow: 0 0 25px #ff6b6b, 0 0 50px #ffa500;
+    font-size: 28px;
+    animation: effectBounce 0.25s ease infinite alternate;
+}
+
+@keyframes effectPulse {
+    from { opacity: 0.7; }
+    to   { opacity: 1; }
+}
+@keyframes effectBounce {
+    from { transform: scale(1); }
+    to   { transform: scale(1.08); }
+}
+@keyframes jackpotFlash {
+    from { opacity: 0.5; background-size: 100%; }
+    to   { opacity: 1; }
 }
