@@ -1094,3 +1094,48 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
             font-size: 12px;
             font-weight: bold;
         }
+    
+/* ショッププレビュー */
+#item-preview {
+    position: sticky;
+    bottom: 0;
+}
+
+@media screen and (max-width: 600px) {
+    /* スマホ: プレビューをstickyにせず通常フローに */
+    #item-preview {
+        position: static !important;
+        margin-top: 10px !important;
+        padding: 12px !important;
+    }
+    /* ショップのアイテムグリッドをスマホ用に縮小 */
+    #shop-items {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+        gap: 8px !important;
+    }
+    /* ショップモーダル全体のパディング縮小 */
+    #shop-modal .responsive-card {
+        padding: 14px !important;
+        max-height: 92vh !important;
+    }
+    /* コイン表示を縮小 */
+    #shop-modal #user-coins {
+        font-size: 24px !important;
+    }
+    /* リアクションピッカーをスマホで大きく・操作しやすく */
+    #reaction-picker {
+        grid-template-columns: repeat(6, 1fr) !important;
+        padding: 10px !important;
+        gap: 6px !important;
+        max-width: calc(100vw - 20px) !important;
+    }
+    .reaction-emoji {
+        font-size: 24px !important;
+        padding: 10px 6px !important;
+        min-width: 40px;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
