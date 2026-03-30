@@ -1403,23 +1403,25 @@ $('#spin-btn').on('click', async () => {
         } while (results[0] === results[1] || results[1] === results[2] || results[0] === results[2]);
     }
 
-    // ===== 演出判定（先にすべて決める） =====
+    // ===== 演出判定 =====
     const isWin       = willWin;
     const isDiamond   = isWin && results[0] === '💎';
     const isSevenStar = isWin && results[0] === '⭐';
-    const isJackpot   = isDiamond; // 確定演出
-    const isReach     = willReachMiss; // リーチ外れのみ
+    const isReach     = willReachMiss;
 
-    // 確定演出（当たり確定フラッシュ）
-    if (isJackpot) {
-        showSlotEffect('jackpot');
-        await wait(600);
-    } else if (isSevenStar) {
-        showSlotEffect('star');
-        await wait(400);
-    } else if (isWin) {
-        showSlotEffect('win');
-        await wait(300);
+    // 💎は常に確定演出、⭐は50%、通常当たりは20%、リーチは30%の確率で演出あり
+    const showPreEffect  = isDiamond ? true
+                         : isSevenStar ? Math.random() < 0.50
+                         : isWin       ? Math.random() < 0.20
+                         : false;
+    const showReachEffect = isReach && Math.random() < 0.30;
+
+    // 当たり確定フラッシュ（スピン前）
+    if (showPreEffect) {
+        if (isDiamond)   { showSlotEffect('jackpot'); await wait(600); }
+        else if (isSevenStar) { showSlotEffect('star'); await wait(400); }
+        else             { showSlotEffect('win');     await wait(300); }
+        hideSlotEffect();
     }
 
     // リール1
@@ -1429,8 +1431,8 @@ $('#spin-btn').on('click', async () => {
     // リール2
     await spinReel(2, results[1]);
 
-    // リーチ演出（2つ揃ったときのみ）
-    if (isReach) {
+    // リーチ演出（確率で出る）
+    if (showReachEffect) {
         await wait(200);
         $('#reach-effect').removeClass('hidden');
         showSlotEffect('reach');
@@ -1446,7 +1448,7 @@ $('#spin-btn').on('click', async () => {
     $('#reach-effect').addClass('hidden');
     await wait(350);
 
-    checkSlotResult(results, currentCoins - betCost, isWin, willReachMiss);
+    checkSlotResult(results, currentCoins - betCost, isWin, willReachMiss, isDiamond, isSevenStar);
 });
 
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -1462,7 +1464,7 @@ function hideSlotEffect() {
     $('#slot-effect-container').addClass('hidden');
 }
 
-async function checkSlotResult(results, currentCoins, isWin, isReachMiss) {
+async function checkSlotResult(results, currentCoins, isWin, isReachMiss, isDiamond, isSevenStar) {
     const [r1, r2, r3] = results;
     
     // 強化スピンカウントダウン
@@ -1482,9 +1484,11 @@ async function checkSlotResult(results, currentCoins, isWin, isReachMiss) {
         if (r1 === '🎁') {
             boostedSpinsRemaining = 10;
             updateBoostedSpinsDisplay();
-            showSlotEffect('boosted');
-            await wait(1000);
-            hideSlotEffect();
+            if (Math.random() < 0.70) {
+                showSlotEffect('boosted');
+                await wait(1000);
+                hideSlotEffect();
+            }
             $('#slot-result-display').addClass('hidden');
             resetBtn();
             return;
@@ -1509,22 +1513,25 @@ async function checkSlotResult(results, currentCoins, isWin, isReachMiss) {
         $('#slot-win-amount').text(`+${String(payout).padStart(4, '0')}`);
         $('#slot-result-display').removeClass('hidden');
 
-        // 当たり演出
-        if (r1 === '💎') {
-            showSlotEffect('jackpot');
-        } else if (r1 === '⭐') {
-            showSlotEffect('star');
-        } else {
-            showSlotEffect('win');
+        // 当たり演出（💎は常に、⭐は60%、通常は25%）
+        const showWinEffect = (r1 === '💎') ? true
+                            : (r1 === '⭐') ? Math.random() < 0.60
+                            : Math.random() < 0.25;
+        if (showWinEffect) {
+            if (r1 === '💎')  showSlotEffect('jackpot');
+            else if (r1 === '⭐') showSlotEffect('star');
+            else              showSlotEffect('win');
+            await wait(1800);
+            hideSlotEffect();
         }
-        await wait(2000);
-        hideSlotEffect();
 
     } else if (isReachMiss) {
-        // リーチ外れ演出
-        showSlotEffect('miss');
-        await wait(1000);
-        hideSlotEffect();
+        // リーチ外れ演出（40%）
+        if (Math.random() < 0.40) {
+            showSlotEffect('miss');
+            await wait(900);
+            hideSlotEffect();
+        }
         $('#slot-result-display').addClass('hidden');
 
     } else {
