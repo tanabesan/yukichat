@@ -454,7 +454,7 @@
 
     <!-- ショップモーダル -->
     <div id="shop-modal" class="modal-overlay hidden">
-        <div class="responsive-card" style="padding:20px; max-height:85vh; max-width:800px; display:flex; flex-direction:column;">
+        <div class="responsive-card" style="padding:20px; max-width:800px; display:flex; flex-direction:column;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                 <h3 style="margin:0;">🎁 ショップ</h3>
                 <button onclick="$('#shop-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:24px; cursor:pointer; padding:5px;">✕</button>
@@ -515,7 +515,7 @@
 
     <!-- ランキングモーダル -->
     <div id="ranking-modal" class="modal-overlay hidden">
-        <div class="responsive-card" style="padding:20px; max-width:420px; max-height:85vh; display:flex; flex-direction:column;">
+        <div class="responsive-card" style="padding:20px; max-width:420px; display:flex; flex-direction:column;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                 <h3 style="margin:0;">🏆 ランキング</h3>
                 <button onclick="$('#ranking-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:24px; cursor:pointer;">✕</button>
@@ -530,12 +530,14 @@
 
     <!-- 株モーダル -->
     <div id="stock-modal" class="modal-overlay hidden">
-        <div class="responsive-card" style="padding:20px; max-width:520px; max-height:90vh; display:flex; flex-direction:column;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div class="responsive-card" style="padding:20px; max-width:860px; display:flex; flex-direction:column;">
+            <!-- ヘッダー -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-shrink:0;">
                 <h3 style="margin:0;">📈 株式市場</h3>
                 <button onclick="$('#stock-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:24px; cursor:pointer;">✕</button>
             </div>
-            <div style="background:linear-gradient(135deg, #1a1a2e, #16213e); padding:12px; border-radius:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+            <!-- コイン・評価額 -->
+            <div style="background:linear-gradient(135deg, #1a1a2e, #16213e); padding:12px; border-radius:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
                 <div>
                     <div style="font-size:11px; color:var(--txt-m);">所持コイン</div>
                     <div style="font-size:22px; font-weight:bold; color:#ffd700;">💰 <span id="stock-coins">0</span></div>
@@ -545,11 +547,8 @@
                     <div style="font-size:18px; font-weight:bold; color:#26c6da;">📊 <span id="stock-portfolio-value">0</span></div>
                 </div>
             </div>
-            <div id="stock-list" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;"></div>
-            <div id="stock-my-holdings" class="hidden" style="margin-top:12px; padding:12px; background:var(--bg-38); border-radius:8px;">
-                <div style="font-size:12px; color:var(--txt-m); margin-bottom:8px;">📦 保有株</div>
-                <div id="stock-holdings-list"></div>
-            </div>
+            <!-- 銘柄一覧（PCで2カラム） -->
+            <div id="stock-list" style="flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px; align-content:start;"></div>
         </div>
     </div>
 
