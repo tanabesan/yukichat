@@ -297,48 +297,52 @@
 
     <!-- 管理者権限テストモーダル -->
     <!-- スロットマシンモーダル -->
-    <div id="slot-modal" class="modal-overlay hidden">
-        <div class="responsive-card" style="padding:30px; text-align:center; max-width: 600px;">
-            <h2 style="margin:10px 0 5px 0; font-family: 'Impact', sans-serif; color:#ffd700; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">🎰 LUCKY SLOT 🎰</h2>
-            <div style="font-size:12px; color:var(--txt-m); margin-bottom:20px;">1 PLAY = 10 COINS</div>
-            
-            <!-- スロット台本体 -->
-            <div style="background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); padding: 30px 20px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.8), inset 0 0 50px rgba(255,215,0,0.1); border: 4px solid #ffd700; position: relative;">
-                
+    <!-- スロット全画面UI -->
+    <div id="slot-modal" class="slot-fullscreen hidden">
+
+        <!-- 背景装飾 -->
+        <div class="slot-bg-stars"></div>
+
+        <!-- ヘッダー -->
+        <div class="slot-header">
+            <div class="slot-title">🎰 LUCKY SLOT 🎰</div>
+            <div style="display:flex; align-items:center; gap:20px;">
+                <!-- コイン表示 -->
+                <div class="slot-credits-box">
+                    <div class="slot-credits-label">CREDITS</div>
+                    <div id="slot-coins" class="slot-credits-value">0000</div>
+                </div>
+                <div id="slot-result-display" class="slot-win-box hidden">
+                    <div class="slot-credits-label">WIN</div>
+                    <div id="slot-win-amount" class="slot-win-value">+0000</div>
+                </div>
+                <button onclick="$('#slot-modal').addClass('hidden')" class="slot-exit-btn">✕ EXIT</button>
+            </div>
+        </div>
+
+        <!-- メインエリア（PC: 横並び / スマホ: 縦） -->
+        <div class="slot-main">
+
+            <!-- 左カラム: スロット台 -->
+            <div class="slot-machine-col">
                 <!-- 装飾ライト -->
-                <div style="display: flex; justify-content: space-around; margin-bottom: 15px;">
-                    <div class="slot-light" style="width: 12px; height: 12px; border-radius: 50%; background: #ff0000; box-shadow: 0 0 10px #ff0000; animation: blink 1s infinite;"></div>
-                    <div class="slot-light" style="width: 12px; height: 12px; border-radius: 50%; background: #00ff00; box-shadow: 0 0 10px #00ff00; animation: blink 1s infinite 0.33s;"></div>
-                    <div class="slot-light" style="width: 12px; height: 12px; border-radius: 50%; background: #0000ff; box-shadow: 0 0 10px #0000ff; animation: blink 1s infinite 0.66s;"></div>
-                    <div class="slot-light" style="width: 12px; height: 12px; border-radius: 50%; background: #ffff00; box-shadow: 0 0 10px #ffff00; animation: blink 1s infinite;"></div>
-                    <div class="slot-light" style="width: 12px; height: 12px; border-radius: 50%; background: #ff00ff; box-shadow: 0 0 10px #ff00ff; animation: blink 1s infinite 0.33s;"></div>
+                <div class="slot-lights">
+                    <div class="slot-light" style="background:#ff0000; box-shadow:0 0 10px #ff0000; animation:blink 1s infinite;"></div>
+                    <div class="slot-light" style="background:#00ff00; box-shadow:0 0 10px #00ff00; animation:blink 1s infinite 0.2s;"></div>
+                    <div class="slot-light" style="background:#0088ff; box-shadow:0 0 10px #0088ff; animation:blink 1s infinite 0.4s;"></div>
+                    <div class="slot-light" style="background:#ffff00; box-shadow:0 0 10px #ffff00; animation:blink 1s infinite 0.6s;"></div>
+                    <div class="slot-light" style="background:#ff00ff; box-shadow:0 0 10px #ff00ff; animation:blink 1s infinite 0.8s;"></div>
+                    <div class="slot-light" style="background:#ff6600; box-shadow:0 0 10px #ff6600; animation:blink 1s infinite 0.1s;"></div>
+                    <div class="slot-light" style="background:#00ffff; box-shadow:0 0 10px #00ffff; animation:blink 1s infinite 0.3s;"></div>
                 </div>
 
                 <!-- リール窓 -->
-                <div style="background: #000; padding: 25px 15px; border-radius: 15px; border: 3px solid #333; box-shadow: inset 0 0 30px rgba(0,0,0,0.9); margin-bottom: 20px; position: relative; overflow: hidden;">
-                    
-                    <!-- 中央ライン -->
-                    <div style="position: absolute; left: 0; right: 0; top: 50%; height: 3px; background: linear-gradient(90deg, transparent, #ffd700, transparent); transform: translateY(-50%); z-index: 10; box-shadow: 0 0 10px #ffd700;"></div>
-                    
-                    <div style="display:flex; gap:20px; justify-content:center;">
-                        <!-- リール1 -->
-                        <div class="slot-reel-container">
-                            <div class="slot-reel" id="reel1">
-                                <div class="slot-symbols-strip" id="strip1"></div>
-                            </div>
-                        </div>
-                        <!-- リール2 -->
-                        <div class="slot-reel-container">
-                            <div class="slot-reel" id="reel2">
-                                <div class="slot-symbols-strip" id="strip2"></div>
-                            </div>
-                        </div>
-                        <!-- リール3 -->
-                        <div class="slot-reel-container">
-                            <div class="slot-reel" id="reel3">
-                                <div class="slot-symbols-strip" id="strip3"></div>
-                            </div>
-                        </div>
+                <div class="slot-reels-window">
+                    <div class="slot-centerline"></div>
+                    <div class="slot-reels-row">
+                        <div class="slot-reel-container"><div class="slot-reel" id="reel1"><div class="slot-symbols-strip" id="strip1"></div></div></div>
+                        <div class="slot-reel-container"><div class="slot-reel" id="reel2"><div class="slot-symbols-strip" id="strip2"></div></div></div>
+                        <div class="slot-reel-container"><div class="slot-reel" id="reel3"><div class="slot-symbols-strip" id="strip3"></div></div></div>
                     </div>
                 </div>
 
@@ -346,165 +350,116 @@
                 <div id="slot-effect-container" class="hidden"></div>
 
                 <!-- リーチ演出 -->
-                <div id="reach-effect" class="hidden" style="font-size:28px; font-weight:bold; color:#ffd700; text-shadow: 0 0 20px #ffd700, 0 0 40px #ffd700; animation: reachPulse 0.3s infinite; margin-bottom: 15px;">
-                    🔥 REACH! 🔥
-                </div>
+                <div id="reach-effect" class="hidden slot-reach-text">🔥 REACH! 🔥</div>
 
-                <!-- コイン表示 -->
-                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.5); padding: 15px 20px; border-radius: 10px; border: 2px solid #444;">
-                    <div style="text-align: left;">
-                        <div style="font-size: 10px; color: #888; text-transform: uppercase;">Credits</div>
-                        <div id="slot-coins" style="font-size: 28px; font-weight: bold; color: #ffd700; font-family: 'Courier New', monospace; text-shadow: 0 0 10px #ffd700;">0000</div>
+                <!-- ステータスバッジ -->
+                <div style="display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap;">
+                    <div id="special-spin-indicator" class="hidden slot-badge slot-badge-special">✨ SPECIAL SPIN ACTIVE! ✨<br><span style="font-size:11px;">Next payout ×2</span></div>
+                    <div id="boosted-spins-indicator" class="hidden slot-badge slot-badge-boosted">🔥 BOOSTED SPINS 🔥<br><span style="font-size:11px;">High win rate! (60%)</span></div>
+                </div>
+            </div>
+
+            <!-- 右カラム: コントロール + 配当表 -->
+            <div class="slot-control-col">
+                <!-- ベット選択 -->
+                <div class="slot-section">
+                    <div class="slot-section-label">BET MULTIPLIER</div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="bet-btn active" data-bet="1">×1<br><span style="font-size:10px; opacity:0.8;">10 COINS</span></button>
+                        <button class="bet-btn" data-bet="10">×10<br><span style="font-size:10px; opacity:0.8;">100 COINS</span></button>
+                        <button class="bet-btn" data-bet="100">×100<br><span style="font-size:10px; opacity:0.8;">1000 COINS</span></button>
                     </div>
-                    <div id="slot-result-display" class="hidden" style="text-align: right;">
-                        <div style="font-size: 10px; color: #888; text-transform: uppercase;">Win</div>
-                        <div id="slot-win-amount" style="font-size: 28px; font-weight: bold; color: #00ff00; font-family: 'Courier New', monospace; text-shadow: 0 0 10px #00ff00;">+0000</div>
+                </div>
+
+                <!-- スピンボタン -->
+                <button id="spin-btn" class="slot-spin-btn">
+                    <div style="font-size:28px; font-weight:bold;">🎰 SPIN</div>
+                    <div id="spin-btn-cost" style="font-size:13px; margin-top:4px; opacity:0.9;">- 10 COINS -</div>
+                </button>
+
+                <!-- 配当表 -->
+                <div class="slot-section slot-paytable">
+                    <div class="slot-section-label">💰 PAY TABLE <span id="bet-multiplier-text" style="color:#fff; font-weight:normal;">(×1)</span></div>
+                    <div id="pay-table" class="slot-paytable-inner">
+                        🍒🍒🍒 → ×5  (50)<br>
+                        🍋🍋🍋 → ×8  (80)<br>
+                        🍊🍊🍊 → ×12 (120)<br>
+                        🍇🍇🍇 → ×20 (200)<br>
+                        ⭐⭐⭐ → ×40 (400)<br>
+                        💎💎💎 → ×100 (1000) + SPECIAL!<br>
+                        🎁🎁🎁 → 🔥 BOOST ×10 SPINS!
                     </div>
-                </div>
-            </div>
-
-            <!-- スペシャルスピン表示 -->
-            <div id="special-spin-indicator" class="hidden" style="margin: 15px 0; padding: 15px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 12px; animation: shimmer 1s infinite; border: 2px solid #fff;">
-                <div style="font-size: 18px; font-weight: bold; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
-                    ✨ SPECIAL SPIN ACTIVE! ✨
-                </div>
-                <div style="font-size: 12px; color: #fff; margin-top: 5px;">Next payout x2</div>
-            </div>
-
-            <!-- 強化スピンインジケーター -->
-            <div id="boosted-spins-indicator" class="hidden" style="margin: 15px 0; padding: 15px; background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%); border-radius: 12px; border: 2px solid #ffd700; text-align: center; box-shadow: 0 0 20px rgba(255, 107, 107, 0.6);">
-                <div style="font-size: 20px; font-weight: bold; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
-                    🔥 BOOSTED SPINS 🔥
-                </div>
-                <div style="font-size: 12px; color: #fff; margin-top: 5px;">High win rate! (60%)</div>
-            </div>
-
-            <!-- ベット選択 -->
-            <div style="margin-bottom: 15px;">
-                <div style="font-size: 12px; color: #888; text-transform: uppercase; margin-bottom: 8px;">BET</div>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button class="bet-btn active" data-bet="1" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%); color: #fff; border: 2px solid #ffd700; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s;">
-                        ×1<br><span style="font-size: 10px;">10 COINS</span>
-                    </button>
-                    <button class="bet-btn" data-bet="10" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%); color: #fff; border: 2px solid #666; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s;">
-                        ×10<br><span style="font-size: 10px;">100 COINS</span>
-                    </button>
-                    <button class="bet-btn" data-bet="100" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%); color: #fff; border: 2px solid #666; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s;">
-                        ×100<br><span style="font-size: 10px;">1000 COINS</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- スピンボタン -->
-            <button id="spin-btn" class="slot-spin-btn">
-                <div style="font-size: 24px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">🎰 SPIN</div>
-                <div id="spin-btn-cost" style="font-size: 12px; margin-top: 5px; opacity: 0.9;">- 10 COINS -</div>
-            </button>
-            
-            <button onclick="$('#slot-modal').addClass('hidden')" style="width:100%; background:var(--bg-38); color:var(--txt); border:none; cursor:pointer; padding:12px; border-radius:8px; margin-top: 10px;">EXIT</button>
-
-            <!-- 配当表 -->
-            <div style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.5); border-radius:12px; border: 2px solid #333;">
-                <div style="font-size:14px; font-weight:bold; margin-bottom:10px; color: #ffd700; text-transform: uppercase;">💰 Pay Table <span id="bet-multiplier-text" style="color: #fff;">(×1)</span></div>
-                <div id="pay-table" style="font-size:12px; line-height:2; color:#ccc; font-family: 'Courier New', monospace;">
-                    🍒🍒🍒 → ×5  ( 50)<br>
-                    🍋🍋🍋 → ×8  ( 80)<br>
-                    🍊🍊🍊 → ×12 (120)<br>
-                    🍇🍇🍇 → ×20 (200)<br>
-                    ⭐⭐⭐ → ×40 (400)<br>
-                    💎💎💎 → ×100 (1000) + SPECIAL!<br>
-                    🎁🎁🎁 → 🔥 BOOST x10 SPINS!
                 </div>
             </div>
         </div>
     </div>
 
     <!-- ログインボーナスモーダル -->
-    <div id="login-bonus-modal" class="modal-overlay hidden">
-        <div class="responsive-card" style="padding:30px; text-align:center; max-width: 400px;">
-            <div style="font-size:60px; margin-bottom:10px;">🎁</div>
-            <h2 style="margin:10px 0;">ログインボーナス</h2>
-            
-            <div id="bonus-status" style="background:var(--bg-38); padding:20px; border-radius:12px; margin:20px 0;">
-                <div style="font-size:14px; color:var(--txt-m); margin-bottom:10px;">本日のボーナス</div>
-                <div id="bonus-amount" style="font-size:48px; font-weight:bold; color:#ffd700;">+100</div>
-                <div style="font-size:16px; color:var(--txt-m); margin-top:5px;">コイン</div>
+    <div id="login-bonus-modal" class="fs-screen hidden">
+        <div class="fs-inner fs-center">
+            <button onclick="$('#login-bonus-modal').addClass('hidden')" class="fs-close-btn">✕</button>
+            <div style="font-size:72px; margin-bottom:10px; animation: badgePulse 1.5s infinite;">🎁</div>
+            <h2 style="margin:0 0 20px; font-size:26px; color:#ffd700;">ログインボーナス</h2>
+            <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,215,0,0.3); padding:24px 40px; border-radius:16px; margin-bottom:20px; min-width:280px;">
+                <div style="font-size:13px; color:var(--txt-m); margin-bottom:8px;">本日のボーナス</div>
+                <div id="bonus-amount" style="font-size:56px; font-weight:bold; color:#ffd700; text-shadow:0 0 20px rgba(255,215,0,0.6);">+100</div>
+                <div style="font-size:16px; color:var(--txt-m); margin-top:4px;">コイン</div>
             </div>
-
-            <div id="bonus-claim-section">
-                <button id="claimBonusBtn" style="width:100%; padding:15px; background:linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:18px; margin-bottom:10px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);">
-                    受け取る
-                </button>
+            <div id="bonus-claim-section" style="width:100%; max-width:320px;">
+                <button id="claimBonusBtn" style="width:100%; padding:16px; background:linear-gradient(135deg, #ffd700, #ffed4e); color:#000; border:none; border-radius:10px; font-weight:bold; cursor:pointer; font-size:18px; margin-bottom:10px; box-shadow:0 4px 20px rgba(255,215,0,0.5);">受け取る</button>
                 <div style="font-size:12px; color:var(--txt-m);">※ 1日1回まで</div>
             </div>
-
-            <div id="bonus-already-claimed" class="hidden" style="padding:15px; background:var(--bg-38); border-radius:8px; margin-bottom:15px;">
-                <div style="color:var(--success); font-weight:bold; margin-bottom:5px;">✅ 受け取り済み</div>
+            <div id="bonus-already-claimed" class="hidden" style="padding:14px 24px; background:rgba(59,165,92,0.15); border:1px solid var(--success); border-radius:10px; margin-bottom:10px;">
+                <div style="color:var(--success); font-weight:bold; margin-bottom:4px;">✅ 受け取り済み</div>
                 <div style="font-size:12px; color:var(--txt-m);">次回: 明日のログイン時</div>
             </div>
-
-            <div style="background:var(--bg-38); padding:15px; border-radius:8px; margin-top:15px; text-align:left;">
-                <div style="font-size:12px; color:var(--txt-m); margin-bottom:10px;">💰 現在の所持コイン</div>
-                <div style="font-size:28px; font-weight:bold;" id="bonus-current-coins">0</div>
-            </div>
-
-            <button onclick="$('#login-bonus-modal').addClass('hidden')" style="width:100%; background:var(--bg-38); color:var(--txt); border:none; margin-top:15px; cursor:pointer; padding:12px; border-radius:8px;">閉じる</button>
+            <div style="margin-top:16px; font-size:13px; color:var(--txt-m);">所持コイン: <span style="color:#ffd700; font-weight:bold;" id="bonus-current-coins">0</span> 💰</div>
+            <button onclick="$('#login-bonus-modal').addClass('hidden')" class="fs-back-btn" style="margin-top:20px;">← 戻る</button>
         </div>
     </div>
 
-    <!-- ショップモーダル -->
-    <div id="shop-modal" class="modal-overlay hidden">
-        <div class="responsive-card" style="padding:20px; max-width:800px; display:flex; flex-direction:column;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h3 style="margin:0;">🎁 ショップ</h3>
-                <button onclick="$('#shop-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:24px; cursor:pointer; padding:5px;">✕</button>
-            </div>
-            
-            <!-- コイン表示 -->
-            <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:15px; border-radius:10px; text-align:center; margin-bottom:20px;">
-                <div style="font-size:14px; color:rgba(255,255,255,0.8); margin-bottom:5px;">所持コイン</div>
-                <div style="font-size:32px; font-weight:bold; color:white;">
-                    💰 <span id="user-coins">0</span>
-                </div>
-                <div style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:5px;">
-                    ログインボーナス: 毎日 <span style="color:#ffd700; font-weight:bold;">+100</span> コイン
+    <!-- ショップ全画面 -->
+    <div id="shop-modal" class="fs-screen hidden">
+        <div class="fs-inner" style="max-width:900px;">
+            <!-- ヘッダー -->
+            <div class="fs-header">
+                <div class="fs-title">🎁 ショップ</div>
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <div style="text-align:center; background:rgba(255,255,255,0.08); border-radius:10px; padding:6px 18px;">
+                        <div style="font-size:10px; color:rgba(255,255,255,0.6); text-transform:uppercase;">所持コイン</div>
+                        <div style="font-size:20px; font-weight:bold; color:#ffd700;">💰 <span id="user-coins">0</span></div>
+                    </div>
+                    <button onclick="$('#shop-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
                 </div>
             </div>
 
-            <!-- プレビューエリア（アイテム一覧の上） -->
-            <div id="item-preview" class="hidden" style="position:relative; background:var(--bg-38); padding:14px 16px; border-radius:10px; margin-bottom:12px; border:2px solid #667eea; overflow:hidden;">
+            <!-- プレビューエリア -->
+            <div id="item-preview" class="hidden" style="position:relative; background:rgba(255,255,255,0.05); padding:14px 16px; border-radius:10px; margin-bottom:14px; border:2px solid #667eea; overflow:hidden;">
                 <div style="font-size:11px; color:var(--txt-m); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">👁️ Preview</div>
                 <div style="display:flex; align-items:flex-start; gap:14px;">
-                    <!-- プレビュー用メッセージ -->
                     <div id="preview-message" class="message" style="margin:0; flex-shrink:0;">
                         <div class="icon-container" id="preview-icon-container">
                             <img class="icon" id="preview-icon" src="" alt="">
                         </div>
                         <div class="bubble">
-                            <div class="msg-head">
-                                <span class="sender" id="preview-name"></span>
-                                <span id="preview-badge"></span>
-                            </div>
+                            <div class="msg-head"><span class="sender" id="preview-name"></span><span id="preview-badge"></span></div>
                             <div class="msg-body">プレビュー表示</div>
                         </div>
                     </div>
                     <div style="flex:1; min-width:0; padding-top:4px;">
                         <div id="preview-item-name" style="font-size:16px; font-weight:bold; margin-bottom:6px; color:#fff;"></div>
-
                         <div id="preview-item-desc" style="font-size:12px; color:var(--txt-m); line-height:1.5;"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- アイテム一覧 -->
+            <!-- アイテムグリッド -->
             <div style="flex:1; overflow-y:auto;">
-                <h4 style="margin:10px 0; color:var(--txt-m); font-size:14px;">アイテム</h4>
-                <div id="shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; margin-bottom:15px;">
-                    <!-- JavaScriptで動的に追加 -->
-                </div>
+                <div style="font-size:12px; color:var(--txt-m); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">アイテム一覧</div>
+                <div id="shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:14px; padding-bottom:20px;"></div>
             </div>
 
-            <button onclick="$('#shop-modal').addClass('hidden')" style="width:100%; background:var(--bg-38); color:var(--txt); border:none; margin-top:15px; cursor:pointer; padding:12px; border-radius:5px;">閉じる</button>
+            <button onclick="$('#shop-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
         </div>
     </div>
 
@@ -513,42 +468,41 @@
     </div>
 
 
-    <!-- ランキングモーダル -->
-    <div id="ranking-modal" class="modal-overlay hidden">
-        <div class="responsive-card" style="padding:20px; max-width:420px; display:flex; flex-direction:column;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h3 style="margin:0;">🏆 ランキング</h3>
-                <button onclick="$('#ranking-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:24px; cursor:pointer;">✕</button>
+    <!-- ランキング全画面 -->
+    <div id="ranking-modal" class="fs-screen hidden">
+        <div class="fs-inner" style="max-width:540px;">
+            <div class="fs-header">
+                <div class="fs-title">🏆 ランキング</div>
+                <button onclick="$('#ranking-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
             </div>
-            <div style="display:flex; gap:8px; margin-bottom:15px;">
-                <button class="rank-tab-btn active" data-tab="coins" onclick="switchRankTab('coins',this)" style="flex:1; padding:8px; border:none; border-radius:6px; background:var(--accent); color:#fff; cursor:pointer; font-weight:bold;">💰 コイン</button>
-                <button class="rank-tab-btn" data-tab="stocks" onclick="switchRankTab('stocks',this)" style="flex:1; padding:8px; border:none; border-radius:6px; background:var(--bg-38); color:var(--txt); cursor:pointer; font-weight:bold;">📈 資産</button>
+            <div style="display:flex; gap:8px; margin-bottom:16px; flex-shrink:0;">
+                <button class="rank-tab-btn active" data-tab="coins" onclick="switchRankTab('coins',this)" style="flex:1; padding:10px; border:none; border-radius:8px; background:var(--accent); color:#fff; cursor:pointer; font-weight:bold; font-size:14px;">💰 コイン</button>
+                <button class="rank-tab-btn" data-tab="stocks" onclick="switchRankTab('stocks',this)" style="flex:1; padding:10px; border:none; border-radius:8px; background:rgba(255,255,255,0.08); color:var(--txt); cursor:pointer; font-weight:bold; font-size:14px;">📈 株資産</button>
             </div>
             <div id="ranking-list" style="flex:1; overflow-y:auto;"></div>
+            <button onclick="$('#ranking-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
         </div>
     </div>
 
-    <!-- 株モーダル -->
-    <div id="stock-modal" class="modal-overlay hidden">
-        <div class="responsive-card" style="padding:20px; max-width:860px; display:flex; flex-direction:column;">
-            <!-- ヘッダー -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-shrink:0;">
-                <h3 style="margin:0;">📈 株式市場</h3>
-                <button onclick="$('#stock-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:24px; cursor:pointer;">✕</button>
-            </div>
-            <!-- コイン・評価額 -->
-            <div style="background:linear-gradient(135deg, #1a1a2e, #16213e); padding:12px; border-radius:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
-                <div>
-                    <div style="font-size:11px; color:var(--txt-m);">所持コイン</div>
-                    <div style="font-size:22px; font-weight:bold; color:#ffd700;">💰 <span id="stock-coins">0</span></div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-size:11px; color:var(--txt-m);">保有株式評価額</div>
-                    <div style="font-size:18px; font-weight:bold; color:#26c6da;">📊 <span id="stock-portfolio-value">0</span></div>
+    <!-- 株全画面 -->
+    <div id="stock-modal" class="fs-screen hidden">
+        <div class="fs-inner" style="max-width:960px;">
+            <div class="fs-header">
+                <div class="fs-title">📈 株式市場</div>
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <div style="background:rgba(255,255,255,0.08); border-radius:10px; padding:6px 16px; text-align:center;">
+                        <div style="font-size:10px; color:rgba(255,255,255,0.5); text-transform:uppercase;">所持コイン</div>
+                        <div style="font-size:18px; font-weight:bold; color:#ffd700;">💰 <span id="stock-coins">0</span></div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.08); border-radius:10px; padding:6px 16px; text-align:center;">
+                        <div style="font-size:10px; color:rgba(255,255,255,0.5); text-transform:uppercase;">評価額</div>
+                        <div style="font-size:18px; font-weight:bold; color:#26c6da;">📊 <span id="stock-portfolio-value">0</span></div>
+                    </div>
+                    <button onclick="$('#stock-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
                 </div>
             </div>
-            <!-- 銘柄一覧（PCで2カラム） -->
-            <div id="stock-list" style="flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px; align-content:start;"></div>
+            <div id="stock-list" style="flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; align-content:start; padding-bottom:20px;"></div>
+            <button onclick="$('#stock-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
         </div>
     </div>
 
