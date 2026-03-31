@@ -726,16 +726,69 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
 }
 
 /* --- モーダル共通 --- */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px; box-sizing: border-box; }
+.modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 2000; padding: 20px; box-sizing: border-box;
+}
 
 .responsive-card {
     background: var(--bg-31);
     border-radius: 12px;
     width: 100%;
     max-width: 360px;
-    max-height: 90vh;
+    /* PCでは画面内に収まるよう高さを制限 */
+    max-height: calc(100vh - 40px);
     overflow-y: auto;
     position: relative;
+    box-sizing: border-box;
+}
+
+/* PC専用: モーダル全体のサイズ最適化 */
+@media screen and (min-width: 601px) {
+    /* ショップ: 横2カラム（アイテム一覧 | プレビュー） */
+    #shop-modal .responsive-card {
+        max-width: 860px !important;
+        max-height: calc(100vh - 40px) !important;
+        height: calc(100vh - 40px);
+    }
+
+    /* スロット: コンパクトに */
+    #slot-modal .responsive-card {
+        max-width: 560px !important;
+        max-height: calc(100vh - 40px) !important;
+        overflow-y: auto;
+    }
+
+    /* ランキング */
+    #ranking-modal .responsive-card {
+        max-height: calc(100vh - 40px) !important;
+        height: calc(100vh - 80px);
+    }
+
+    /* 株モーダル */
+    #stock-modal .responsive-card {
+        max-width: 680px !important;
+        max-height: calc(100vh - 40px) !important;
+        height: calc(100vh - 40px);
+    }
+
+    /* プロフィール編集 */
+    #settings-modal .responsive-card {
+        max-height: calc(100vh - 40px) !important;
+        overflow-y: auto;
+    }
+
+    /* ユーザー一覧 */
+    #user-list-modal .responsive-card {
+        max-height: calc(100vh - 40px) !important;
+        height: 600px;
+    }
+
+    /* ログインボーナス */
+    #login-bonus-modal .responsive-card {
+        max-height: calc(100vh - 40px) !important;
+    }
 }
 
 .prof-card { width: 100%; max-width: 320px; background: #111214; border-radius: 12px; overflow: hidden; position: relative; margin: auto; }
@@ -1328,4 +1381,36 @@ select.settings-input option {
 @media screen and (max-width: 600px) {
     #stock-list > div { padding: 10px; }
     #stock-list button { padding: 6px 4px; font-size: 11px; }
+}
+
+/* ===== PC専用モーダル内レイアウト追加調整 ===== */
+@media screen and (min-width: 601px) {
+    /* 株: 銘柄グリッドが縦スクロールで収まるよう */
+    #stock-list {
+        max-height: calc(100vh - 220px);
+        overflow-y: auto;
+    }
+
+    /* ランキングリスト */
+    #ranking-list {
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+    }
+
+    /* ショップ: アイテムグリッドの高さ制限 */
+    #shop-items {
+        max-height: calc(100vh - 320px);
+        overflow-y: auto;
+    }
+
+    /* スロット: ペイテーブルを折りたたみ可能に */
+    #slot-modal .responsive-card {
+        overflow-y: auto;
+    }
+
+    /* ユーザー一覧 */
+    #user-list-modal #user-list-tabs-content {
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+    }
 }
