@@ -1405,12 +1405,7 @@ $('#openSlotBtn').on('click', async () => {
     }
 });
 
-// スロットモーダルを閉じる（背景クリック）
-$('#slot-modal').on('click', function(e) {
-    if (e.target === this) {
-        $(this).addClass('hidden');
-    }
-});
+// スロットは全画面UIなので背景クリック閉じは不要
 
 // リールをコマ送りで回す（上→下方向のみ、戻り動作なし）
 function spinReel(reelId, targetSymbol, duration) {
