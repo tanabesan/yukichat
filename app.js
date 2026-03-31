@@ -2976,16 +2976,46 @@ function renderStockList(holdings) {
                         <div style="font-size:12px; color:${changeColor}; font-weight:bold;">${changeSign} ${Math.abs(change)}%</div>
                     </div>
                 </div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <button onclick="adjustStockQty('${s.id}',-1)" style="width:32px; height:32px; background:var(--bg-31); color:var(--txt); border:1px solid #444; border-radius:6px; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center;">−</button>
+                    <input id="qty-${s.id}" type="number" value="1" min="1" max="9999" class="settings-input" style="flex:1; text-align:center; padding:6px; font-size:15px; font-weight:bold; margin-bottom:0;">
+                    <button onclick="adjustStockQty('${s.id}',1)" style="width:32px; height:32px; background:var(--bg-31); color:var(--txt); border:1px solid #444; border-radius:6px; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center;">＋</button>
+                    <button onclick="setStockQtyMax('${s.id}','buy',${price})" style="padding:6px 10px; background:var(--bg-31); color:var(--txt-m); border:1px solid #444; border-radius:6px; cursor:pointer; font-size:11px;">全力買</button>
+                    <button onclick="setStockQtyMax('${s.id}','sell',${owned})" style="padding:6px 10px; background:var(--bg-31); color:var(--txt-m); border:1px solid #444; border-radius:6px; cursor:pointer; font-size:11px;">全売</button>
+                </div>
                 <div style="display:flex; gap:8px;">
-                    <button onclick="tradeStock('${s.id}','buy',1)" style="flex:1; padding:8px; background:#00c853; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px;">買 +1</button>
-                    <button onclick="tradeStock('${s.id}','buy',10)" style="flex:1; padding:8px; background:#00796b; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px;">買 +10</button>
-                    <button onclick="tradeStock('${s.id}','sell',1)" style="flex:1; padding:8px; background:#ff4757; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px;" ${owned < 1 ? 'disabled' : ''}>売 -1</button>
-                    <button onclick="tradeStock('${s.id}','sell',10)" style="flex:1; padding:8px; background:#c62828; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px;" ${owned < 10 ? 'disabled' : ''}>売 -10</button>
+                    <button onclick="tradeStockQty('${s.id}','buy')" style="flex:1; padding:10px; background:#00c853; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;">📈 買う</button>
+                    <button onclick="tradeStockQty('${s.id}','sell')" style="flex:1; padding:10px; background:#ff4757; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;" ${owned < 1 ? 'disabled' : ''}>📉 売る</button>
                 </div>
             </div>
         `);
     });
 }
+
+// 数量±ボタン
+window.adjustStockQty = (stockId, delta) => {
+    const $input = $(`#qty-${stockId}`);
+    const val = Math.max(1, (parseInt($input.val()) || 1) + delta);
+    $input.val(val);
+};
+
+// 全力買い/全売りボタン
+window.setStockQtyMax = async (stockId, type, priceOrOwned) => {
+    if (type === 'buy') {
+        const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+        const coins = userSnap.data()?.coins || 0;
+        const qty = Math.max(1, Math.floor(coins / priceOrOwned));
+        $(`#qty-${stockId}`).val(qty);
+    } else {
+        $(`#qty-${stockId}`).val(Math.max(1, priceOrOwned));
+    }
+};
+
+// 数量入力欄から取得して売買
+window.tradeStockQty = (stockId, action) => {
+    const qty = Math.max(1, parseInt($(`#qty-${stockId}`).val()) || 1);
+    tradeStock(stockId, action, qty);
+};
 
 window.tradeStock = async (stockId, action, qty) => {
     const userRef = doc(db, "users", auth.currentUser.uid);
