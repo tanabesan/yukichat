@@ -11,30 +11,137 @@ const db = initializeFirestore(app, {
 const auth = getAuth(app);
 
 // --- 通知音と設定用変数 ---
-// Web Audio APIで通知音を生成（ファイル依存なし・確実に鳴る）
+// ===== サウンドエンジン (Web Audio API) =====
 const _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function _resumeCtx() {
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+}
+
+// 基本音生成ユーティリティ
+function _tone(freq, startTime, duration, volume = 0.4, type = 'sine', fadeIn = 0.01) {
+    const osc  = _audioCtx.createOscillator();
+    const gain = _audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(_audioCtx.destination);
+    osc.frequency.value = freq;
+    osc.type = type;
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(volume, startTime + fadeIn);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.05);
+}
+
+// ノイズ生成（スロット回転音用）
+function _noise(startTime, duration, volume = 0.15) {
+    const bufSize = _audioCtx.sampleRate * duration;
+    const buf = _audioCtx.createBuffer(1, bufSize, _audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+    const src  = _audioCtx.createBufferSource();
+    const gain = _audioCtx.createGain();
+    const filter = _audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 800;
+    src.buffer = buf;
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(_audioCtx.destination);
+    gain.gain.setValueAtTime(volume, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    src.start(startTime);
+    src.stop(startTime + duration + 0.05);
+}
+
+// --- 各効果音 ---
+
+// 通知音: ポコン♪（チャット受信）
 function playNotifySound() {
     if (!isSoundEnabled) return;
-    try {
-        const ctx = _audioCtx;
-        if (ctx.state === 'suspended') ctx.resume();
-        // 2音の短いチャイム
-        [[880, 0, 0.12], [1100, 0.13, 0.12]].forEach(([freq, delay, dur]) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.frequency.value = freq;
-            osc.type = 'sine';
-            const t = ctx.currentTime + delay;
-            gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(0.4, t + 0.01);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
-            osc.start(t);
-            osc.stop(t + dur);
-        });
-    } catch(e) { console.log('Audio error', e); }
+    _resumeCtx();
+    const t = _audioCtx.currentTime;
+    _tone(880,  t,       0.10, 0.3, 'sine');
+    _tone(1320, t+0.11,  0.10, 0.25, 'sine');
 }
+
+// スロット回転音（ガラガラ）
+function playSlotSpinSound(duration) {
+    if (!isSoundEnabled) return;
+    _resumeCtx();
+    const t = _audioCtx.currentTime;
+    _noise(t, duration * 0.001, 0.2);
+    // カタカタ音
+    for (let i = 0; i < 6; i++) {
+        _tone(200 + Math.random()*100, t + i * duration * 0.00015, 0.04, 0.08, 'square');
+    }
+}
+
+// リール停止音（コトン）
+function playReelStopSound(reelIndex) {
+    if (!isSoundEnabled) return;
+    _resumeCtx();
+    const t = _audioCtx.currentTime;
+    const freq = [300, 340, 380][reelIndex] || 300;
+    _tone(freq, t, 0.08, 0.35, 'triangle');
+    _tone(freq * 0.5, t, 0.12, 0.2, 'sine');
+}
+
+// リーチ音（ドキドキ）
+function playReachSound() {
+    if (!isSoundEnabled) return;
+    _resumeCtx();
+    const t = _audioCtx.currentTime;
+    _tone(440, t,      0.08, 0.3, 'square');
+    _tone(440, t+0.12, 0.08, 0.3, 'square');
+    _tone(440, t+0.24, 0.08, 0.3, 'square');
+    _tone(660, t+0.40, 0.15, 0.4, 'square');
+}
+
+// 当たり音（コイン）
+function playWinSound() {
+    if (!isSoundEnabled) return;
+    _resumeCtx();
+    const t = _audioCtx.currentTime;
+    [523, 659, 784, 1047].forEach((f, i) => {
+        _tone(f, t + i * 0.08, 0.15, 0.3, 'sine');
+    });
+}
+
+// 大当たり音（ジャックポット）
+function playJackpotSound() {
+    if (!isSoundEnabled) return;
+    _resumeCtx();
+    const t = _audioCtx.currentTime;
+    // ファンファーレ
+    [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => {
+        _tone(f, t + i * 0.07, 0.18, 0.35, 'sine');
+    });
+    // コイン音を重ねる
+    for (let i = 0; i < 8; i++) {
+        _tone(1200 + Math.random()*400, t + 0.5 + i*0.06, 0.06, 0.15, 'triangle');
+    }
+}
+
+// 外れ音（ブー）
+function playMissSound() {
+    if (!isSoundEnabled) return;
+    _resumeCtx();
+    const t = _audioCtx.currentTime;
+    _tone(220, t,      0.15, 0.3, 'sawtooth');
+    _tone(180, t+0.18, 0.20, 0.3, 'sawtooth');
+}
+
+// BOOSTED発動音
+function playBoostedSound() {
+    if (!isSoundEnabled) return;
+    _resumeCtx();
+    const t = _audioCtx.currentTime;
+    [300, 400, 500, 700, 900].forEach((f, i) => {
+        _tone(f, t + i * 0.06, 0.12, 0.3, 'square');
+    });
+}
+
 // 後方互換: notifyAudio.play()を呼んでる箇所に対応
 const notifyAudio = { play: () => { playNotifySound(); return Promise.resolve(); }, currentTime: 0, volume: 0.5 };
 
@@ -1356,6 +1463,7 @@ function spinReel(reelId, targetSymbol, duration) {
         }
 
         // 少し待ってから開始（前のリールとの間隔演出）
+        playSlotSpinSound(frames.length);
         setTimeout(nextFrame, 0);
     });
 }
@@ -1452,16 +1560,19 @@ $('#spin-btn').on('click', async () => {
 
     // リール1
     await spinReel(1, results[0]);
+    playReelStopSound(0);
     await wait(250);
 
     // リール2
     await spinReel(2, results[1]);
+    playReelStopSound(1);
 
     // リーチ演出（確率で出る）
     if (showReachEffect) {
         await wait(200);
         $('#reach-effect').removeClass('hidden');
         showSlotEffect('reach');
+        playReachSound();
         await wait(800);
         hideSlotEffect();
     } else {
@@ -1470,6 +1581,7 @@ $('#spin-btn').on('click', async () => {
 
     // リール3
     await spinReel(3, results[2]);
+    playReelStopSound(2);
 
     $('#reach-effect').addClass('hidden');
     await wait(350);
@@ -1512,6 +1624,7 @@ async function checkSlotResult(results, currentCoins, isWin, isReachMiss, isDiam
             updateBoostedSpinsDisplay();
             if (Math.random() < 0.70) {
                 showSlotEffect('boosted');
+                playBoostedSound();
                 await wait(1000);
                 hideSlotEffect();
             }
@@ -1544,9 +1657,9 @@ async function checkSlotResult(results, currentCoins, isWin, isReachMiss, isDiam
                             : (r1 === '⭐') ? Math.random() < 0.60
                             : Math.random() < 0.25;
         if (showWinEffect) {
-            if (r1 === '💎')  showSlotEffect('jackpot');
-            else if (r1 === '⭐') showSlotEffect('star');
-            else              showSlotEffect('win');
+            if (r1 === '💎')  { showSlotEffect('jackpot'); playJackpotSound(); }
+            else if (r1 === '⭐') { showSlotEffect('star'); playWinSound(); }
+            else              { showSlotEffect('win');     playWinSound(); }
             await wait(1800);
             hideSlotEffect();
         }
@@ -1555,6 +1668,7 @@ async function checkSlotResult(results, currentCoins, isWin, isReachMiss, isDiam
         // リーチ外れ演出（40%）
         if (Math.random() < 0.40) {
             showSlotEffect('miss');
+            playMissSound();
             await wait(900);
             hideSlotEffect();
         }
