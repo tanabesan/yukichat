@@ -61,6 +61,9 @@
                 <span id="headerTitle">パブリックチャット</span>
             </div>
             <div style="display:flex; gap:15px; align-items:center;">
+                <span id="callDMBtn" class="material-symbols-outlined op-btn hidden" style="color:#00c853; opacity:1; font-size:24px;" title="通話">call</span>
+                <span id="openRankingBtn" class="material-symbols-outlined op-btn" style="color:#ffd700; opacity:1; font-size:24px;" title="ランキング">leaderboard</span>
+                <span id="openStockBtn" class="material-symbols-outlined op-btn" style="color:#26c6da; opacity:1; font-size:24px;" title="株">trending_up</span>
                 <span id="openSlotBtn" class="material-symbols-outlined op-btn" style="color:#ff4757; opacity:1; font-size:24px;" title="スロット">casino</span>
                 <span id="openLoginBonusBtn" class="material-symbols-outlined op-btn" style="color:#ffd700; opacity:1; font-size:24px;" title="ログインボーナス">redeem</span>
                 <span id="openShopBtnHeader" class="material-symbols-outlined op-btn" style="color:#f093fb; opacity:1; font-size:24px;" title="ショップ">shopping_bag</span>
@@ -507,6 +510,47 @@
 
     <!-- リアクションピッカー -->
     <div id="reaction-picker" class="hidden" style="position: fixed; z-index: 9999; background: var(--bg-2b); border-radius: 12px; padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;">
+    </div>
+
+
+    <!-- ランキングモーダル -->
+    <div id="ranking-modal" class="modal-overlay hidden">
+        <div class="responsive-card" style="padding:20px; max-width:420px; max-height:85vh; display:flex; flex-direction:column;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0;">🏆 ランキング</h3>
+                <button onclick="$('#ranking-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:24px; cursor:pointer;">✕</button>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:15px;">
+                <button class="rank-tab-btn active" data-tab="coins" onclick="switchRankTab('coins',this)" style="flex:1; padding:8px; border:none; border-radius:6px; background:var(--accent); color:#fff; cursor:pointer; font-weight:bold;">💰 コイン</button>
+                <button class="rank-tab-btn" data-tab="stocks" onclick="switchRankTab('stocks',this)" style="flex:1; padding:8px; border:none; border-radius:6px; background:var(--bg-38); color:var(--txt); cursor:pointer; font-weight:bold;">📈 資産</button>
+            </div>
+            <div id="ranking-list" style="flex:1; overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- 株モーダル -->
+    <div id="stock-modal" class="modal-overlay hidden">
+        <div class="responsive-card" style="padding:20px; max-width:520px; max-height:90vh; display:flex; flex-direction:column;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0;">📈 株式市場</h3>
+                <button onclick="$('#stock-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:24px; cursor:pointer;">✕</button>
+            </div>
+            <div style="background:linear-gradient(135deg, #1a1a2e, #16213e); padding:12px; border-radius:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-size:11px; color:var(--txt-m);">所持コイン</div>
+                    <div style="font-size:22px; font-weight:bold; color:#ffd700;">💰 <span id="stock-coins">0</span></div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:11px; color:var(--txt-m);">保有株式評価額</div>
+                    <div style="font-size:18px; font-weight:bold; color:#26c6da;">📊 <span id="stock-portfolio-value">0</span></div>
+                </div>
+            </div>
+            <div id="stock-list" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;"></div>
+            <div id="stock-my-holdings" class="hidden" style="margin-top:12px; padding:12px; background:var(--bg-38); border-radius:8px;">
+                <div style="font-size:12px; color:var(--txt-m); margin-bottom:8px;">📦 保有株</div>
+                <div id="stock-holdings-list"></div>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="https://tanabesan.github.io/yukichat/app.js"></script>
