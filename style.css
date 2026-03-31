@@ -1316,3 +1316,16 @@ select.settings-input option {
     from { opacity: 0.5; background-size: 100%; }
     to   { opacity: 1; }
 }
+
+/* ===== ランキング・株 ===== */
+.rank-tab-btn { transition: background 0.2s, color 0.2s; font-size: 13px; }
+
+#stock-list button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+@media screen and (max-width: 600px) {
+    #stock-list > div { padding: 10px; }
+    #stock-list button { padding: 6px 4px; font-size: 11px; }
+}
