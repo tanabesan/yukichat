@@ -247,6 +247,7 @@ const STAMP_LIST = [
 
 let pendingImageUrl = null, replyTarget = null, editTargetId = null, pc, localStream, currentCallId = null;
 let currentRoomId = null;
+let currentDMOtherUid = null; // DM相手のuid
 let currentUnsubscribe = null;
 let globalUnsubscribers = [];
 let friendIds = [];
@@ -652,8 +653,9 @@ const syncProfilePreview = () => {
 };
 $("#editName, #editPhoto, #editBanner, #editBio, #editEquippedEffect, #editEquippedBadge").on("input change", syncProfilePreview);
 
-window.switchChat = (roomId, otherName = null) => {
+window.switchChat = (roomId, otherName = null, otherUid = null) => {
     currentRoomId = roomId;
+    currentDMOtherUid = otherUid;
     isInitialLoad = true;
     lastMsgCount = 0;
     lastVisibleDoc = null;
@@ -664,8 +666,13 @@ window.switchChat = (roomId, otherName = null) => {
     if(!roomId) $(".sidebar-item:first").addClass("active");
 
     const colRef = roomId ? collection(db, "rooms", roomId, "messages") : collection(db, "chats");
-    if (roomId) $("#headerTitle").text(otherName + " とのDM");
-    else $("#headerTitle").text("グローバルチャット");
+    if (roomId) {
+        $("#headerTitle").text(otherName + " とのDM");
+        $("#callDMBtn").removeClass("hidden");
+    } else {
+        $("#headerTitle").text("グローバルチャット");
+        $("#callDMBtn").addClass("hidden");
+    }
 
     const msgQuery = query(colRef, orderBy("createdAt", "desc"), limit(PAGE_SIZE));
     currentUnsubscribe = onSnapshot(msgQuery, (snap) => {
@@ -2129,7 +2136,7 @@ window.openDM = async (otherUid, otherName) => {
     await setDoc(doc(db, "rooms", roomId), { users: [auth.currentUser.uid, otherUid] }, { merge: true });
     $("#prof-modal, #user-list-modal").addClass("hidden");
     toggleSidebar(false);
-    switchChat(roomId, otherName);
+    switchChat(roomId, otherName, otherUid);
 };
 
 $("#my-profile-trigger").on("click", async () => {
@@ -2808,3 +2815,233 @@ offlineCheckInterval = setInterval(() => {
         if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
     }, { passive: true });
 })();
+
+// ============================================================
+// 通話ボタン（DM中のみ表示）
+// ============================================================
+$('#callDMBtn').on('click', async () => {
+    if (!currentDMOtherUid) return;
+    // 既存のWebRTC通話を発信
+    $('#other-settings-modal').addClass('hidden');
+    await setupWebRTC();
+    const callDoc = doc(collection(db, "calls"));
+    currentCallId = callDoc.id;
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await setDoc(callDoc, {
+        offer: { type: offer.type, sdp: offer.sdp },
+        caller: auth.currentUser.displayName,
+        callerUid: auth.currentUser.uid,
+        targetUid: currentDMOtherUid
+    });
+    onSnapshot(callDoc, (s) => {
+        if (!pc.currentRemoteDescription && s.data()?.answer)
+            pc.setRemoteDescription(new RTCSessionDescription(s.data().answer));
+    });
+});
+
+// ============================================================
+// ランキング
+// ============================================================
+$('#openRankingBtn').on('click', () => {
+    $('#ranking-modal').removeClass('hidden');
+    loadRanking('coins');
+});
+
+window.switchRankTab = (tab, el) => {
+    $('.rank-tab-btn').css({ background: 'var(--bg-38)', color: 'var(--txt)' });
+    $(el).css({ background: 'var(--accent)', color: '#fff' });
+    loadRanking(tab);
+};
+
+async function loadRanking(tab) {
+    const $list = $('#ranking-list').html('<div style="text-align:center; padding:20px; color:var(--txt-m);">読み込み中...</div>');
+    try {
+        const snap = await getDocs(collection(db, "users"));
+        let users = snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(u => u.name);
+
+        if (tab === 'coins') {
+            users.sort((a, b) => (b.coins || 0) - (a.coins || 0));
+        } else {
+            // 株資産 = 保有数 × 現在株価
+            const priceSnap = await getDocs(collection(db, "stocks"));
+            const prices = {};
+            priceSnap.docs.forEach(d => { prices[d.id] = d.data().price || 0; });
+            users.forEach(u => {
+                let val = 0;
+                const holdings = u.stockHoldings || {};
+                Object.entries(holdings).forEach(([sym, qty]) => { val += (prices[sym] || 0) * qty; });
+                u._stockVal = val;
+            });
+            users.sort((a, b) => (b._stockVal || 0) - (a._stockVal || 0));
+        }
+
+        const medals = ['🥇', '🥈', '🥉'];
+        $list.empty();
+        users.slice(0, 20).forEach((u, i) => {
+            const rank = i < 3 ? medals[i] : `${i + 1}`;
+            const value = tab === 'coins'
+                ? `💰 ${(u.coins || 0).toLocaleString()}`
+                : `📊 ${(u._stockVal || 0).toLocaleString()}`;
+            const isMe = auth.currentUser && u.uid === auth.currentUser.uid;
+            $list.append(`
+                <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:8px; margin-bottom:6px; background:${isMe ? 'rgba(88,101,242,0.15)' : 'var(--bg-38)'}; border:${isMe ? '1px solid var(--accent)' : '1px solid transparent'};">
+                    <div style="width:28px; text-align:center; font-size:18px; font-weight:bold;">${rank}</div>
+                    <img src="${u.photo || 'https://via.placeholder.com/30'}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-weight:bold; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(u.name)}</div>
+                    </div>
+                    <div style="font-size:13px; font-weight:bold; color:#ffd700; white-space:nowrap;">${value}</div>
+                </div>
+            `);
+        });
+        if (users.length === 0) $list.html('<div style="text-align:center; padding:20px; color:var(--txt-m);">まだデータがありません</div>');
+    } catch(e) {
+        $list.html('<div style="text-align:center; padding:20px; color:var(--danger);">読み込みエラー</div>');
+    }
+}
+
+// ============================================================
+// 株ゲーム
+// ============================================================
+const STOCKS = [
+    { id: 'yukicorp',  name: '❄️ ユキコープ',   basePrice: 100,  volatility: 0.08 },
+    { id: 'chocoin',   name: '🍫 チョコイン',    basePrice: 250,  volatility: 0.12 },
+    { id: 'memestock', name: '🚀 ミームストック', basePrice: 50,   volatility: 0.25 },
+    { id: 'stablebet', name: '🏦 スタブルベット', basePrice: 500,  volatility: 0.03 },
+    { id: 'ramenco',   name: '🍜 ラーメンコ',    basePrice: 180,  volatility: 0.10 },
+    { id: 'cattoken',  name: '🐱 キャットトークン', basePrice: 320, volatility: 0.15 },
+];
+
+let stockPrices = {}; // { id: currentPrice }
+let stockUnsubscribe = null;
+
+$('#openStockBtn').on('click', async () => {
+    $('#stock-modal').removeClass('hidden');
+    await loadStockData();
+});
+
+$('#stock-modal').on('click', function(e) {
+    if (e.target === this) $(this).addClass('hidden');
+});
+
+async function loadStockData() {
+    // まず株価が存在しなければ初期化
+    const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+    const userCoins = userSnap.data()?.coins || 0;
+    const holdings = userSnap.data()?.stockHoldings || {};
+    $('#stock-coins').text(userCoins.toLocaleString());
+
+    // 株価をFirestoreから取得（なければ初期化）
+    const priceUpdates = {};
+    let needsInit = false;
+    for (const s of STOCKS) {
+        const snap = await getDoc(doc(db, "stocks", s.id));
+        if (!snap.exists()) {
+            priceUpdates[s.id] = s.basePrice;
+            needsInit = true;
+        } else {
+            stockPrices[s.id] = snap.data().price;
+        }
+    }
+    if (needsInit) {
+        for (const [id, price] of Object.entries(priceUpdates)) {
+            await setDoc(doc(db, "stocks", id), { price, updatedAt: serverTimestamp() });
+            stockPrices[id] = price;
+        }
+    }
+
+    renderStockList(holdings);
+    updatePortfolioValue(holdings);
+}
+
+function renderStockList(holdings) {
+    const $list = $('#stock-list').empty();
+    STOCKS.forEach(s => {
+        const price = stockPrices[s.id] || s.basePrice;
+        const owned = holdings[s.id] || 0;
+        const prev = s.basePrice;
+        const change = ((price - prev) / prev * 100).toFixed(1);
+        const changeColor = price >= prev ? '#00c853' : '#ff4757';
+        const changeSign = price >= prev ? '▲' : '▼';
+        $list.append(`
+            <div style="background:var(--bg-38); border-radius:10px; padding:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <div>
+                        <div style="font-weight:bold; font-size:15px;">${s.name}</div>
+                        <div style="font-size:11px; color:var(--txt-m); margin-top:2px;">保有: ${owned}株</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:20px; font-weight:bold; color:#ffd700;">${price.toLocaleString()} 💰</div>
+                        <div style="font-size:12px; color:${changeColor}; font-weight:bold;">${changeSign} ${Math.abs(change)}%</div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="tradeStock('${s.id}','buy',1)" style="flex:1; padding:8px; background:#00c853; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px;">買 +1</button>
+                    <button onclick="tradeStock('${s.id}','buy',10)" style="flex:1; padding:8px; background:#00796b; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px;">買 +10</button>
+                    <button onclick="tradeStock('${s.id}','sell',1)" style="flex:1; padding:8px; background:#ff4757; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px;" ${owned < 1 ? 'disabled' : ''}>売 -1</button>
+                    <button onclick="tradeStock('${s.id}','sell',10)" style="flex:1; padding:8px; background:#c62828; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px;" ${owned < 10 ? 'disabled' : ''}>売 -10</button>
+                </div>
+            </div>
+        `);
+    });
+}
+
+window.tradeStock = async (stockId, action, qty) => {
+    const userRef = doc(db, "users", auth.currentUser.uid);
+    const userSnap = await getDoc(userRef);
+    const userData = userSnap.data();
+    let coins = userData.coins || 0;
+    const holdings = { ...(userData.stockHoldings || {}) };
+    const price = stockPrices[stockId] || STOCKS.find(s => s.id === stockId)?.basePrice || 100;
+    const cost = price * qty;
+    const owned = holdings[stockId] || 0;
+
+    if (action === 'buy') {
+        if (coins < cost) { alert(`💰 コインが足りません（必要: ${cost.toLocaleString()}）`); return; }
+        coins -= cost;
+        holdings[stockId] = owned + qty;
+    } else {
+        if (owned < qty) { alert(`株が足りません（保有: ${owned}株）`); return; }
+        coins += cost;
+        holdings[stockId] = owned - qty;
+        if (holdings[stockId] <= 0) delete holdings[stockId];
+    }
+
+    await setDoc(userRef, { coins, stockHoldings: holdings }, { merge: true });
+
+    // 売買で価格変動（大量売買ほど動く）
+    const stock = STOCKS.find(s => s.id === stockId);
+    const impact = (action === 'buy' ? 1 : -1) * qty * 0.002 * (stock?.volatility || 0.1);
+    const newPrice = Math.max(1, Math.round(price * (1 + impact + (Math.random() - 0.5) * (stock?.volatility || 0.1) * 0.5)));
+    await setDoc(doc(db, "stocks", stockId), { price: newPrice, updatedAt: serverTimestamp() });
+    stockPrices[stockId] = newPrice;
+
+    $('#stock-coins').text(coins.toLocaleString());
+    renderStockList(holdings);
+    updatePortfolioValue(holdings);
+};
+
+function updatePortfolioValue(holdings) {
+    let total = 0;
+    Object.entries(holdings).forEach(([id, qty]) => { total += (stockPrices[id] || 0) * qty; });
+    $('#stock-portfolio-value').text(total.toLocaleString());
+}
+
+// 株価の定期変動（全ユーザー共通、10分ごと）
+setInterval(async () => {
+    if ($('#stock-modal').hasClass('hidden')) return;
+    for (const s of STOCKS) {
+        const snap = await getDoc(doc(db, "stocks", s.id));
+        if (!snap.exists()) continue;
+        const current = snap.data().price;
+        const drift = (Math.random() - 0.48) * s.volatility;
+        const newPrice = Math.max(1, Math.round(current * (1 + drift)));
+        await setDoc(doc(db, "stocks", s.id), { price: newPrice, updatedAt: serverTimestamp() });
+        stockPrices[s.id] = newPrice;
+    }
+    const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+    const holdings = userSnap.data()?.stockHoldings || {};
+    renderStockList(holdings);
+    updatePortfolioValue(holdings);
+}, 60000); // 1分ごとに価格変動
