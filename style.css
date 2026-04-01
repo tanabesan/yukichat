@@ -1731,3 +1731,20 @@ select.settings-input option {
     .fs-title { font-size: 17px; }
     .fs-header { margin-bottom: 12px; padding-bottom: 10px; }
 }
+
+/* ===== 株カード ===== */
+.stock-qty-btn {
+    width: 30px; height: 30px;
+    background: var(--bg-31); color: var(--txt);
+    border: 1px solid #444; border-radius: 6px;
+    cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.stock-max-btn {
+    padding: 5px 8px;
+    background: var(--bg-31); color: var(--txt-m);
+    border: 1px solid #444; border-radius: 6px;
+    cursor: pointer; font-size: 11px; flex-shrink: 0;
+}
+.stock-qty-btn:active, .stock-max-btn:active { opacity: 0.7; }
