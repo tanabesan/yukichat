@@ -3116,8 +3116,8 @@ window.tradeStock = async (stockId, action, qty) => {
         if (holdings[stockId] <= 0) delete holdings[stockId];
     }
 
-    // 価格は変えない
-    await setDoc(userRef, { coins, stockHoldings: holdings }, { merge: true });
+    // updateDocで完全上書き（setDoc+mergeだとマップのキー削除が反映されない）
+    await updateDoc(userRef, { coins, stockHoldings: holdings });
     userHoldings = { ...holdings }; // キャッシュ更新
     await refreshPortfolio();
     refreshStockCard(stockId, holdings);
