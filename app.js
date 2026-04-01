@@ -2919,6 +2919,7 @@ const STOCK_EVENTS = [
 let stockPrices = {};      // 現在価格
 let stockHistory = {};     // 価格履歴 { id: [{price,time},...] }
 let stockEvents  = {};     // 直近イベント { id: label }
+let userHoldings = {};     // 保有株キャッシュ（ローカル）
 // 価格更新はCloud Functions担当
 
 // ===== Firestore リアルタイム購読 =====
@@ -2953,6 +2954,7 @@ async function initStockData() {
     const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
     $('#stock-coins').text((userSnap.data()?.coins || 0).toLocaleString());
     const holdings = userSnap.data()?.stockHoldings || {};
+    userHoldings = { ...holdings }; // キャッシュに保存
 
     // 未初期化銘柄を初期化
     for (const s of STOCKS) {
@@ -2984,10 +2986,11 @@ async function initStockData() {
 
 // ===== カード描画 =====
 function renderStockList(holdings) {
+    if (holdings) userHoldings = { ...holdings }; // キャッシュ更新
     const $list = $('#stock-list').empty();
     STOCKS.forEach(s => {
         $list.append(`<div id="stock-card-${s.id}"></div>`);
-        refreshStockCard(s.id, holdings);
+        refreshStockCard(s.id, userHoldings);
     });
 }
 
@@ -3052,13 +3055,11 @@ function refreshStockCard(stockId, holdingsOverride) {
         </div>`;
     $(`#stock-card-${s.id}`).html(card);
 
-    // 保有数を非同期で埋める
-    getDoc(doc(db, "users", auth.currentUser.uid)).then(snap => {
-        const holdings = holdingsOverride || snap.data()?.stockHoldings || {};
-        const owned = holdings[s.id] || 0;
-        $(`#owned-${s.id}`).text(owned);
-        if (owned < 1) $(`#sell-btn-${s.id}`).prop('disabled', true).css('opacity', 0.4);
-    });
+    // 保有数をキャッシュから即座に反映
+    const holdings = holdingsOverride || userHoldings;
+    const owned = holdings[s.id] || 0;
+    $(`#owned-${s.id}`).text(owned);
+    if (owned < 1) $(`#sell-btn-${s.id}`).prop('disabled', true).css('opacity', 0.4);
 }
 
 async function refreshPortfolio() {
@@ -3117,6 +3118,7 @@ window.tradeStock = async (stockId, action, qty) => {
 
     // 価格は変えない
     await setDoc(userRef, { coins, stockHoldings: holdings }, { merge: true });
+    userHoldings = { ...holdings }; // キャッシュ更新
     await refreshPortfolio();
     refreshStockCard(stockId, holdings);
 };
