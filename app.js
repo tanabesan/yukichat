@@ -2897,121 +2897,203 @@ async function loadRanking(tab) {
 }
 
 // ============================================================
-// 株ゲーム
+// 株ゲーム（価格は時間ベースのランダム変動のみ・売買影響なし）
 // ============================================================
 const STOCKS = [
-    { id: 'yukicorp',  name: '❄️ ユキコープ',   basePrice: 100,  volatility: 0.08 },
-    { id: 'chocoin',   name: '🍫 チョコイン',    basePrice: 250,  volatility: 0.12 },
-    { id: 'memestock', name: '🚀 ミームストック', basePrice: 50,   volatility: 0.25 },
-    { id: 'stablebet', name: '🏦 スタブルベット', basePrice: 500,  volatility: 0.03 },
-    { id: 'ramenco',   name: '🍜 ラーメンコ',    basePrice: 180,  volatility: 0.10 },
-    { id: 'cattoken',  name: '🐱 キャットトークン', basePrice: 320, volatility: 0.15 },
+    { id: 'yukicorp',  name: '❄️ ユキコープ',    basePrice: 100, vol: 0.06, trend: 0.001 },
+    { id: 'chocoin',   name: '🍫 チョコイン',     basePrice: 250, vol: 0.10, trend: 0.002 },
+    { id: 'memestock', name: '🚀 ミームストック',  basePrice: 50,  vol: 0.22, trend: 0.000 },
+    { id: 'stablebet', name: '🏦 スタブルベット',  basePrice: 500, vol: 0.02, trend: 0.001 },
+    { id: 'ramenco',   name: '🍜 ラーメンコ',     basePrice: 180, vol: 0.08, trend: 0.001 },
+    { id: 'cattoken',  name: '🐱 キャットトークン', basePrice: 320, vol: 0.13, trend: 0.002 },
 ];
 
-let stockPrices = {}; // { id: currentPrice }
-let stockUnsubscribe = null;
+// イベント定義（確率・倍率・説明）
+const STOCK_EVENTS = [
+    { prob: 0.015, mult: [1.20, 1.50], label: '🚀 急騰！' },
+    { prob: 0.015, mult: [0.55, 0.75], label: '💥 暴落！' },
+    { prob: 0.030, mult: [1.08, 1.18], label: '📈 好材料' },
+    { prob: 0.030, mult: [0.84, 0.93], label: '📉 悪材料' },
+];
 
-$('#openStockBtn').on('click', async () => {
-    $('#stock-modal').removeClass('hidden');
-    await loadStockData();
-});
+let stockPrices = {};      // 現在価格
+let stockHistory = {};     // 価格履歴 { id: [{price,time},...] }
+let stockEvents  = {};     // 直近イベント { id: label }
+// 価格更新はCloud Functions担当
 
-$('#stock-modal').on('click', function(e) {
-    if (e.target === this) $(this).addClass('hidden');
-});
-
-async function loadStockData() {
-    // まず株価が存在しなければ初期化
-    const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
-    const userCoins = userSnap.data()?.coins || 0;
-    const holdings = userSnap.data()?.stockHoldings || {};
-    $('#stock-coins').text(userCoins.toLocaleString());
-
-    // 株価をFirestoreから取得（なければ初期化）
-    const priceUpdates = {};
-    let needsInit = false;
-    for (const s of STOCKS) {
-        const snap = await getDoc(doc(db, "stocks", s.id));
-        if (!snap.exists()) {
-            priceUpdates[s.id] = s.basePrice;
-            needsInit = true;
-        } else {
-            stockPrices[s.id] = snap.data().price;
-        }
-    }
-    if (needsInit) {
-        for (const [id, price] of Object.entries(priceUpdates)) {
-            await setDoc(doc(db, "stocks", id), { price, updatedAt: serverTimestamp() });
-            stockPrices[id] = price;
-        }
-    }
-
-    renderStockList(holdings);
-    updatePortfolioValue(holdings);
-}
-
-function renderStockList(holdings) {
-    const $list = $('#stock-list').empty();
+// ===== Firestore リアルタイム購読 =====
+let stockListeners = [];
+function subscribeStocks() {
+    stockListeners.forEach(u => u());
+    stockListeners = [];
     STOCKS.forEach(s => {
-        const price = stockPrices[s.id] || s.basePrice;
-        const owned = holdings[s.id] || 0;
-        const prev = s.basePrice;
-        const change = ((price - prev) / prev * 100).toFixed(1);
-        const changeColor = price >= prev ? '#00c853' : '#ff4757';
-        const changeSign = price >= prev ? '▲' : '▼';
-        $list.append(`
-            <div style="background:var(--bg-38); border-radius:10px; padding:14px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div>
-                        <div style="font-weight:bold; font-size:15px;">${s.name}</div>
-                        <div style="font-size:11px; color:var(--txt-m); margin-top:2px;">保有: ${owned}株</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:20px; font-weight:bold; color:#ffd700;">${price.toLocaleString()} 💰</div>
-                        <div style="font-size:12px; color:${changeColor}; font-weight:bold;">${changeSign} ${Math.abs(change)}%</div>
-                    </div>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                    <button onclick="adjustStockQty('${s.id}',-1)" style="width:32px; height:32px; background:var(--bg-31); color:var(--txt); border:1px solid #444; border-radius:6px; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center;">−</button>
-                    <input id="qty-${s.id}" type="number" value="1" min="1" max="9999" class="settings-input" style="flex:1; text-align:center; padding:6px; font-size:15px; font-weight:bold; margin-bottom:0;">
-                    <button onclick="adjustStockQty('${s.id}',1)" style="width:32px; height:32px; background:var(--bg-31); color:var(--txt); border:1px solid #444; border-radius:6px; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center;">＋</button>
-                    <button onclick="setStockQtyMax('${s.id}','buy',${price})" style="padding:6px 10px; background:var(--bg-31); color:var(--txt-m); border:1px solid #444; border-radius:6px; cursor:pointer; font-size:11px;">全力買</button>
-                    <button onclick="setStockQtyMax('${s.id}','sell',${owned})" style="padding:6px 10px; background:var(--bg-31); color:var(--txt-m); border:1px solid #444; border-radius:6px; cursor:pointer; font-size:11px;">全売</button>
-                </div>
-                <div style="display:flex; gap:8px;">
-                    <button onclick="tradeStockQty('${s.id}','buy')" style="flex:1; padding:10px; background:#00c853; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;">📈 買う</button>
-                    <button onclick="tradeStockQty('${s.id}','sell')" style="flex:1; padding:10px; background:#ff4757; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;" ${owned < 1 ? 'disabled' : ''}>📉 売る</button>
-                </div>
-            </div>
-        `);
+        const unsub = onSnapshot(doc(db, "stocks", s.id), snap => {
+            if (!snap.exists()) return;
+            const d = snap.data();
+            stockPrices[s.id] = d.price;
+            stockHistory[s.id] = d.history || [];
+            stockEvents[s.id]  = d.lastEvent || '';
+            if (!$('#stock-modal').hasClass('hidden')) {
+                refreshStockCard(s.id);
+                refreshPortfolio();
+            }
+        });
+        stockListeners.push(unsub);
     });
 }
 
-// 数量±ボタン
-window.adjustStockQty = (stockId, delta) => {
-    const $input = $(`#qty-${stockId}`);
-    const val = Math.max(1, (parseInt($input.val()) || 1) + delta);
-    $input.val(val);
-};
+// ===== 株画面を開く =====
+$('#openStockBtn').on('click', async () => {
+    $('#stock-modal').removeClass('hidden');
+    await initStockData();
+    subscribeStocks();
+});
 
-// 全力買い/全売りボタン
-window.setStockQtyMax = async (stockId, type, priceOrOwned) => {
+async function initStockData() {
+    const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+    $('#stock-coins').text((userSnap.data()?.coins || 0).toLocaleString());
+    const holdings = userSnap.data()?.stockHoldings || {};
+
+    // 未初期化銘柄を初期化
+    for (const s of STOCKS) {
+        const snap = await getDoc(doc(db, "stocks", s.id));
+        if (!snap.exists()) {
+            const initHistory = [];
+            const now = Date.now();
+            let p = s.basePrice;
+            for (let i = 29; i >= 0; i--) {
+                initHistory.push({ price: p, time: now - i * 60000 });
+                p = Math.max(1, Math.round(p * (1 + (Math.random()-0.5)*s.vol*0.3)));
+            }
+            await setDoc(doc(db, "stocks", s.id), {
+                price: s.basePrice, history: initHistory,
+                lastEvent: '', updatedAt: serverTimestamp()
+            });
+        }
+        const d = (await getDoc(doc(db, "stocks", s.id))).data();
+        stockPrices[s.id]  = d.price;
+        stockHistory[s.id] = d.history || [];
+        stockEvents[s.id]  = d.lastEvent || '';
+    }
+
+    renderStockList(holdings);
+    refreshPortfolio();
+}
+
+// 価格更新はCloud Functionsが担当（クライアントは購読のみ）
+
+// ===== カード描画 =====
+function renderStockList(holdings) {
+    const $list = $('#stock-list').empty();
+    STOCKS.forEach(s => {
+        $list.append(`<div id="stock-card-${s.id}"></div>`);
+        refreshStockCard(s.id, holdings);
+    });
+}
+
+function refreshStockCard(stockId, holdingsOverride) {
+    const s = STOCKS.find(x => x.id === stockId);
+    if (!s) return;
+    const price = stockPrices[s.id] || s.basePrice;
+    const hist  = stockHistory[s.id] || [];
+    const event = stockEvents[s.id] || '';
+
+    // 前回比（履歴の1個前と比較）
+    const prevPrice = hist.length >= 2 ? hist[hist.length - 2].price : s.basePrice;
+    const changePct = ((price - prevPrice) / prevPrice * 100).toFixed(1);
+    const up = price >= prevPrice;
+    const changeColor = up ? '#00c853' : '#ff4757';
+    const changeSign  = up ? '▲' : '▼';
+
+    // ミニグラフSVG
+    const svgW = 200, svgH = 50;
+    const pts = hist.slice(-30);
+    let sparkSvg = '';
+    if (pts.length >= 2) {
+        const prices = pts.map(p => p.price);
+        const mn = Math.min(...prices), mx = Math.max(...prices);
+        const range = mx - mn || 1;
+        const coords = pts.map((p, i) => {
+            const x = (i / (pts.length - 1)) * svgW;
+            const y = svgH - ((p.price - mn) / range) * (svgH - 6) - 3;
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(' ');
+        const lineColor = up ? '#00c853' : '#ff4757';
+        sparkSvg = `<svg width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" style="display:block;margin:8px 0;">
+            <polyline points="${coords}" fill="none" stroke="${lineColor}" stroke-width="2" stroke-linejoin="round"/>
+        </svg>`;
+    }
+
+    const card = `
+        <div style="background:var(--bg-38); border-radius:12px; padding:14px; border:1px solid ${event ? changeColor+'55' : 'transparent'};">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                <div>
+                    <div style="font-weight:bold; font-size:15px;">${s.name}</div>
+                    <div style="font-size:11px; color:var(--txt-m); margin-top:2px;">保有: <span id="owned-${s.id}">?</span>株</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:20px; font-weight:bold; color:#ffd700;">${price.toLocaleString()} 💰</div>
+                    <div style="font-size:12px; color:${changeColor}; font-weight:bold;">${changeSign} ${Math.abs(changePct)}%</div>
+                </div>
+            </div>
+            ${event ? `<div style="font-size:12px; color:${changeColor}; font-weight:bold; margin-bottom:4px;">${event}</div>` : ''}
+            ${sparkSvg}
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                <button onclick="adjustStockQty('${s.id}',-1)" class="stock-qty-btn">−</button>
+                <input id="qty-${s.id}" type="number" value="1" min="1" max="99999" class="settings-input" style="flex:1; text-align:center; padding:5px; font-size:14px; font-weight:bold; margin-bottom:0;">
+                <button onclick="adjustStockQty('${s.id}',1)" class="stock-qty-btn">＋</button>
+                <button onclick="setStockQtyMax('${s.id}','buy',${price})" class="stock-max-btn">全力買</button>
+                <button onclick="setStockQtyMax('${s.id}','sell')" class="stock-max-btn">全売</button>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button onclick="tradeStockQty('${s.id}','buy')" style="flex:1; padding:10px; background:#00c853; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;">📈 買う</button>
+                <button onclick="tradeStockQty('${s.id}','sell')" id="sell-btn-${s.id}" style="flex:1; padding:10px; background:#ff4757; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;">📉 売る</button>
+            </div>
+        </div>`;
+    $(`#stock-card-${s.id}`).html(card);
+
+    // 保有数を非同期で埋める
+    getDoc(doc(db, "users", auth.currentUser.uid)).then(snap => {
+        const holdings = holdingsOverride || snap.data()?.stockHoldings || {};
+        const owned = holdings[s.id] || 0;
+        $(`#owned-${s.id}`).text(owned);
+        if (owned < 1) $(`#sell-btn-${s.id}`).prop('disabled', true).css('opacity', 0.4);
+    });
+}
+
+async function refreshPortfolio() {
+    const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
+    const coins = snap.data()?.coins || 0;
+    const holdings = snap.data()?.stockHoldings || {};
+    $('#stock-coins').text(coins.toLocaleString());
+    let total = 0;
+    Object.entries(holdings).forEach(([id, qty]) => { total += (stockPrices[id] || 0) * qty; });
+    $('#stock-portfolio-value').text(total.toLocaleString());
+}
+
+// ===== 数量操作 =====
+window.adjustStockQty = (stockId, delta) => {
+    const $i = $(`#qty-${stockId}`);
+    $i.val(Math.max(1, (parseInt($i.val()) || 1) + delta));
+};
+window.setStockQtyMax = async (stockId, type) => {
     if (type === 'buy') {
-        const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
-        const coins = userSnap.data()?.coins || 0;
-        const qty = Math.max(1, Math.floor(coins / priceOrOwned));
-        $(`#qty-${stockId}`).val(qty);
+        const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
+        const coins = snap.data()?.coins || 0;
+        const price = stockPrices[stockId] || 1;
+        $(`#qty-${stockId}`).val(Math.max(1, Math.floor(coins / price)));
     } else {
-        $(`#qty-${stockId}`).val(Math.max(1, priceOrOwned));
+        const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
+        const owned = (snap.data()?.stockHoldings || {})[stockId] || 0;
+        $(`#qty-${stockId}`).val(Math.max(1, owned));
     }
 };
-
-// 数量入力欄から取得して売買
 window.tradeStockQty = (stockId, action) => {
     const qty = Math.max(1, parseInt($(`#qty-${stockId}`).val()) || 1);
     tradeStock(stockId, action, qty);
 };
 
+// ===== 売買（価格は変動させない） =====
 window.tradeStock = async (stockId, action, qty) => {
     const userRef = doc(db, "users", auth.currentUser.uid);
     const userSnap = await getDoc(userRef);
@@ -3033,40 +3115,8 @@ window.tradeStock = async (stockId, action, qty) => {
         if (holdings[stockId] <= 0) delete holdings[stockId];
     }
 
+    // 価格は変えない
     await setDoc(userRef, { coins, stockHoldings: holdings }, { merge: true });
-
-    // 売買で価格変動（大量売買ほど動く）
-    const stock = STOCKS.find(s => s.id === stockId);
-    const impact = (action === 'buy' ? 1 : -1) * qty * 0.002 * (stock?.volatility || 0.1);
-    const newPrice = Math.max(1, Math.round(price * (1 + impact + (Math.random() - 0.5) * (stock?.volatility || 0.1) * 0.5)));
-    await setDoc(doc(db, "stocks", stockId), { price: newPrice, updatedAt: serverTimestamp() });
-    stockPrices[stockId] = newPrice;
-
-    $('#stock-coins').text(coins.toLocaleString());
-    renderStockList(holdings);
-    updatePortfolioValue(holdings);
+    await refreshPortfolio();
+    refreshStockCard(stockId, holdings);
 };
-
-function updatePortfolioValue(holdings) {
-    let total = 0;
-    Object.entries(holdings).forEach(([id, qty]) => { total += (stockPrices[id] || 0) * qty; });
-    $('#stock-portfolio-value').text(total.toLocaleString());
-}
-
-// 株価の定期変動（全ユーザー共通、10分ごと）
-setInterval(async () => {
-    if ($('#stock-modal').hasClass('hidden')) return;
-    for (const s of STOCKS) {
-        const snap = await getDoc(doc(db, "stocks", s.id));
-        if (!snap.exists()) continue;
-        const current = snap.data().price;
-        const drift = (Math.random() - 0.48) * s.volatility;
-        const newPrice = Math.max(1, Math.round(current * (1 + drift)));
-        await setDoc(doc(db, "stocks", s.id), { price: newPrice, updatedAt: serverTimestamp() });
-        stockPrices[s.id] = newPrice;
-    }
-    const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
-    const holdings = userSnap.data()?.stockHoldings || {};
-    renderStockList(holdings);
-    updatePortfolioValue(holdings);
-}, 60000); // 1分ごとに価格変動
