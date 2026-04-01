@@ -2927,20 +2927,22 @@ let stockListeners = [];
 function subscribeStocks() {
     stockListeners.forEach(u => u());
     stockListeners = [];
-    STOCKS.forEach(s => {
-        const unsub = onSnapshot(doc(db, "stocks", s.id), snap => {
-            if (!snap.exists()) return;
-            const d = snap.data();
-            stockPrices[s.id] = d.price;
-            stockHistory[s.id] = d.history || [];
-            stockEvents[s.id]  = d.lastEvent || '';
+    // 6本個別 → 1本のコレクション購読にまとめて読み取り効率化
+    const unsub = onSnapshot(collection(db, "stocks"), snap => {
+        snap.docChanges().forEach(change => {
+            if (change.type === 'removed') return;
+            const d = change.doc.data();
+            const id = change.doc.id;
+            stockPrices[id]  = d.price;
+            stockHistory[id] = d.history || [];
+            stockEvents[id]  = d.lastEvent || '';
             if (!$('#stock-modal').hasClass('hidden')) {
-                refreshStockCard(s.id);
+                refreshStockCard(id);
                 refreshPortfolio();
             }
         });
-        stockListeners.push(unsub);
     });
+    stockListeners.push(unsub);
 }
 
 // ===== 株画面を開く =====
@@ -2952,9 +2954,9 @@ $('#openStockBtn').on('click', async () => {
 
 async function initStockData() {
     const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
-    $('#stock-coins').text((userSnap.data()?.coins || 0).toLocaleString());
-    const holdings = userSnap.data()?.stockHoldings || {};
-    userHoldings = { ...holdings }; // キャッシュに保存
+    const userData = userSnap.data() || {};
+    userCoinsCache = userData.coins || 0;
+    userHoldings = { ...(userData.stockHoldings || {}) };
 
     // 未初期化銘柄を初期化
     for (const s of STOCKS) {
@@ -3062,10 +3064,14 @@ function refreshStockCard(stockId, holdingsOverride) {
     if (owned < 1) $(`#sell-btn-${s.id}`).prop('disabled', true).css('opacity', 0.4);
 }
 
-async function refreshPortfolio() {
-    const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
-    const coins = snap.data()?.coins || 0;
-    const holdings = snap.data()?.stockHoldings || {};
+// userCoinsキャッシュ（株画面用）
+let userCoinsCache = 0;
+
+function refreshPortfolio(coinsOverride, holdingsOverride) {
+    // ローカルキャッシュで計算（Firestore読み取り不要）
+    const coins = coinsOverride !== undefined ? coinsOverride : userCoinsCache;
+    const holdings = holdingsOverride || userHoldings;
+    userCoinsCache = coins;
     $('#stock-coins').text(coins.toLocaleString());
     let total = 0;
     Object.entries(holdings).forEach(([id, qty]) => { total += (stockPrices[id] || 0) * qty; });
@@ -3077,15 +3083,12 @@ window.adjustStockQty = (stockId, delta) => {
     const $i = $(`#qty-${stockId}`);
     $i.val(Math.max(1, (parseInt($i.val()) || 1) + delta));
 };
-window.setStockQtyMax = async (stockId, type) => {
+window.setStockQtyMax = (stockId, type) => {
     if (type === 'buy') {
-        const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
-        const coins = snap.data()?.coins || 0;
         const price = stockPrices[stockId] || 1;
-        $(`#qty-${stockId}`).val(Math.max(1, Math.floor(coins / price)));
+        $(`#qty-${stockId}`).val(Math.max(1, Math.floor(userCoinsCache / price)));
     } else {
-        const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
-        const owned = (snap.data()?.stockHoldings || {})[stockId] || 0;
+        const owned = userHoldings[stockId] || 0;
         $(`#qty-${stockId}`).val(Math.max(1, owned));
     }
 };
@@ -3101,6 +3104,8 @@ window.tradeStock = async (stockId, action, qty) => {
     const userData = userSnap.data();
     let coins = userData.coins || 0;
     const holdings = { ...(userData.stockHoldings || {}) };
+
+    // onSnapshotで常に最新を保持しているstockPricesを使用
     const price = stockPrices[stockId] || STOCKS.find(s => s.id === stockId)?.basePrice || 100;
     const cost = price * qty;
     const owned = holdings[stockId] || 0;
@@ -3119,6 +3124,6 @@ window.tradeStock = async (stockId, action, qty) => {
     // updateDocで完全上書き（setDoc+mergeだとマップのキー削除が反映されない）
     await updateDoc(userRef, { coins, stockHoldings: holdings });
     userHoldings = { ...holdings }; // キャッシュ更新
-    await refreshPortfolio();
+    refreshPortfolio(coins, holdings); // ローカルで即計算
     refreshStockCard(stockId, holdings);
 };
