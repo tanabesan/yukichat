@@ -985,15 +985,11 @@ function renderMessages(snap, isDesc = false) {
             const lastDoc = docs[docs.length - 1];
             const isMyMessage = auth.currentUser && lastDoc.data.uid === auth.currentUser.uid;
 
-            // DOM確定後にスクロール判定
+            // DOM確定後に常に一番下へスクロール
             if (!isLoadingMoreMessages) {
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
-                        const isAtBottomNow = ($box[0].scrollHeight - $box.scrollTop() <= $box[0].clientHeight + 180);
-                        // 自分の送信 or 一番下付近にいるときだけ自動スクロール
-                        if (isMyMessage || isAtBottomNow) {
-                            $box[0].scrollTop = $box[0].scrollHeight;
-                        }
+                        $box[0].scrollTop = $box[0].scrollHeight;
                     });
                 });
             }
@@ -2980,7 +2976,7 @@ async function initStockData() {
         stockEvents[s.id]  = d.lastEvent || '';
     }
 
-    renderStockList(holdings);
+    renderStockList(userHoldings);
     refreshPortfolio();
 }
 
