@@ -2760,9 +2760,14 @@ const STOCK_TYPE_LABELS = {
     rare:     { label: '希少型',     color: '#a78bfa', icon: '💎' },
 };
 
-let activeStockIds = [];   // 現在上場中のID一覧
-let stockData     = {};    // { id: {name,price,history,...} }
-let stockListeners = [];
+let activeStockIds  = [];  // 現在上場中のID一覧
+let stockData       = {};  // { id: {name,price,history,...} }
+let stockPrices     = {};  // { id: 現在価格 }
+let stockHistory    = {};  // { id: 価格履歴 }
+let stockEvents     = {};  // { id: 直近イベント }
+let userCoinsCache  = 0;
+let userHoldings    = {};
+let stockListeners  = [];
 
 // ===== Firestore購読 =====
 function subscribeStocks() {
@@ -2874,6 +2879,11 @@ async function initStockData() {
 
     renderStockList();
     refreshPortfolio();
+
+    // リアルタイム購読（初回のみ開始）
+    if (stockListeners.length === 0) {
+        subscribeStocks();
+    }
 }
 
 // ===== カード一覧描画 =====
