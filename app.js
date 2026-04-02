@@ -2690,7 +2690,16 @@ $('#openRankingBtn').on('click', () => {
 
 $('#openStockBtn').on('click', async () => {
     $('#stock-modal').removeClass('hidden');
-    await initStockData();
+    if (stockListeners.length === 0) {
+        await initStockData();
+    } else {
+        const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+        const userData = userSnap.data() || {};
+        userCoinsCache = userData.coins || 0;
+        userHoldings   = { ...(userData.stockHoldings || {}) };
+        renderStockList();
+        refreshPortfolio();
+    }
 });
 
 window.switchRankTab = (tab, el) => {
@@ -2879,11 +2888,7 @@ async function initStockData() {
 
     renderStockList();
     refreshPortfolio();
-
-    // リアルタイム購読（初回のみ開始）
-    if (stockListeners.length === 0) {
-        subscribeStocks();
-    }
+    subscribeStocks();
 }
 
 // ===== ポートフォリオ表示更新 =====
