@@ -2886,6 +2886,27 @@ async function initStockData() {
     }
 }
 
+// ===== ポートフォリオ表示更新 =====
+function refreshPortfolio(coins, holdings) {
+    const c = (coins !== undefined) ? coins : userCoinsCache;
+    const h = (holdings !== undefined) ? holdings : userHoldings;
+
+    // 評価額 = 保有数 × 現在株価
+    let portfolioValue = 0;
+    Object.entries(h).forEach(([id, qty]) => {
+        portfolioValue += (stockPrices[id] || 0) * qty;
+    });
+
+    $('#stock-coins').text(c.toLocaleString());
+    $('#stock-portfolio-value').text(portfolioValue.toLocaleString());
+
+    // 各カードの保有数表示も更新
+    Object.keys(stockData).forEach(id => {
+        const owned = h[id] || 0;
+        $(`#stock-card-${id} .stock-owned`).text(`保有: ${owned}株`);
+    });
+}
+
 // ===== カード一覧描画 =====
 function renderStockList() {
     const $list = $('#stock-list').empty();
@@ -2947,7 +2968,7 @@ function refreshStockCard(stockId) {
                     <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                         <span style="font-size:10px; background:${typeConf.color}22; color:${typeConf.color}; border-radius:4px; padding:1px 6px; font-weight:bold;">${typeConf.icon} ${typeConf.label}</span>
                         ${inCrisis ? '<span style="font-size:10px; background:rgba(255,71,87,0.2); color:#ff4757; border-radius:4px; padding:1px 6px; font-weight:bold; animation:badgePulse 1s infinite;">⚠️ 倒産危機</span>' : ''}
-                        <span style="font-size:10px; color:var(--txt-m);">保有: ${owned}株</span>
+                        <span class="stock-owned" style="font-size:10px; color:var(--txt-m);">保有: ${owned}株</span>
                     </div>
                 </div>
                 <div style="text-align:right; flex-shrink:0; margin-left:10px;">
