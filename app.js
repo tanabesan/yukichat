@@ -2688,6 +2688,11 @@ $('#openRankingBtn').on('click', () => {
     loadRanking('coins');
 });
 
+$('#openStockBtn').on('click', async () => {
+    $('#stock-modal').removeClass('hidden');
+    await initStockData();
+});
+
 window.switchRankTab = (tab, el) => {
     $('.rank-tab-btn').css({ background: 'var(--bg-38)', color: 'var(--txt)' });
     $(el).css({ background: 'var(--accent)', color: '#fff' });
