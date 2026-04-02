@@ -1,9 +1,11 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, startAfter, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getDatabase, ref as rtdbRef, set as rtdbSet, onValue, onDisconnect, serverTimestamp as rtdbServerTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 const firebaseConfig = { apiKey: "AIzaSyA8X7HsOXDERBTy4GvLE8ibg3bk8JhldZg", authDomain: "chat-16746.firebaseapp.com", projectId: "chat-16746", storageBucket: "chat-16746.firebasestorage.app", messagingSenderId: "1009009975164", appId: "1:1009009975164:web:64192371271cb589614ef9" };
 const app = initializeApp(firebaseConfig);
+const rtdb = getDatabase(app);
 
 const db = initializeFirestore(app, {
     localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
@@ -425,6 +427,7 @@ onAuthStateChanged(auth, async (user) => {
             }
         }
 
+        initPresence(user.uid);
         setOnline();
         $("#auth-container").addClass("hidden");
         $("#app-wrapper").addClass("visible");
@@ -2397,22 +2400,74 @@ function listenForCalls() {
 }
 let currentOnlineStatus = null; // 現在のステータスを記録（null, 'online', 'offline'）
 
+// ===== Realtime Database プレゼンス管理 =====
+// onDisconnectでサーバー側から確実にofflineにする
+let presenceInitialized = false;
+
+const initPresence = (uid) => {
+    if (presenceInitialized) return;
+    presenceInitialized = true;
+
+    const statusRef = rtdbRef(rtdb, `status/${uid}`);
+    const connectedRef = rtdbRef(rtdb, '.info/connected');
+
+    onValue(connectedRef, async (snap) => {
+        if (!snap.val()) return; // 切断中
+
+        // 切断時にサーバーが自動でofflineにセット（これがポイント）
+        await onDisconnect(statusRef).set({
+            state: 'offline',
+            lastSeen: rtdbServerTimestamp()
+        });
+
+        // 接続中はonlineにセット
+        await rtdbSet(statusRef, {
+            state: 'online',
+            lastSeen: rtdbServerTimestamp()
+        });
+
+        // Firestoreにも同期
+        updateDoc(doc(db, "users", uid), { status: "online", lastSeen: serverTimestamp() }).catch(() => {});
+        currentOnlineStatus = 'online';
+    });
+
+    // RTDBのstatus変化をFirestoreに同期
+    onValue(statusRef, (snap) => {
+        if (!snap.val()) return;
+        const state = snap.val().state;
+        updateDoc(doc(db, "users", uid), {
+            status: state,
+            lastSeen: serverTimestamp()
+        }).catch(() => {});
+        currentOnlineStatus = state;
+    });
+};
+
 const setOnline = async () => {
-    if (auth.currentUser && currentOnlineStatus !== 'online') {
+    if (!auth.currentUser) return;
+    initPresence(auth.currentUser.uid);
+    // RTDBがメインなので追加でFirestoreに書くだけ
+    if (currentOnlineStatus !== 'online') {
         currentOnlineStatus = 'online';
         try {
-            await updateDoc(doc(db, "users", auth.currentUser.uid), { status: "online", lastSeen: serverTimestamp() });
-        } catch (e) { console.log("Status update error (online)"); }
+            await rtdbSet(rtdbRef(rtdb, `status/${auth.currentUser.uid}`), {
+                state: 'online', lastSeen: rtdbServerTimestamp()
+            });
+        } catch (e) {}
     }
 };
 
 const setOffline = async () => {
-    if (auth.currentUser && currentOnlineStatus !== 'offline') {
-        currentOnlineStatus = 'offline';
-        try {
-            await updateDoc(doc(db, "users", auth.currentUser.uid), { status: "offline", lastSeen: serverTimestamp(), isTyping: false });
-        } catch (e) { console.log("Status update error (offline)"); }
-    }
+    if (!auth.currentUser) return;
+    currentOnlineStatus = 'offline';
+    try {
+        await rtdbSet(rtdbRef(rtdb, `status/${auth.currentUser.uid}`), {
+            state: 'offline', lastSeen: rtdbServerTimestamp()
+        });
+        await updateDoc(doc(db, "users", auth.currentUser.uid), {
+            status: "offline", lastSeen: serverTimestamp(), isTyping: false
+        });
+    } catch (e) {}
 };
 
 $("#loginBtn").on("click", async () => {
@@ -2435,235 +2490,29 @@ const doLogout = async () => {
 $("#logoutBtn, #logoutBtnSide").on("click", doLogout);
 $("#openOtherSettings").on("click", () => $("#other-settings-modal").removeClass("hidden"));
 
-// --- イベント監視追加: タブ表示時・フォーカス時、ユーザー操作時に未読クリア ---
-// モバイル対応: オフライン検知の強化（iOS & Android）
-let onlineStatusInterval;
-let lastActivityTime = Date.now();
-let offlineCheckInterval;
+// --- イベント監視: 未読クリアのみ（オンライン状態はRTDB onDisconnectが管理） ---
 
-const ensureOnlineStatus = () => {
-    if (auth.currentUser && document.visibilityState === "visible") {
-        setOnline();
-        lastActivityTime = Date.now();
-    }
-};
-
-const ensureOfflineStatus = () => {
-    if (auth.currentUser) {
-        setOffline();
-    }
-};
-
-// iOS Safari: 非アクティブ検知の強化
-const checkInactivity = () => {
-    const now = Date.now();
-    // 10秒以上更新がなく、非表示状態ならオフライン
-    if (now - lastActivityTime > 10000 && document.visibilityState === "hidden") {
-        ensureOfflineStatus();
-    }
-};
-
-// 全ブラウザ対応: visibilitychange（標準）
+// タブ表示復帰時に未読クリア
 document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-        setOnline();
-        lastActivityTime = Date.now();
-        
-        // アクティブな間は定期的にオンライン状態を更新
-        if (onlineStatusInterval) clearInterval(onlineStatusInterval);
-        onlineStatusInterval = setInterval(ensureOnlineStatus, 30000); // 30秒ごと
-        
-        if (document.hasFocus()) clearUnread();
-    } else {
-        // バックグラウンドに入ったら即座にオフライン
-        if (onlineStatusInterval) clearInterval(onlineStatusInterval);
-        ensureOfflineStatus();
-        
-        setTimeout(checkInactivity, 2000);
+    if (document.visibilityState === "visible" && document.hasFocus()) {
+        clearUnread();
     }
-}, true); // capture phase
+}, true);
 
-// Windows Chrome専用: document.hidden の直接監視
-let lastHiddenState = document.hidden;
-setInterval(() => {
-    const currentHidden = document.hidden;
-    if (currentHidden !== lastHiddenState) {
-        lastHiddenState = currentHidden;
-        if (currentHidden) {
-            ensureOfflineStatus();
-        } else {
-            setOnline();
-            lastActivityTime = Date.now();
-        }
-    }
-}, 2000); // 2秒ごとに状態チェック（0.5秒 → 2秒に変更）
+// フォーカス時に未読クリア
+window.addEventListener("focus", () => { clearUnread(); });
 
-// Firefox対応: mozvisibilitychange
-document.addEventListener("mozvisibilitychange", () => {
-    if (document.mozHidden) {
-        ensureOfflineStatus();
-    } else {
-        setOnline();
-        lastActivityTime = Date.now();
-    }
-});
+// ユーザーアクションで未読クリア
+window.addEventListener("mousemove", () => { if (document.hasFocus()) clearUnread(); });
+window.addEventListener("click", () => { clearUnread(); });
+window.addEventListener("keydown", () => { clearUnread(); });
 
-// 古いIE/Edge対応: msvisibilitychange
-document.addEventListener("msvisibilitychange", () => {
-    if (document.msHidden) {
-        ensureOfflineStatus();
-    } else {
-        setOnline();
-        lastActivityTime = Date.now();
-    }
-});
-
-// WebKit系（Safari）対応: webkitvisibilitychange
-document.addEventListener("webkitvisibilitychange", () => {
-    if (document.webkitHidden) {
-        ensureOfflineStatus();
-    } else {
-        setOnline();
-        lastActivityTime = Date.now();
-    }
-});
-
-// focus/blur イベント
-window.addEventListener("focus", () => {
-    setOnline();
-    lastActivityTime = Date.now();
-    clearUnread();
-});
-
-window.addEventListener("blur", () => {
-    // blurだけでは即座にオフラインにしない（入力欄クリックなどでも発火するため）
-    // hiddenになった場合のみオフライン
-    setTimeout(() => {
-        if (document.visibilityState === "hidden" || document.hidden) {
-            ensureOfflineStatus();
-        }
-    }, 500); // 少し待ってから判定
-}, true); // capture phase
-
-// ユーザーアクションで未読クリア & アクティブ記録
-window.addEventListener("mousemove", () => { 
-    lastActivityTime = Date.now();
-    if(document.hasFocus()) clearUnread(); 
-});
-window.addEventListener("click", () => { 
-    lastActivityTime = Date.now();
-    clearUnread(); 
-});
-window.addEventListener("keydown", () => { 
-    lastActivityTime = Date.now();
-    clearUnread(); 
-});
-
-// タッチイベント（モバイル対応）
+// タッチイベント（モバイル）
 let lastTouchTime = 0;
 window.addEventListener("touchstart", () => {
     const now = Date.now();
-    lastActivityTime = now;
-    
-    // タッチイベントの重複を防ぐ
-    if (now - lastTouchTime > 100) {
-        setOnline();
-        clearUnread();
-        lastTouchTime = now;
-    }
+    if (now - lastTouchTime > 100) { clearUnread(); lastTouchTime = now; }
 }, { passive: true });
-
-// iOS Safari: スクロール時もアクティブと見なす
-window.addEventListener("scroll", () => {
-    lastActivityTime = Date.now();
-}, { passive: true });
-// --------------------------------------------------------
-
-// ページ離脱時の処理（iOS Safari対策を強化）
-window.addEventListener("pagehide", (e) => {
-    if (onlineStatusInterval) clearInterval(onlineStatusInterval);
-    ensureOfflineStatus();
-    
-    // iOS Safari: navigator.sendBeacon で確実に送信
-    if (navigator.sendBeacon && auth.currentUser) {
-        const offlineData = JSON.stringify({
-            uid: auth.currentUser.uid,
-            status: 'offline',
-            timestamp: Date.now()
-        });
-        // Firestoreには送れないが、ログとして記録
-        console.log('pagehide: Setting offline', offlineData);
-    }
-}, { capture: true });
-
-window.addEventListener("beforeunload", (e) => {
-    if (onlineStatusInterval) clearInterval(onlineStatusInterval);
-    if (offlineCheckInterval) clearInterval(offlineCheckInterval);
-    ensureOfflineStatus();
-    
-    // 念押しでFirestoreに直接書き込み
-    if (auth.currentUser) {
-        const userRef = doc(db, "users", auth.currentUser.uid);
-        setDoc(userRef, { status: 'offline' }, { merge: true }).catch(() => {});
-    }
-}, { capture: true });
-
-window.addEventListener("unload", (e) => {
-    if (auth.currentUser) {
-        const userRef = doc(db, "users", auth.currentUser.uid);
-        setDoc(userRef, { status: 'offline' }, { merge: true }).catch(() => {});
-    }
-}, { capture: true });
-
-// iOS Safari専用: 追加のライフサイクルイベント
-if ('onfreeze' in window) {
-    window.addEventListener("freeze", () => {
-        if (onlineStatusInterval) clearInterval(onlineStatusInterval);
-        ensureOfflineStatus();
-    }, { capture: true });
-}
-
-if ('onresume' in window) {
-    window.addEventListener("resume", () => {
-        setOnline();
-        lastActivityTime = Date.now();
-    }, { capture: true });
-}
-
-// iOS PWA対策: App切り替え検知
-if (window.navigator.standalone) {
-    document.addEventListener("webkitvisibilitychange", () => {
-        if (document.webkitHidden) {
-            ensureOfflineStatus();
-        } else {
-            setOnline();
-            lastActivityTime = Date.now();
-        }
-    });
-}
-
-// フォールバック: 定期的にチェック（全ブラウザ対応）
-// イベントが発火しないブラウザ用の最終手段
-offlineCheckInterval = setInterval(() => {
-    if (auth.currentUser) {
-        const now = Date.now();
-        const isHidden = document.hidden || document.mozHidden || document.webkitHidden || document.msHidden || document.visibilityState === "hidden";
-        const hasNoFocus = !document.hasFocus();
-        const isInactive = (now - lastActivityTime) > 30000; // 30秒以上操作なし
-        
-        // よりバランスの取れたオフライン判定
-        if (isHidden) {
-            // 非表示なら即オフライン
-            ensureOfflineStatus();
-        } else if (hasNoFocus && isInactive) {
-            // フォーカスなし + 30秒以上操作なし
-            ensureOfflineStatus();
-        } else if (document.visibilityState === "visible" && document.hasFocus()) {
-            // 表示中 + フォーカスあり
-            ensureOnlineStatus();
-        }
-    }
-}, 10000); // 10秒ごとにチェック（3秒 → 10秒に変更）
 
 // ============================================================
 // スマホ長押しコンテキストメニュー
