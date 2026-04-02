@@ -6,7 +6,6 @@
     <title>ゆきちゃっと</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" />
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    
     <link rel="stylesheet" href="https://tanabesan.github.io/yukichat/style.css">
 </head>
 <body id="body-container">
@@ -19,9 +18,7 @@
             <input type="email" id="email" class="settings-input" placeholder="メール">
             <input type="password" id="password" class="settings-input" placeholder="パスワード">
             <button id="loginBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:16px;">ログイン / 登録</button>
-            
             <div style="margin: 15px 0; border-top: 1px solid #444;"></div>
-            
             <button id="guestBtn" style="width:100%; padding:12px; background:#4e5058; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:16px;">ゲストで参加 (匿名)</button>
             <div style="font-size:11px; color:var(--txt-m); margin-top:5px;">※ゲストは最終ログインから30日後に自動削除されます</div>
         </div>
@@ -42,7 +39,6 @@
                 <span class="material-symbols-outlined">person_search</span>
                 <span>ユーザーを探す</span>
             </div>
-            
             <div class="sidebar-label">ダイレクトメッセージ</div>
             <div id="dm-list"></div>
         </div>
@@ -84,7 +80,6 @@
         </div>
 
         <div id="messages-container">
-            <!-- 名前変更を促すバナー -->
             <div id="guest-warning-banner" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 15px; text-align: center; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); position: relative; z-index: 50;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
                     <span style="flex: 1 1 auto; min-width: 200px;">👋 ゲストモードではフレンド機能が使えません。名前を変更するか、メールアドレスでログインしてください！</span>
@@ -92,7 +87,6 @@
                     <button onclick="$('#guest-warning-banner').hide();" style="background: transparent; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0 5px; opacity: 0.8; line-height: 1;">✕</button>
                 </div>
             </div>
-            
             <div id="messages"></div>
             <div id="typing-indicator" class="hidden"></div>
         </div>
@@ -164,10 +158,7 @@
     <div id="settings-modal" class="modal-overlay hidden">
         <div class="responsive-card" style="padding:20px; max-width: 900px; max-height: 90vh; overflow-y: auto;">
             <h3 style="margin-top:0;">プロフィール編集</h3>
-            
-            <!-- PC: 2カラムレイアウト -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <!-- 左側: プレビュー -->
                 <div>
                     <div class="preview-box" style="position: sticky; top: 0;">
                         <div class="preview-label">Live Preview</div>
@@ -190,17 +181,13 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- 右側: フォーム -->
                 <div>
                     <input type="file" id="real_avatar_input" class="hidden" accept="image/*">
                     <input type="file" id="real_banner_input" class="hidden" accept="image/*">
-
                     <div class="form-field">
                         <label class="form-label">名前</label>
                         <input type="text" id="editName" class="settings-input" placeholder="名前">
                     </div>
-
                     <div class="form-field">
                         <label class="form-label">アイコンURL</label>
                         <div class="settings-input-group">
@@ -210,7 +197,6 @@
                             </button>
                         </div>
                     </div>
-
                     <div class="form-field">
                         <label class="form-label">バナーURL</label>
                         <div class="settings-input-group">
@@ -220,42 +206,28 @@
                             </button>
                         </div>
                     </div>
-
                     <div class="form-field">
                         <label class="form-label">自己紹介</label>
                         <textarea id="editBio" class="settings-input" placeholder="自己紹介"></textarea>
                     </div>
-
-                    <!-- アイテム装備設定 -->
                     <div style="padding-top:14px; border-top:1px solid var(--bg-38); margin-top:4px;">
                         <h4 style="margin:0 0 14px 0; color:var(--txt); font-size:14px;">🎨 アイテム設定</h4>
-
                         <div class="form-field">
                             <label class="form-label">バッジ</label>
-                            <select id="editEquippedBadge" class="settings-input">
-                                <option value="">なし</option>
-                            </select>
+                            <select id="editEquippedBadge" class="settings-input"><option value="">なし</option></select>
                         </div>
-
                         <div class="form-field">
                             <label class="form-label">テーマ</label>
-                            <select id="editEquippedTheme" class="settings-input">
-                                <option value="">デフォルト</option>
-                            </select>
+                            <select id="editEquippedTheme" class="settings-input"><option value="">デフォルト</option></select>
                         </div>
-
                         <div class="form-field">
                             <label class="form-label">エフェクト</label>
-                            <select id="editEquippedEffect" class="settings-input">
-                                <option value="">なし</option>
-                            </select>
+                            <select id="editEquippedEffect" class="settings-input"><option value="">なし</option></select>
                         </div>
                     </div>
-
                     <div id="profile-upload-status" class="hidden" style="margin-top:10px;">
                         <span id="profile-upload-text">画像をアップロード中</span><span class="dot-ani">.</span><span class="dot-ani">.</span><span class="dot-ani">.</span>
                     </div>
-
                     <button id="saveProfile" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:16px; margin-top:14px;">保存して更新</button>
                     <button onclick="$('#settings-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:8px; cursor:pointer; padding:8px; font-size:14px;">キャンセル</button>
                 </div>
@@ -266,17 +238,14 @@
     <div id="other-settings-modal" class="modal-overlay hidden">
         <div class="responsive-card" style="padding:25px; text-align:center; max-width: 300px;">
             <h3>設定</h3>
-
             <button id="toggleSoundBtn" class="btn-toggle-on" style="width:100%; padding:12px; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size:16px; display:flex; align-items:center; justify-content:center; gap:8px;">
                 <span class="material-symbols-outlined">volume_up</span>
                 <span id="soundBtnText">通知音: ON</span>
             </button>
-
             <button id="toggleNotificationBtn" class="btn-toggle-on" style="width:100%; padding:12px; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size:16px; display:flex; align-items:center; justify-content:center; gap:8px;">
                 <span class="material-symbols-outlined">notifications</span>
                 <span id="notificationBtnText">通知: ON</span>
             </button>
-
             <button id="logoutBtn" style="width:100%; padding:12px; background:var(--danger); color:#fff; border:none; border-radius:5px; font-weight:bold; font-size:16px; margin-top:10px;">ログアウト</button>
             <button onclick="$('#other-settings-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:10px; cursor:pointer; padding:10px;">閉じる</button>
         </div>
@@ -295,19 +264,12 @@
         </div>
     </div>
 
-    <!-- 管理者権限テストモーダル -->
     <!-- スロットマシンモーダル -->
-    <!-- スロット全画面UI -->
     <div id="slot-modal" class="slot-fullscreen hidden">
-
-        <!-- 背景装飾 -->
         <div class="slot-bg-stars"></div>
-
-        <!-- ヘッダー -->
         <div class="slot-header">
             <div class="slot-title">🎰 LUCKY SLOT 🎰</div>
             <div style="display:flex; align-items:center; gap:20px;">
-                <!-- コイン表示 -->
                 <div class="slot-credits-box">
                     <div class="slot-credits-label">CREDITS</div>
                     <div id="slot-coins" class="slot-credits-value">0000</div>
@@ -319,13 +281,8 @@
                 <button onclick="$('#slot-modal').addClass('hidden')" class="slot-exit-btn">✕ EXIT</button>
             </div>
         </div>
-
-        <!-- メインエリア（PC: 横並び / スマホ: 縦） -->
         <div class="slot-main">
-
-            <!-- 左カラム: スロット台 -->
             <div class="slot-machine-col">
-                <!-- 装飾ライト -->
                 <div class="slot-lights">
                     <div class="slot-light" style="background:#ff0000; box-shadow:0 0 10px #ff0000; animation:blink 1s infinite;"></div>
                     <div class="slot-light" style="background:#00ff00; box-shadow:0 0 10px #00ff00; animation:blink 1s infinite 0.2s;"></div>
@@ -335,8 +292,6 @@
                     <div class="slot-light" style="background:#ff6600; box-shadow:0 0 10px #ff6600; animation:blink 1s infinite 0.1s;"></div>
                     <div class="slot-light" style="background:#00ffff; box-shadow:0 0 10px #00ffff; animation:blink 1s infinite 0.3s;"></div>
                 </div>
-
-                <!-- リール窓 -->
                 <div class="slot-reels-window">
                     <div class="slot-centerline"></div>
                     <div class="slot-reels-row">
@@ -345,23 +300,14 @@
                         <div class="slot-reel-container"><div class="slot-reel" id="reel3"><div class="slot-symbols-strip" id="strip3"></div></div></div>
                     </div>
                 </div>
-
-                <!-- 演出オーバーレイ -->
                 <div id="slot-effect-container" class="hidden"></div>
-
-                <!-- リーチ演出 -->
                 <div id="reach-effect" class="hidden slot-reach-text">🔥 REACH! 🔥</div>
-
-                <!-- ステータスバッジ -->
                 <div style="display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap;">
                     <div id="special-spin-indicator" class="hidden slot-badge slot-badge-special">✨ SPECIAL SPIN ACTIVE! ✨<br><span style="font-size:11px;">Next payout ×2</span></div>
                     <div id="boosted-spins-indicator" class="hidden slot-badge slot-badge-boosted">🔥 BOOSTED SPINS 🔥<br><span style="font-size:11px;">High win rate! (60%)</span></div>
                 </div>
             </div>
-
-            <!-- 右カラム: コントロール + 配当表 -->
             <div class="slot-control-col">
-                <!-- ベット選択 -->
                 <div class="slot-section">
                     <div class="slot-section-label">BET MULTIPLIER</div>
                     <div style="display:flex; gap:8px;">
@@ -370,14 +316,10 @@
                         <button class="bet-btn" data-bet="100">×100<br><span style="font-size:10px; opacity:0.8;">1000 COINS</span></button>
                     </div>
                 </div>
-
-                <!-- スピンボタン -->
                 <button id="spin-btn" class="slot-spin-btn">
                     <div style="font-size:28px; font-weight:bold;">🎰 SPIN</div>
                     <div id="spin-btn-cost" style="font-size:13px; margin-top:4px; opacity:0.9;">- 10 COINS -</div>
                 </button>
-
-                <!-- 配当表 -->
                 <div class="slot-section slot-paytable">
                     <div class="slot-section-label">💰 PAY TABLE <span id="bet-multiplier-text" style="color:#fff; font-weight:normal;">(×1)</span></div>
                     <div id="pay-table" class="slot-paytable-inner">
@@ -421,7 +363,6 @@
     <!-- ショップ全画面 -->
     <div id="shop-modal" class="fs-screen hidden">
         <div class="fs-inner" style="max-width:900px;">
-            <!-- ヘッダー -->
             <div class="fs-header">
                 <div class="fs-title">🎁 ショップ</div>
                 <div style="display:flex; align-items:center; gap:16px;">
@@ -432,8 +373,6 @@
                     <button onclick="$('#shop-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
                 </div>
             </div>
-
-            <!-- プレビューエリア -->
             <div id="item-preview" class="hidden" style="position:relative; background:rgba(255,255,255,0.05); padding:14px 16px; border-radius:10px; margin-bottom:14px; border:2px solid #667eea; overflow:hidden;">
                 <div style="font-size:11px; color:var(--txt-m); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">👁️ Preview</div>
                 <div style="display:flex; align-items:flex-start; gap:14px;">
@@ -452,21 +391,16 @@
                     </div>
                 </div>
             </div>
-
-            <!-- アイテムグリッド -->
             <div style="flex:1; overflow-y:auto;">
                 <div style="font-size:12px; color:var(--txt-m); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">アイテム一覧</div>
                 <div id="shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:14px; padding-bottom:20px;"></div>
             </div>
-
             <button onclick="$('#shop-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
         </div>
     </div>
 
     <!-- リアクションピッカー -->
-    <div id="reaction-picker" class="hidden" style="position: fixed; z-index: 9999; background: var(--bg-2b); border-radius: 12px; padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;">
-    </div>
-
+    <div id="reaction-picker" class="hidden" style="position: fixed; z-index: 9999; background: var(--bg-2b); border-radius: 12px; padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;"></div>
 
     <!-- ランキング全画面 -->
     <div id="ranking-modal" class="fs-screen hidden">
@@ -498,11 +432,109 @@
                         <div style="font-size:10px; color:rgba(255,255,255,0.5); text-transform:uppercase;">評価額</div>
                         <div style="font-size:18px; font-weight:bold; color:#26c6da;">📊 <span id="stock-portfolio-value">0</span></div>
                     </div>
+                    <button onclick="$('#stock-help-modal').removeClass('hidden')" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25); color:#fff; border-radius:50%; width:34px; height:34px; cursor:pointer; font-size:16px; font-weight:bold; flex-shrink:0;" title="株の仕組みを見る">？</button>
                     <button onclick="$('#stock-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
                 </div>
             </div>
             <div id="stock-list" style="flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; align-content:start; padding-bottom:20px;"></div>
             <button onclick="$('#stock-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
+        </div>
+    </div>
+
+    <!-- 株ヘルプモーダル -->
+    <div id="stock-help-modal" class="modal-overlay hidden" onclick="if(event.target===this)$(this).addClass('hidden')">
+        <div class="responsive-card" style="max-width:560px; max-height:85vh; overflow-y:auto; padding:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0; font-size:18px;">📖 株式市場の仕組み</h3>
+                <button onclick="$('#stock-help-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:22px; cursor:pointer; padding:4px 8px;">✕</button>
+            </div>
+
+            <!-- 基本 -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:13px; font-weight:bold; color:#26c6da; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">📌 基本の流れ</div>
+                <div style="font-size:13px; color:var(--txt); line-height:1.8; background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    コインを使って銘柄の株を買い、価格が上がったら売って差額を稼ぎます。<br>
+                    株価は <strong style="color:#ffd700;">1分ごと</strong> に自動で変動します。タイミングよく売買してコインを増やしましょう！
+                </div>
+            </div>
+
+            <!-- 銘柄タイプ -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:13px; font-weight:bold; color:#26c6da; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">🏷️ 銘柄タイプ一覧</div>
+                <div style="display:flex; flex-direction:column; gap:8px; font-size:13px;">
+                    <div style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px;">
+                        <span style="background:#26c6da22; color:#26c6da; border-radius:4px; padding:2px 8px; font-weight:bold; white-space:nowrap; font-size:12px;">🏦 安定型</span>
+                        <span style="color:var(--txt); line-height:1.6;">値動きが小さく倒産しない。リターンは低いが安全。初心者向け。</span>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px;">
+                        <span style="background:#00c85322; color:#00c853; border-radius:4px; padding:2px 8px; font-weight:bold; white-space:nowrap; font-size:12px;">📈 成長型</span>
+                        <span style="color:var(--txt); line-height:1.6;">緩やかに上昇するトレンドあり。低確率で倒産する場合も。</span>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px;">
+                        <span style="background:#ff475722; color:#ff4757; border-radius:4px; padding:2px 8px; font-weight:bold; white-space:nowrap; font-size:12px;">⚠️ ハイリスク</span>
+                        <span style="color:var(--txt); line-height:1.6;">激しく上下する。大儲けも大損も起きる。倒産確率高め。</span>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px;">
+                        <span style="background:#f093fb22; color:#f093fb; border-radius:4px; padding:2px 8px; font-weight:bold; white-space:nowrap; font-size:12px;">🎰 ミーム</span>
+                        <span style="color:var(--txt); line-height:1.6;">最も激しい値動き。急騰・急落が頻繁。倒産率も最高。一発逆転向け。</span>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px;">
+                        <span style="background:#ffd70022; color:#ffd700; border-radius:4px; padding:2px 8px; font-weight:bold; white-space:nowrap; font-size:12px;">🔄 循環型</span>
+                        <span style="color:var(--txt); line-height:1.6;">上下を繰り返すサイクルがある。安値で買って高値で売るのがコツ。</span>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px;">
+                        <span style="background:#a78bfa22; color:#a78bfa; border-radius:4px; padding:2px 8px; font-weight:bold; white-space:nowrap; font-size:12px;">💎 希少型</span>
+                        <span style="color:var(--txt); line-height:1.6;">値動きが極めて小さく安定。IPO価格が高め。長期保有向け。</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- イベント -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:13px; font-weight:bold; color:#26c6da; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">⚡ 発生するイベント</div>
+                <div style="font-size:13px; color:var(--txt); line-height:1.8; background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    毎ティックにランダムでイベントが起きることがあります。<br><br>
+                    <span style="color:#00c853;">📈 好決算 / 🚀 急騰</span> ── 株価が大きく上昇<br>
+                    <span style="color:#ff4757;">📉 悪決算 / 💥 炎上</span> ── 株価が大きく下落<br>
+                    <span style="color:#ffd700;">🎉 業界好況 / 📰 業界不況</span> ── <strong>全銘柄</strong>が同時に上昇・下落<br>
+                    <span style="color:#ff4757;">⚠️ 倒産危機</span> ── 毎ティックじわじわ下落し続ける（次項参照）<br>
+                    <span style="color:#00c853;">🏥 V字回復</span> ── 底値付近の銘柄が急回復することがある
+                </div>
+            </div>
+
+            <!-- 倒産 -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:13px; font-weight:bold; color:#ff4757; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">💀 倒産・上場廃止の仕組み</div>
+                <div style="font-size:13px; color:var(--txt); line-height:1.8; background:rgba(255,71,87,0.06); border:1px solid rgba(255,71,87,0.2); border-radius:8px; padding:12px;">
+                    ⚠️ <strong style="color:#ff4757;">倒産危機フラグ</strong>が立つと、毎ティック 6〜15% ずつ価格が下落し続けます。<br><br>
+                    価格が <strong style="color:#ff4757;">IPO価格の 8% 以下</strong> になると <strong>💀 上場廃止</strong> になります。<br>
+                    上場廃止になると保有株は <strong style="color:#ff4757;">紙切れ（価値ゼロ）</strong> になるので注意！<br><br>
+                    倒産危機中は赤枠で表示されます。早めに売るかV字回復に賭けるか判断しましょう。<br><br>
+                    上場廃止後は自動的に新しい銘柄が <strong style="color:#00c853;">🆕 新規上場</strong> されます。
+                </div>
+            </div>
+
+            <!-- スパークライン -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:13px; font-weight:bold; color:#26c6da; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">📊 グラフの見方</div>
+                <div style="font-size:13px; color:var(--txt); line-height:1.8; background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    各カードに表示されているグラフは <strong>直近30ティック分</strong>の価格推移です。<br>
+                    上昇中は <span style="color:#00c853;">緑</span>、下落中は <span style="color:#ff4757;">赤</span> で表示されます。<br><br>
+                    <strong>▲ / ▼ %</strong> は前回比、<strong>IPO比 %</strong> は上場時の価格からの変化率です。
+                </div>
+            </div>
+
+            <!-- 売買 -->
+            <div>
+                <div style="font-size:13px; font-weight:bold; color:#26c6da; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">💹 売買のやり方</div>
+                <div style="font-size:13px; color:var(--txt); line-height:1.8; background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    数量を入力（または <strong>全力買</strong>・<strong>全売</strong> ボタン）して、<br>
+                    <span style="color:#00c853; font-weight:bold;">📈 買う</span> ボタンでコインを使って購入、<span style="color:#ff4757; font-weight:bold;">📉 売る</span> ボタンで売却してコインに変換します。<br><br>
+                    コインが足りない場合・保有数が足りない場合は取引できません。
+                </div>
+            </div>
+
+            <button onclick="$('#stock-help-modal').addClass('hidden')" style="width:100%; margin-top:24px; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:15px;">わかった！</button>
         </div>
     </div>
 
