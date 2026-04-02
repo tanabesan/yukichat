@@ -2688,11 +2688,6 @@ $('#openRankingBtn').on('click', () => {
     loadRanking('coins');
 });
 
-$('#openStockBtn').on('click', async () => {
-    $('#stock-modal').removeClass('hidden');
-    await initStockData();
-});
-
 window.switchRankTab = (tab, el) => {
     $('.rank-tab-btn').css({ background: 'var(--bg-38)', color: 'var(--txt)' });
     $(el).css({ background: 'var(--accent)', color: '#fff' });
@@ -2760,14 +2755,9 @@ const STOCK_TYPE_LABELS = {
     rare:     { label: '希少型',     color: '#a78bfa', icon: '💎' },
 };
 
-let activeStockIds  = [];  // 現在上場中のID一覧
-let stockData       = {};  // { id: {name,price,history,...} }
-let stockPrices     = {};  // { id: 現在価格 }
-let stockHistory    = {};  // { id: 価格履歴 }
-let stockEvents     = {};  // { id: 直近イベント }
-let userCoinsCache  = 0;
-let userHoldings    = {};
-let stockListeners  = [];
+let activeStockIds = [];   // 現在上場中のID一覧
+let stockData     = {};    // { id: {name,price,history,...} }
+let stockListeners = [];
 
 // ===== Firestore購読 =====
 function subscribeStocks() {
@@ -2775,7 +2765,7 @@ function subscribeStocks() {
     stockListeners = [];
 
     // __list__を購読してactiveIdsを取得
-    const listUnsub = onSnapshot(doc(db, "stocks", "stock_list"), async (listSnap) => {
+    const listUnsub = onSnapshot(doc(db, "stocks", "__list__"), async (listSnap) => {
         if (!listSnap.exists()) return;
         const newIds = listSnap.data().activeIds || [];
 
@@ -2858,7 +2848,7 @@ async function initStockData() {
     userHoldings   = { ...(userData.stockHoldings || {}) };
 
     // __list__を取得
-    const listSnap = await getDoc(doc(db, "stocks", "stock_list"));
+    const listSnap = await getDoc(doc(db, "stocks", "__list__"));
     if (!listSnap.exists()) {
         $('#stock-list').html('<div style="text-align:center; padding:40px; color:var(--txt-m);">初期化中... 少し待ってください</div>');
         return;
@@ -2879,11 +2869,6 @@ async function initStockData() {
 
     renderStockList();
     refreshPortfolio();
-
-    // リアルタイム購読（初回のみ開始）
-    if (stockListeners.length === 0) {
-        subscribeStocks();
-    }
 }
 
 // ===== カード一覧描画 =====
