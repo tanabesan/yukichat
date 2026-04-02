@@ -2775,7 +2775,7 @@ function subscribeStocks() {
     stockListeners = [];
 
     // __list__を購読してactiveIdsを取得
-    const listUnsub = onSnapshot(doc(db, "stocks", "__list__"), async (listSnap) => {
+    const listUnsub = onSnapshot(doc(db, "stocks", "stock_list"), async (listSnap) => {
         if (!listSnap.exists()) return;
         const newIds = listSnap.data().activeIds || [];
 
@@ -2858,7 +2858,7 @@ async function initStockData() {
     userHoldings   = { ...(userData.stockHoldings || {}) };
 
     // __list__を取得
-    const listSnap = await getDoc(doc(db, "stocks", "__list__"));
+    const listSnap = await getDoc(doc(db, "stocks", "stock_list"));
     if (!listSnap.exists()) {
         $('#stock-list').html('<div style="text-align:center; padding:40px; color:var(--txt-m);">初期化中... 少し待ってください</div>');
         return;
