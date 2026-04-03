@@ -3083,7 +3083,7 @@ function refreshStockCard(stockId) {
                     <div style="font-size:10px; color:${ipoColor};">IPO比 ${price >= ipoPrice ? '+' : ''}${ipoChange}%</div>
                 </div>
             </div>
-            ${event ? `<div style="font-size:12px; color:${changeColor}; font-weight:bold; margin:2px 0;">${event}</div>` : ''}
+            ${event ? `<div style="font-size:12px; color:${inCrisis ? '#ff4757' : changeColor}; font-weight:bold; margin:2px 0;">${event}</div>` : ''}
             ${sparkSvg}
             <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
                 <button onclick="adjustStockQty('${stockId}',-1)" class="stock-qty-btn">−</button>
