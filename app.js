@@ -144,8 +144,6 @@ function playBoostedSound() {
     });
 }
 
-// 後方互換: notifyAudio.play()を呼んでる箇所に対応
-const notifyAudio = { play: () => { playNotifySound(); return Promise.resolve(); }, currentTime: 0, volume: 0.5 };
 
 let unreadCount = 0;
 let unreadRooms = {}; // 各DM部屋の未読数を管理
