@@ -2778,7 +2778,7 @@ function startStockPolling() {
     stockPollTimer = setInterval(pollStockData, 60 * 1000);
 }
 
-function stopStockPolling() {
+window.stopStockPolling = function() {
     if (stockPollTimer) {
         clearInterval(stockPollTimer);
         stockPollTimer = null;
