@@ -2690,16 +2690,7 @@ $('#openRankingBtn').on('click', () => {
 
 $('#openStockBtn').on('click', async () => {
     $('#stock-modal').removeClass('hidden');
-    if (stockListeners.length === 0) {
-        await initStockData();
-    } else {
-        const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
-        const userData = userSnap.data() || {};
-        userCoinsCache = userData.coins || 0;
-        userHoldings   = { ...(userData.stockHoldings || {}) };
-        renderStockList();
-        refreshPortfolio();
-    }
+    await initStockData();
 });
 
 window.switchRankTab = (tab, el) => {
@@ -2776,63 +2767,82 @@ let stockHistory    = {};  // { id: 価格履歴 }
 let stockEvents     = {};  // { id: 直近イベント }
 let userCoinsCache  = 0;
 let userHoldings    = {};
-let stockListeners  = [];
 
-// ===== Firestore購読 =====
-function subscribeStocks() {
-    stockListeners.forEach(u => u());
-    stockListeners = [];
+// ===== 毎分ポーリング =====
+let stockPollTimer = null;
 
-    // __list__を購読してactiveIdsを取得
-    const listUnsub = onSnapshot(doc(db, "stocks", "stock_list"), async (listSnap) => {
+function startStockPolling() {
+    stopStockPolling();
+    // 即時1回実行してから毎分繰り返す
+    pollStockData();
+    stockPollTimer = setInterval(pollStockData, 60 * 1000);
+}
+
+function stopStockPolling() {
+    if (stockPollTimer) {
+        clearInterval(stockPollTimer);
+        stockPollTimer = null;
+    }
+}
+
+async function pollStockData() {
+    if ($('#stock-modal').hasClass('hidden')) return;
+
+    try {
+        // stock_listを取得
+        const listSnap = await getDoc(doc(db, "stocks", "stock_list"));
         if (!listSnap.exists()) return;
         const newIds = listSnap.data().activeIds || [];
-
-        // 新たに追加されたIDを購読
-        newIds.forEach(id => {
-            if (!activeStockIds.includes(id)) {
-                const unsub = onSnapshot(doc(db, "stocks", id), (snap) => {
-                    if (!snap.exists()) return;
-                    const d = snap.data();
-                    stockData[id] = d;
-                    stockPrices[id]  = d.price;
-                    stockHistory[id] = d.history || [];
-                    stockEvents[id]  = d.lastEvent || '';
-
-                    if (!$('#stock-modal').hasClass('hidden')) {
-                        // 上場廃止チェック
-                        if (d.status === 'delisted') {
-                            handleDelisted(id, d);
-                        } else {
-                            refreshStockCard(id);
-                            refreshPortfolio();
-                        }
-                    }
-                });
-                stockListeners.push(unsub);
-            }
-        });
 
         // 上場廃止で消えたIDを検知
         activeStockIds.forEach(id => {
             if (!newIds.includes(id)) {
-                // リストから消えた→上場廃止済み
                 if (userHoldings[id]) {
                     showDelistNotice(id, stockData[id]?.name || id);
                     delete userHoldings[id];
                 }
                 $(`#stock-card-${id}`).remove();
                 delete stockData[id];
+                delete stockPrices[id];
             }
         });
 
+        const prevIds = [...activeStockIds];
         activeStockIds = [...newIds];
 
-        if (!$('#stock-modal').hasClass('hidden')) {
-            renderStockList();
+        // 全銘柄データを取得
+        for (const id of newIds) {
+            const snap = await getDoc(doc(db, "stocks", id));
+            if (!snap.exists()) continue;
+            const d = snap.data();
+            stockData[id]    = d;
+            stockPrices[id]  = d.price;
+            stockHistory[id] = d.history || [];
+            stockEvents[id]  = d.lastEvent || '';
+
+            if (d.status === 'delisted') {
+                handleDelisted(id, d);
+            }
         }
-    });
-    stockListeners.push(listUnsub);
+
+        // 新銘柄が増えていたら一覧を再描画、そうでなければ各カードだけ更新
+        const hasNewStock = newIds.some(id => !prevIds.includes(id));
+        if (hasNewStock) {
+            renderStockList();
+        } else {
+            newIds.forEach(id => refreshStockCard(id));
+        }
+
+        // ユーザーデータも再取得して保有数・コインを同期
+        const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+        const userData = userSnap.data() || {};
+        userCoinsCache = userData.coins || 0;
+        userHoldings   = { ...(userData.stockHoldings || {}) };
+        refreshPortfolio();
+
+    } catch (e) {
+        console.error("pollStockData error:", e);
+    }
 }
 
 function handleDelisted(id, d) {
@@ -2888,7 +2898,7 @@ async function initStockData() {
 
     renderStockList();
     refreshPortfolio();
-    subscribeStocks();
+    startStockPolling();
 }
 
 // ===== ポートフォリオ表示更新 =====
