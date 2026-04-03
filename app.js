@@ -150,27 +150,101 @@ const notifyAudio = { play: () => { playNotifySound(); return Promise.resolve();
 let unreadCount = 0;
 let unreadRooms = {}; // 各DM部屋の未読数を管理
 let lastSeenTimestamps = {}; // 各チャットの最終閲覧時刻
-let isSoundEnabled = localStorage.getItem("chat_sound_enabled") !== "false"; 
+// ===== 通知設定（細かく管理） =====
+const NOTIF_KEYS = {
+    soundChat:    'notif_sound_chat',
+    soundDm:      'notif_sound_dm',
+    soundFriendReq: 'notif_sound_friend_req',
+    soundFriendAcc: 'notif_sound_friend_acc',
+    pushChat:     'notif_push_chat',
+    pushDm:       'notif_push_dm',
+    pushFriendReq:'notif_push_friend_req',
+    pushFriendAcc:'notif_push_friend_acc',
+};
 
-function updateSoundBtnUI() {
-    if(isSoundEnabled) {
-        $("#toggleSoundBtn").removeClass("btn-toggle-off").addClass("btn-toggle-on");
-        $("#toggleSoundBtn span:first").text("volume_up");
-        $("#soundBtnText").text("通知音: ON");
+function getNotif(key) {
+    const v = localStorage.getItem(NOTIF_KEYS[key]);
+    return v === null ? true : v === 'true'; // デフォルトON
+}
+function setNotif(key, val) {
+    localStorage.setItem(NOTIF_KEYS[key], val);
+}
+
+// 後方互換（isSoundEnabledを参照している箇所用）
+let isSoundEnabled = getNotif('soundChat');
+
+// 通知音（MP3）
+const _notifyAudioEl = new Audio('https://tanabesen.github.io/yukichat/file/sound/通知音.mp3');
+_notifyAudioEl.volume = 0.6;
+const notifyAudio = {
+    play: () => { 
+        _notifyAudioEl.currentTime = 0;
+        return _notifyAudioEl.play().catch(e => console.log('Audio play blocked', e));
+    },
+    currentTime: 0,
+    volume: 0.6
+};
+
+// 設定UIの初期化
+function initNotifUI() {
+    Object.keys(NOTIF_KEYS).forEach(key => {
+        const elId = key.replace(/([A-Z])/g, c => c.toLowerCase())
+            .replace('sound', 'sound').replace('push', 'push');
+        // キーをキャメルケース→チェックボックスIDに変換
+        const checkId = '#' + key.charAt(0).toLowerCase() + key.slice(1)
+            .replace('Chat','ChatMsg').replace('Dm','DmMsg')
+            .replace('FriendReq','FriendReq').replace('FriendAcc','FriendAcc');
+        const $el = $(checkId.replace('soundChat','soundChatMsg')
+            .replace('soundDm','soundDmMsg')
+            .replace('pushChat','pushChatMsg')
+            .replace('pushDm','pushDmMsg'));
+        if ($el.length) $el.prop('checked', getNotif(key));
+    });
+
+    // パーミッション表示
+    updatePushPermissionMsg();
+
+    // チェックボックス変更時に保存
+    $('#soundChatMsg').on('change', function() { setNotif('soundChat', this.checked); isSoundEnabled = this.checked; });
+    $('#soundDmMsg').on('change', function() { setNotif('soundDm', this.checked); });
+    $('#soundFriendReq').on('change', function() { setNotif('soundFriendReq', this.checked); });
+    $('#soundFriendAcc').on('change', function() { setNotif('soundFriendAcc', this.checked); });
+    $('#pushChatMsg').on('change', function() { setNotif('pushChat', this.checked); });
+    $('#pushDmMsg').on('change', function() { setNotif('pushDm', this.checked); });
+    $('#pushFriendReq').on('change', function() { setNotif('pushFriendReq', this.checked); });
+    $('#pushFriendAcc').on('change', function() { setNotif('pushFriendAcc', this.checked); });
+
+    // 試聴ボタン
+    $('#testSoundBtn').on('click', () => notifyAudio.play());
+}
+
+function updatePushPermissionMsg() {
+    const $msg = $('#notif-permission-msg');
+    if (!('Notification' in window)) {
+        $msg.text('このブラウザはプッシュ通知に対応していません');
+    } else if (Notification.permission === 'granted') {
+        $msg.text('✅ 通知が許可されています');
+    } else if (Notification.permission === 'denied') {
+        $msg.text('🚫 通知がブロックされています。ブラウザ設定から許可してください');
     } else {
-        $("#toggleSoundBtn").removeClass("btn-toggle-on").addClass("btn-toggle-off");
-        $("#toggleSoundBtn span:first").text("volume_off");
-        $("#soundBtnText").text("通知音: OFF");
+        $msg.text('ボタンを押して通知を許可してください');
     }
 }
-updateSoundBtnUI();
 
-$("#toggleSoundBtn").on("click", () => {
-    isSoundEnabled = !isSoundEnabled;
-    localStorage.setItem("chat_sound_enabled", isSoundEnabled);
-    updateSoundBtnUI();
-    if(isSoundEnabled) notifyAudio.play().catch(e=>console.log(e));
-});
+// 通知音を鳴らす関数（種類別）
+function playNotifSound(type) {
+    if (!getNotif(type)) return;
+    notifyAudio.play();
+}
+
+// ブラウザ通知を送る関数（種類別）
+function sendPushNotif(type, title, body, icon, tag) {
+    if (!getNotif(type)) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const n = new Notification(title, { body, icon: icon || '/favicon.ico', tag });
+    n.onclick = () => window.focus();
+    return n;
+}
 
 function clearUnread() {
     // 現在のチャットの最終閲覧時刻を記録
@@ -474,24 +548,10 @@ onAuthStateChanged(auth, async (user) => {
                     // バッジとタイトル更新
                     triggerBadge("friend_request_" + reqId);
                     
-                    // 音を鳴らす
-                    if (isSoundEnabled) {
-                        notifyAudio.currentTime = 0;
-                        notifyAudio.play().catch(e => console.log("Audio play blocked", e));
-                    }
-                    
+                    // 通知音
+                    playNotifSound('soundFriendReq');
                     // ブラウザ通知
-                    if (notificationsEnabled) {
-                        const n = new Notification("新しいフレンド申請", {
-                            body: `${senderName}さんからフレンド申請が届きました`,
-                            icon: senderPhoto,
-                            tag: 'friend-request-' + reqId
-                        });
-                        n.onclick = () => { 
-                            window.focus(); 
-                            $("#openUserListBtn").click();
-                        };
-                    }
+                    sendPushNotif('pushFriendReq', '新しいフレンド申請', `${senderName}さんからフレンド申請が届きました`, senderPhoto, 'friend-request-' + reqId);
                     
                     console.log("New friend request from:", senderName);
                 }
@@ -503,16 +563,14 @@ onAuthStateChanged(auth, async (user) => {
                     const accepterPhoto = accepterData ? accepterData.photo : DEFAULT_AVATAR;
                     
                     // 承認通知
-                    if (notificationsEnabled) {
-                        const n = new Notification("フレンド申請が承認されました", {
-                            body: `${accepterName}さんがフレンド申請を承認しました`,
-                            icon: accepterPhoto,
-                            tag: 'friend-accepted-' + reqId
-                        });
-                        n.onclick = () => { 
+                    playNotifSound('soundFriendAcc');
+                    sendPushNotif('pushFriendAcc', 'フレンド申請が承認されました', `${accepterName}さんがフレンド申請を承認しました`, accepterPhoto, 'friend-accepted-' + reqId);
+                    if (false) { // onclick対応のため残す
+                        const n = null;
+                        n?.onclick(() => { 
                             window.focus(); 
                             openDM(data.to, accepterName);
-                        };
+                        });
                     }
                     
                     console.log("Friend request accepted by:", accepterName);
@@ -881,9 +939,11 @@ function triggerBadge(roomId = null) {
     // 全体の未読数を再計算
     recalculateTotalUnread();
     
-    if (isSoundEnabled) {
-        notifyAudio.currentTime = 0;
-        notifyAudio.play().catch(e => console.log("Audio play blocked", e));
+    const isDm = roomId && roomId !== 'global' && !roomId.startsWith('friend_');
+    if (isDm) {
+        playNotifSound('soundDm');
+    } else {
+        playNotifSound('soundChat');
     }
 }
 
@@ -1030,15 +1090,11 @@ function renderMessages(snap, isDesc = false) {
                         triggerBadge(roomIdForBadge);
                         
                         // ブラウザ通知（許可されている場合のみ）
-                        if (notificationsEnabled && (document.visibilityState === 'hidden' || !document.hasFocus())) {
-                            const notificationTitle = `新着: ${lastDoc.data.name || "ゲスト"}`;
-                            const notificationBody = lastDoc.data.text || (lastDoc.data.stamp ? "スタンプ" : "画像");
-                            const n = new Notification(notificationTitle, {
-                                body: notificationBody,
-                                icon: lastDoc.data.photo || DEFAULT_AVATAR,
-                                tag: 'chat-msg'
-                            });
-                            n.onclick = () => { window.focus(); };
+                        if (document.visibilityState === 'hidden' || !document.hasFocus()) {
+                            const notifTitle = `新着: ${lastDoc.data.name || "ゲスト"}`;
+                            const notifBody = lastDoc.data.text || (lastDoc.data.stamp ? "スタンプ" : "画像");
+                            const isDmNotif = !!currentRoomId;
+                            sendPushNotif(isDmNotif ? 'pushDm' : 'pushChat', notifTitle, notifBody, lastDoc.data.photo || DEFAULT_AVATAR, 'chat-msg');
                         }
                     }
                 } else {
@@ -1944,38 +2000,25 @@ $('#openShopBtnHeader, #openShopBtn').on('click', () => {
 
 // 通知ボタン（設定モーダル内）
 $('#toggleNotificationBtn').on('click', async () => {
-    if ('Notification' in window) {
-        if (Notification.permission === 'granted') {
-            notificationsEnabled = !notificationsEnabled;
-            localStorage.setItem('chat_notifications_enabled', notificationsEnabled);
-            updateNotificationButtonUI();
-        } else if (Notification.permission === 'default') {
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                notificationsEnabled = true;
-                localStorage.setItem('chat_notifications_enabled', 'true');
-                updateNotificationButtonUI();
-            }
-        } else {
-            alert('ブラウザの設定で通知を許可してください');
+    if (!('Notification' in window)) {
+        alert('このブラウザはプッシュ通知に対応していません');
+        return;
+    }
+    if (Notification.permission === 'denied') {
+        alert('通知がブロックされています。ブラウザの設定から許可してください');
+        return;
+    }
+    if (Notification.permission !== 'granted') {
+        const perm = await Notification.requestPermission();
+        updatePushPermissionMsg();
+        if (perm === 'granted') {
+            $('#notificationBtnText').text('✅ 通知が許可されました');
         }
     }
 });
 
 function updateNotificationButtonUI() {
-    const $btn = $('#toggleNotificationBtn');
-    const $text = $('#notificationBtnText');
-    const $icon = $btn.find('.material-symbols-outlined');
-    
-    if (notificationsEnabled) {
-        $btn.removeClass('btn-toggle-off').addClass('btn-toggle-on');
-        $text.text('通知: ON');
-        $icon.text('notifications');
-    } else {
-        $btn.removeClass('btn-toggle-on').addClass('btn-toggle-off');
-        $text.text('通知: OFF');
-        $icon.text('notifications_off');
-    }
+    updatePushPermissionMsg();
 }
 
 window.react = async (id, emoji, currentJson) => {
@@ -2514,7 +2557,10 @@ const doLogout = async () => {
 };
 
 $("#logoutBtn, #logoutBtnSide").on("click", doLogout);
-$("#openOtherSettings").on("click", () => $("#other-settings-modal").removeClass("hidden"));
+$("#openOtherSettings").on("click", () => {
+    $("#other-settings-modal").removeClass("hidden");
+    initNotifUI();
+});
 
 // ヘッダー⋮メニュー
 $("#headerMenuBtn").on("click", (e) => {
