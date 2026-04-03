@@ -823,13 +823,27 @@ function generateMessageHtml(id, d) {
     const replyName = d.replyTo ? escapeHTML(d.replyTo.name) : "";
     const replyText = d.replyTo ? escapeHTML(d.replyTo.text) : "";
 
+    // 投稿時刻
+    let timeStr = '';
+    if (d.createdAt) {
+        const dt = d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
+        const now = new Date();
+        const isToday = dt.toDateString() === now.toDateString();
+        const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+        const isYesterday = dt.toDateString() === yesterday.toDateString();
+        const hm = dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        if (isToday) { timeStr = hm; }
+        else if (isYesterday) { timeStr = '昨日 ' + hm; }
+        else { timeStr = dt.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' }) + ' ' + hm; }
+    }
+
     return `<div class="message ${isMe?'me':''} ${isStamp?'is-stamp':''} ${isFriend?'is-friend':''} ${effectClass}" id="msg-${id}" data-uid="${d.uid}" data-msgid="${id}" data-is-me="${isMe}" data-is-stamp="${isStamp}" data-name="${safeName.replace(/"/g,'&quot;')}" data-text="${safeText.replace(/"/g,'&quot;').replace(/\n/g,' ')}">
         <div class="icon-container" onclick="showProfile('${d.uid}')">
             <img src="${d.photo || DEFAULT_AVATAR}" class="icon">
             <div class="status-dot ${userStatus === 'online' ? 'online' : 'offline'}"></div>
         </div>
         <div class="msg-body">
-            <div class="user-info">${safeName}${badgeHtml}</div>
+            <div class="user-info">${safeName}${badgeHtml}${timeStr ? `<span class="msg-time">${timeStr}</span>` : ''}</div>
             <div class="bubble">
                 ${d.replyTo ? `<div class="reply-in-bubble" onclick="scrollToMsg('${d.replyTo.id}')">@${replyName} ${replyText}</div>` : ''}
                 ${d.text ? `<div>${safeText}${d.isEdited ? '<span class="edited-mark">(編集済)</span>' : ''}</div>` : ''}
