@@ -2408,36 +2408,46 @@ const initPresence = (uid) => {
     if (presenceInitialized) return;
     presenceInitialized = true;
 
-    const statusRef = rtdbRef(rtdb, `status/${uid}`);
+    const statusRef   = rtdbRef(rtdb, `status/${uid}`);
     const connectedRef = rtdbRef(rtdb, '.info/connected');
 
+    // .info/connected でRTDB接続状態を監視
     onValue(connectedRef, async (snap) => {
-        if (!snap.val()) return; // 切断中
+        if (!snap.val()) {
+            // RTDBから切断 → Firestoreをofflineに
+            updateDoc(doc(db, "users", uid), {
+                status: "offline", lastSeen: serverTimestamp(), isTyping: false
+            }).catch(() => {});
+            currentOnlineStatus = 'offline';
+            return;
+        }
 
-        // 切断時にサーバーが自動でofflineにセット（これがポイント）
+        // ① 切断時にサーバーが自動でRTDB+Firestoreをofflineに（タブを閉じても確実に動く）
         await onDisconnect(statusRef).set({
             state: 'offline',
             lastSeen: rtdbServerTimestamp()
         });
 
-        // 接続中はonlineにセット
+        // ② 接続確立 → onlineにセット
         await rtdbSet(statusRef, {
             state: 'online',
             lastSeen: rtdbServerTimestamp()
         });
-
-        // Firestoreにも同期
-        updateDoc(doc(db, "users", uid), { status: "online", lastSeen: serverTimestamp() }).catch(() => {});
+        updateDoc(doc(db, "users", uid), {
+            status: "online", lastSeen: serverTimestamp()
+        }).catch(() => {});
         currentOnlineStatus = 'online';
     });
 
-    // RTDBのstatus変化をFirestoreに同期
+    // RTDBのstatus変化をFirestoreに同期（onDisconnectで書き換わったときに反映）
     onValue(statusRef, (snap) => {
         if (!snap.val()) return;
         const state = snap.val().state;
+        if (state === currentOnlineStatus) return; // 変化なければスキップ
         updateDoc(doc(db, "users", uid), {
             status: state,
-            lastSeen: serverTimestamp()
+            lastSeen: serverTimestamp(),
+            ...(state === 'offline' ? { isTyping: false } : {})
         }).catch(() => {});
         currentOnlineStatus = state;
     });
@@ -2446,19 +2456,21 @@ const initPresence = (uid) => {
 const setOnline = async () => {
     if (!auth.currentUser) return;
     initPresence(auth.currentUser.uid);
-    // RTDBがメインなので追加でFirestoreに書くだけ
-    if (currentOnlineStatus !== 'online') {
-        currentOnlineStatus = 'online';
-        try {
-            await rtdbSet(rtdbRef(rtdb, `status/${auth.currentUser.uid}`), {
-                state: 'online', lastSeen: rtdbServerTimestamp()
-            });
-        } catch (e) {}
-    }
+    if (currentOnlineStatus === 'online') return;
+    currentOnlineStatus = 'online';
+    try {
+        await rtdbSet(rtdbRef(rtdb, `status/${auth.currentUser.uid}`), {
+            state: 'online', lastSeen: rtdbServerTimestamp()
+        });
+        updateDoc(doc(db, "users", auth.currentUser.uid), {
+            status: "online", lastSeen: serverTimestamp()
+        }).catch(() => {});
+    } catch (e) {}
 };
 
 const setOffline = async () => {
     if (!auth.currentUser) return;
+    if (currentOnlineStatus === 'offline') return;
     currentOnlineStatus = 'offline';
     try {
         await rtdbSet(rtdbRef(rtdb, `status/${auth.currentUser.uid}`), {
@@ -2490,17 +2502,26 @@ const doLogout = async () => {
 $("#logoutBtn, #logoutBtnSide").on("click", doLogout);
 $("#openOtherSettings").on("click", () => $("#other-settings-modal").removeClass("hidden"));
 
-// --- イベント監視: 未読クリアのみ（オンライン状態はRTDB onDisconnectが管理） ---
+// --- イベント監視 ---
 
-// タブ表示復帰時に未読クリア
+// タブ表示/非表示でオンライン状態を切り替え
 document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && document.hasFocus()) {
+    if (document.visibilityState === "visible") {
+        setOnline();
         clearUnread();
+    } else {
+        setOffline();
     }
 }, true);
 
-// フォーカス時に未読クリア
-window.addEventListener("focus", () => { clearUnread(); });
+// フォーカス取得時にオンラインに戻す
+window.addEventListener("focus", () => {
+    setOnline();
+    clearUnread();
+});
+
+// フォーカス喪失時はオフラインにしない（別ウィンドウ操作などで誤判定するため）
+// タブを閉じたときはonDisconnectが確実に処理する
 
 // ユーザーアクションで未読クリア
 window.addEventListener("mousemove", () => { if (document.hasFocus()) clearUnread(); });
