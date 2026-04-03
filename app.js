@@ -172,7 +172,7 @@ function setNotif(key, val) {
 let isSoundEnabled = getNotif('soundChat');
 
 // 通知音（MP3）
-const _notifyAudioEl = new Audio('https://tanabesan.github.io/yukichat/file/sound/通知音.mp3');
+const _notifyAudioEl = new Audio('https://tanabesan.github.io/yukichat/file/sound/%E9%80%9A%E7%9F%A5%E9%9F%B3.mp3');
 _notifyAudioEl.volume = 0.6;
 const notifyAudio = {
     play: () => { 
