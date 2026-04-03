@@ -38,6 +38,22 @@
         .header-menu-item:hover {
             background: rgba(255,255,255,0.08);
         }
+        .notif-toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--txt);
+        }
+        .notif-toggle-row:hover { background: rgba(255,255,255,0.08); }
+        .notif-check {
+            width: 18px; height: 18px; cursor: pointer;
+            accent-color: var(--accent);
+        }
     </style>
 </head>
 <body id="body-container">
@@ -304,18 +320,63 @@
     </div>
 
     <div id="other-settings-modal" class="modal-overlay hidden">
-        <div class="responsive-card" style="padding:25px; text-align:center; max-width: 300px;">
-            <h3>設定</h3>
-            <button id="toggleSoundBtn" class="btn-toggle-on" style="width:100%; padding:12px; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size:16px; display:flex; align-items:center; justify-content:center; gap:8px;">
-                <span class="material-symbols-outlined">volume_up</span>
-                <span id="soundBtnText">通知音: ON</span>
-            </button>
-            <button id="toggleNotificationBtn" class="btn-toggle-on" style="width:100%; padding:12px; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size:16px; display:flex; align-items:center; justify-content:center; gap:8px;">
-                <span class="material-symbols-outlined">notifications</span>
-                <span id="notificationBtnText">通知: ON</span>
-            </button>
-            <button id="logoutBtn" style="width:100%; padding:12px; background:var(--danger); color:#fff; border:none; border-radius:5px; font-weight:bold; font-size:16px; margin-top:10px;">ログアウト</button>
-            <button onclick="$('#other-settings-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:10px; cursor:pointer; padding:10px;">閉じる</button>
+        <div class="responsive-card" style="padding:24px; max-width:360px; max-height:90vh; overflow-y:auto;">
+            <h3 style="margin:0 0 20px;">⚙️ 設定</h3>
+
+            <!-- 通知音セクション -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:11px; font-weight:bold; color:var(--txt-m); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">🔔 通知音</div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <label class="notif-toggle-row">
+                        <span>チャットメッセージ</span>
+                        <input type="checkbox" id="soundChatMsg" class="notif-check">
+                    </label>
+                    <label class="notif-toggle-row">
+                        <span>DMメッセージ</span>
+                        <input type="checkbox" id="soundDmMsg" class="notif-check">
+                    </label>
+                    <label class="notif-toggle-row">
+                        <span>フレンド申請</span>
+                        <input type="checkbox" id="soundFriendReq" class="notif-check">
+                    </label>
+                    <label class="notif-toggle-row">
+                        <span>フレンド申請承認</span>
+                        <input type="checkbox" id="soundFriendAcc" class="notif-check">
+                    </label>
+                </div>
+                <button id="testSoundBtn" style="margin-top:10px; width:100%; padding:8px; background:rgba(255,255,255,0.08); color:var(--txt); border:1px solid rgba(255,255,255,0.15); border-radius:6px; cursor:pointer; font-size:13px;">▶ 通知音を試聴</button>
+            </div>
+
+            <!-- ブラウザ通知セクション -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:11px; font-weight:bold; color:var(--txt-m); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">📣 ブラウザ通知（プッシュ）</div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <label class="notif-toggle-row">
+                        <span>チャットメッセージ</span>
+                        <input type="checkbox" id="pushChatMsg" class="notif-check">
+                    </label>
+                    <label class="notif-toggle-row">
+                        <span>DMメッセージ</span>
+                        <input type="checkbox" id="pushDmMsg" class="notif-check">
+                    </label>
+                    <label class="notif-toggle-row">
+                        <span>フレンド申請</span>
+                        <input type="checkbox" id="pushFriendReq" class="notif-check">
+                    </label>
+                    <label class="notif-toggle-row">
+                        <span>フレンド申請承認</span>
+                        <input type="checkbox" id="pushFriendAcc" class="notif-check">
+                    </label>
+                </div>
+                <div id="notif-permission-msg" style="margin-top:8px; font-size:12px; color:var(--txt-m);"></div>
+                <button id="toggleNotificationBtn" style="margin-top:8px; width:100%; padding:8px; background:rgba(255,255,255,0.08); color:var(--txt); border:1px solid rgba(255,255,255,0.15); border-radius:6px; cursor:pointer; font-size:13px;">
+                    <span id="notificationBtnText">通知の許可をリクエスト</span>
+                </button>
+            </div>
+
+            <!-- ログアウト -->
+            <button id="logoutBtn" style="width:100%; padding:12px; background:var(--danger); color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:15px; margin-top:4px; cursor:pointer;">ログアウト</button>
+            <button onclick="$('#other-settings-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:8px; cursor:pointer; padding:10px;">閉じる</button>
         </div>
     </div>
 
