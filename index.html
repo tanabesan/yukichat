@@ -433,11 +433,11 @@
                         <div style="font-size:18px; font-weight:bold; color:#26c6da;">📊 <span id="stock-portfolio-value">0</span></div>
                     </div>
                     <button onclick="$('#stock-help-modal').removeClass('hidden')" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25); color:#fff; border-radius:50%; width:34px; height:34px; cursor:pointer; font-size:16px; font-weight:bold; flex-shrink:0;" title="株の仕組みを見る">？</button>
-                    <button onclick="$('#stock-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
+                    <button onclick="stopStockPolling(); $('#stock-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
                 </div>
             </div>
             <div id="stock-list" style="flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; align-content:start; padding-bottom:20px;"></div>
-            <button onclick="$('#stock-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
+            <button onclick="stopStockPolling(); $('#stock-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
         </div>
     </div>
 
