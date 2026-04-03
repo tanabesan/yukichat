@@ -2999,6 +2999,31 @@ function refreshStockCard(stockId) {
     $(`#stock-card-${stockId}`).html(card);
 }
 
+// ===== 数量調整ボタン =====
+window.adjustStockQty = (stockId, delta) => {
+    const $input = $(`#qty-${stockId}`);
+    const val = parseInt($input.val()) || 1;
+    $input.val(Math.max(1, val + delta));
+};
+
+// ===== 全力買・全売ボタン =====
+window.setStockQtyMax = (stockId, action) => {
+    const price = stockPrices[stockId] || 1;
+    if (action === 'buy') {
+        const maxQty = Math.floor(userCoinsCache / price);
+        $(`#qty-${stockId}`).val(Math.max(1, maxQty));
+    } else {
+        const owned = userHoldings[stockId] || 0;
+        $(`#qty-${stockId}`).val(Math.max(1, owned));
+    }
+};
+
+// ===== 売買実行 =====
+window.tradeStockQty = async (stockId, action) => {
+    const qty = parseInt($(`#qty-${stockId}`).val()) || 1;
+    await window.tradeStock(stockId, action, qty);
+};
+
 window.tradeStock = async (stockId, action, qty) => {
     const userRef = doc(db, "users", auth.currentUser.uid);
     const userSnap = await getDoc(userRef);
@@ -3006,8 +3031,7 @@ window.tradeStock = async (stockId, action, qty) => {
     let coins = userData.coins || 0;
     const holdings = { ...(userData.stockHoldings || {}) };
 
-    // onSnapshotで常に最新を保持しているstockPricesを使用
-    const price = stockPrices[stockId] || STOCKS.find(s => s.id === stockId)?.basePrice || 100;
+    const price = stockPrices[stockId] || 100;
     const cost = price * qty;
     const owned = holdings[stockId] || 0;
 
@@ -3022,9 +3046,9 @@ window.tradeStock = async (stockId, action, qty) => {
         if (holdings[stockId] <= 0) delete holdings[stockId];
     }
 
-    // updateDocで完全上書き（setDoc+mergeだとマップのキー削除が反映されない）
     await updateDoc(userRef, { coins, stockHoldings: holdings });
-    userHoldings = { ...holdings }; // キャッシュ更新
-    refreshPortfolio(coins, holdings); // ローカルで即計算
-    refreshStockCard(stockId, holdings);
+    userCoinsCache = coins;
+    userHoldings = { ...holdings };
+    refreshPortfolio(coins, holdings);
+    refreshStockCard(stockId);
 };
