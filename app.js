@@ -2516,6 +2516,18 @@ const doLogout = async () => {
 $("#logoutBtn, #logoutBtnSide").on("click", doLogout);
 $("#openOtherSettings").on("click", () => $("#other-settings-modal").removeClass("hidden"));
 
+// ヘッダー⋮メニュー
+$("#headerMenuBtn").on("click", (e) => {
+    e.stopPropagation();
+    $("#headerMenuDropdown").toggleClass("hidden");
+});
+// 外側クリックで閉じる
+$(document).on("click", (e) => {
+    if (!$(e.target).closest("#headerMenuBtn, #headerMenuDropdown").length) {
+        $("#headerMenuDropdown").addClass("hidden");
+    }
+});
+
 // --- イベント監視 ---
 
 // タブ表示/非表示でオンライン状態を切り替え
