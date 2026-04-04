@@ -1375,6 +1375,316 @@ async function openLoginBonusModal() {
     }
 }
 
+
+// ========== ポーカー ==========
+const POKER_SUITS = ['♠', '♥', '♦', '♣'];
+const POKER_RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const POKER_PAYOUTS = {
+    'ロイヤルフラッシュ': 250,
+    'ストレートフラッシュ': 50,
+    'フォーカード':        25,
+    'フルハウス':          9,
+    'フラッシュ':          6,
+    'ストレート':          4,
+    'スリーカード':        3,
+    'ツーペア':            2,
+    'ワンペア':            1,
+    'ハズレ':              0,
+};
+
+let pokerDeck = [];
+let pokerHand = [];
+let pokerHeld = [false, false, false, false, false];
+let pokerBet = 100;
+let pokerPhase = 'bet'; // bet, draw, result, doubleup
+let pokerCurrentWin = 0;
+let pokerDoubleUpWin = 0;
+
+function pokerMakeDeck() {
+    const deck = [];
+    for (const s of POKER_SUITS) {
+        for (const r of POKER_RANKS) {
+            deck.push({ suit: s, rank: r });
+        }
+    }
+    // シャッフル
+    for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    return deck;
+}
+
+function pokerCardHtml(card, idx, clickable) {
+    const isRed = card.suit === '♥' || card.suit === '♦';
+    const held = pokerHeld[idx];
+    return `<div class="poker-card ${isRed ? 'red' : 'black'} ${held ? 'held' : ''}" 
+        ${clickable ? `onclick="pokerToggleHold(${idx})"` : ''}
+        id="poker-card-${idx}">
+        <div class="poker-card-rank">${card.rank}</div>
+        <div class="poker-card-suit">${card.suit}</div>
+    </div>`;
+}
+
+function pokerRenderCards(clickable) {
+    $('#poker-cards').html(pokerHand.map((c, i) => pokerCardHtml(c, i, clickable)).join(''));
+    if (clickable) {
+        $('#poker-hold-btns').html(pokerHand.map((c, i) =>
+            `<button class="poker-hold-btn ${pokerHeld[i] ? 'held' : ''}" onclick="pokerToggleHold(${i})">
+                ${pokerHeld[i] ? 'HOLD ✓' : 'HOLD'}
+            </button>`
+        ).join(''));
+    } else {
+        $('#poker-hold-btns').html('');
+    }
+}
+
+window.pokerToggleHold = (idx) => {
+    if (pokerPhase !== 'draw') return;
+    pokerHeld[idx] = !pokerHeld[idx];
+    pokerRenderCards(true);
+};
+
+function pokerRankValue(rank) {
+    return POKER_RANKS.indexOf(rank);
+}
+
+function pokerEvaluate(hand) {
+    const ranks = hand.map(c => pokerRankValue(c.rank));
+    const suits = hand.map(c => c.suit);
+    const rankCounts = {};
+    ranks.forEach(r => rankCounts[r] = (rankCounts[r] || 0) + 1);
+    const counts = Object.values(rankCounts).sort((a,b) => b - a);
+    const isFlush = suits.every(s => s === suits[0]);
+    const sortedRanks = [...ranks].sort((a,b) => a - b);
+    const isStr = (sortedRanks[4] - sortedRanks[0] === 4 && new Set(sortedRanks).size === 5);
+    // A-2-3-4-5のストレート
+    const isWheel = JSON.stringify(sortedRanks) === JSON.stringify([0,1,2,3,12]);
+    const isStraight = isStr || isWheel;
+    const isRoyal = isFlush && JSON.stringify(sortedRanks) === JSON.stringify([8,9,10,11,12]);
+
+    if (isRoyal)                          return 'ロイヤルフラッシュ';
+    if (isFlush && isStraight)            return 'ストレートフラッシュ';
+    if (counts[0] === 4)                  return 'フォーカード';
+    if (counts[0] === 3 && counts[1] === 2) return 'フルハウス';
+    if (isFlush)                          return 'フラッシュ';
+    if (isStraight)                       return 'ストレート';
+    if (counts[0] === 3)                  return 'スリーカード';
+    if (counts[0] === 2 && counts[1] === 2) return 'ツーペア';
+    // ワンペア：J(9)以上のペア
+    if (counts[0] === 2) {
+        const pairRank = parseInt(Object.keys(rankCounts).find(k => rankCounts[k] === 2));
+        if (pairRank >= 9) return 'ワンペア'; // J=9, Q=10, K=11, A=12
+    }
+    return 'ハズレ';
+}
+
+function pokerInit(coins) {
+    pokerPhase = 'bet';
+    pokerHeld = [false,false,false,false,false];
+    pokerHand = [];
+    pokerCurrentWin = 0;
+    pokerDoubleUpWin = 0;
+    $('#poker-coins').text(String(coins).padStart(4, '0'));
+    $('#poker-cards').html('');
+    $('#poker-hold-btns').html('');
+    $('#poker-hand-name').text('');
+    $('#poker-result').addClass('hidden');
+    $('#poker-doubleup-area').addClass('hidden');
+    $('#poker-deal-btn').removeClass('hidden');
+    $('#poker-draw-btn').addClass('hidden');
+    $('#poker-bet-area').show();
+}
+
+$('.poker-bet-btn').on('click', function() {
+    if (pokerPhase !== 'bet') return;
+    $('.poker-bet-btn').removeClass('active');
+    $(this).addClass('active');
+    pokerBet = parseInt($(this).data('bet'));
+});
+
+$('#poker-deal-btn').on('click', async () => {
+    if (pokerPhase !== 'bet') return;
+    const userRef = doc(db, "users", auth.currentUser.uid);
+    const userSnap = await getDoc(userRef);
+    const coins = userSnap.data().coins || 0;
+    if (coins < pokerBet) { alert(`💰 コインが足りません（必要: ${pokerBet.toLocaleString()}）`); return; }
+
+    // ベット分を引く
+    await updateDoc(userRef, { coins: coins - pokerBet });
+    $('#poker-coins').text(String(coins - pokerBet).padStart(4, '0'));
+
+    // 配る
+    pokerDeck = pokerMakeDeck();
+    pokerHand = pokerDeck.splice(0, 5);
+    pokerHeld = [false,false,false,false,false];
+    pokerPhase = 'draw';
+
+    const handName = pokerEvaluate(pokerHand);
+    $('#poker-hand-name').text(handName !== 'ハズレ' ? handName : '');
+    pokerRenderCards(true);
+    $('#poker-deal-btn').addClass('hidden');
+    $('#poker-draw-btn').removeClass('hidden');
+    $('#poker-result').addClass('hidden');
+    $('#poker-doubleup-area').addClass('hidden');
+    $('#poker-bet-area').hide();
+});
+
+$('#poker-draw-btn').on('click', async () => {
+    if (pokerPhase !== 'draw') return;
+    pokerPhase = 'result';
+
+    // 捨てたカードを引き直す
+    for (let i = 0; i < 5; i++) {
+        if (!pokerHeld[i]) pokerHand[i] = pokerDeck.shift();
+    }
+    pokerHeld = [false,false,false,false,false];
+    pokerRenderCards(false);
+
+    const handName = pokerEvaluate(pokerHand);
+    const mult = POKER_PAYOUTS[handName] || 0;
+    pokerCurrentWin = pokerBet * mult;
+    pokerDoubleUpWin = pokerCurrentWin;
+
+    $('#poker-hand-name').text(handName);
+    $('#poker-draw-btn').addClass('hidden');
+
+    // 結果表示
+    $('#poker-result').removeClass('hidden');
+    if (pokerCurrentWin > 0) {
+        $('#poker-result-text').html(`<span style="color:#ffd700;">🎉 ${handName}！ +${pokerCurrentWin.toLocaleString()} コイン</span>`);
+        $('#poker-doubleup-btn').removeClass('hidden');
+    } else {
+        $('#poker-result-text').html(`<span style="color:#ff4757;">😢 ハズレ...</span>`);
+        $('#poker-doubleup-btn').addClass('hidden');
+    }
+
+    // 勝利コインを加算
+    if (pokerCurrentWin > 0) {
+        const userRef = doc(db, "users", auth.currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        const coins = userSnap.data().coins || 0;
+        await updateDoc(userRef, { coins: coins + pokerCurrentWin });
+        $('#poker-coins').text(String(coins + pokerCurrentWin).padStart(4, '0'));
+    }
+});
+
+$('#poker-collect-btn').on('click', () => {
+    pokerPhase = 'bet';
+    pokerHeld = [false,false,false,false,false];
+    $('#poker-result').addClass('hidden');
+    $('#poker-doubleup-area').addClass('hidden');
+    $('#poker-deal-btn').removeClass('hidden');
+    $('#poker-draw-btn').addClass('hidden');
+    $('#poker-hand-name').text('');
+    $('#poker-cards').html('');
+    $('#poker-hold-btns').html('');
+    $('#poker-bet-area').show();
+});
+
+// ===== ダブルアップ =====
+$('#poker-doubleup-btn').on('click', () => {
+    if (pokerPhase !== 'result') return;
+    pokerPhase = 'doubleup';
+    $('#poker-result').addClass('hidden');
+    $('#poker-doubleup-area').removeClass('hidden');
+    $('#poker-du-result').text('');
+    $('#poker-du-after-btns').addClass('hidden');
+    $('#poker-du-btns').show();
+
+    // ディーラーカード（裏向き）+ 4枚裏向き
+    const duDeck = pokerMakeDeck();
+    const dealerCard = duDeck.shift();
+    window._pokerDuDeck = duDeck;
+    window._pokerDuDealerCard = dealerCard;
+
+    $('#poker-doubleup-win').text(`現在の獲得: ${pokerDoubleUpWin.toLocaleString()} コイン → 当たれば ${(pokerDoubleUpWin * 2).toLocaleString()} コイン`);
+
+    // ディーラーカード表示（裏面）
+    $('#poker-du-cards').html(`
+        <div class="poker-card black" style="background:linear-gradient(135deg,#1a1a2e,#16213e); border:2px solid #ffd700;">
+            <div style="font-size:28px;">🂠</div>
+        </div>
+    `);
+});
+
+window.pokerDoubleUpChoice = async (choice) => {
+    if (pokerPhase !== 'doubleup') return;
+    $('#poker-du-btns').hide();
+
+    const dealerCard = window._pokerDuDealerCard;
+    const dealerRank = pokerRankValue(dealerCard.rank);
+    const isRed = dealerCard.suit === '♥' || dealerCard.suit === '♦';
+
+    // ディーラーカードを公開
+    $('#poker-du-cards').html(`
+        <div class="poker-card ${isRed ? 'red' : 'black'}">
+            <div class="poker-card-rank">${dealerCard.rank}</div>
+            <div class="poker-card-suit">${dealerCard.suit}</div>
+        </div>
+    `);
+
+    // 判定（8が基準：8以上=HIGH, 7以下=LOW、8はどちらも負け）
+    const win = (choice === 'high' && dealerRank >= 8) || (choice === 'low' && dealerRank <= 6);
+    const push = dealerRank === 7; // 7はドロー（負け扱い）
+
+    if (win) {
+        pokerDoubleUpWin *= 2;
+        $('#poker-du-result').html(`<span style="color:#00c853;">✅ 当たり！ ${pokerDoubleUpWin.toLocaleString()} コイン</span>`);
+        // 差分を追加（元の勝利分は既に受け取り済みなので差額を追加）
+        const userRef = doc(db, "users", auth.currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        const coins = userSnap.data().coins || 0;
+        const bonus = pokerDoubleUpWin / 2; // 追加分
+        await updateDoc(userRef, { coins: coins + bonus });
+        $('#poker-coins').text(String(coins + bonus).padStart(4, '0'));
+        pokerPhase = 'doubleup';
+        $('#poker-doubleup-win').text(`現在の獲得: ${pokerDoubleUpWin.toLocaleString()} コイン → 当たれば ${(pokerDoubleUpWin * 2).toLocaleString()} コイン`);
+        $('#poker-du-after-btns').removeClass('hidden');
+        $('#poker-du-again-btn').show();
+        $('#poker-du-collect-btn').show();
+    } else {
+        // 負け：差額分を没収（既に受け取った勝利分を引く）
+        const userRef = doc(db, "users", auth.currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        const coins = userSnap.data().coins || 0;
+        await updateDoc(userRef, { coins: Math.max(0, coins - pokerDoubleUpWin) });
+        $('#poker-coins').text(String(Math.max(0, coins - pokerDoubleUpWin)).padStart(4, '0'));
+        pokerDoubleUpWin = 0;
+        $('#poker-du-result').html(`<span style="color:#ff4757;">${push ? '😐 7はドロー（負け）' : '❌ ハズレ...全部没収'}</span>`);
+        $('#poker-du-after-btns').removeClass('hidden');
+        $('#poker-du-again-btn').hide();
+        $('#poker-du-collect-btn').show();
+    }
+};
+
+$('#poker-du-again-btn').on('click', () => {
+    pokerPhase = 'doubleup';
+    $('#poker-du-result').text('');
+    $('#poker-du-after-btns').addClass('hidden');
+    $('#poker-du-btns').show();
+    const duDeck = pokerMakeDeck();
+    const dealerCard = duDeck.shift();
+    window._pokerDuDeck = duDeck;
+    window._pokerDuDealerCard = dealerCard;
+    $('#poker-doubleup-win').text(`現在の獲得: ${pokerDoubleUpWin.toLocaleString()} コイン → 当たれば ${(pokerDoubleUpWin * 2).toLocaleString()} コイン`);
+    $('#poker-du-cards').html(`
+        <div class="poker-card black" style="background:linear-gradient(135deg,#1a1a2e,#16213e); border:2px solid #ffd700;">
+            <div style="font-size:28px;">🂠</div>
+        </div>
+    `);
+});
+
+$('#poker-du-collect-btn').on('click', () => {
+    pokerPhase = 'bet';
+    $('#poker-doubleup-area').addClass('hidden');
+    $('#poker-deal-btn').removeClass('hidden');
+    $('#poker-hand-name').text('');
+    $('#poker-cards').html('');
+    $('#poker-hold-btns').html('');
+    $('#poker-bet-area').show();
+});
+
 // ========== スロットマシン ==========
 const slotSymbols = ['🍒', '🍋', '🍊', '🍇', '⭐', '💎', '🎁'];
 const slotPayouts = {
@@ -1455,21 +1765,40 @@ function initReelStrips() {
 }
 
 // スロット画面を開く
-$('#openSlotBtn').on('click', async () => {
-    $('#slot-modal').removeClass('hidden');
-    initReelStrips();
-    
-    // コイン残高を更新
+// ===== カジノ =====
+window.openCasinoTop = () => {
+    $('#slot-modal').addClass('hidden');
+    $('#poker-modal').addClass('hidden');
+    $('#casino-modal').removeClass('hidden');
+};
+
+window.openCasinoGame = async (game) => {
     const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
     const coins = userDoc.data().coins || 0;
-    $('#slot-coins').text(String(coins).padStart(4, '0'));
-    $('#slot-result-display').addClass('hidden');
-    
-    if (hasSpecialSpin) {
-        $('#special-spin-indicator').removeClass('hidden');
-    } else {
-        $('#special-spin-indicator').addClass('hidden');
+    if (game === 'slot') {
+        $('#casino-modal').addClass('hidden');
+        $('#slot-modal').removeClass('hidden');
+        initReelStrips();
+        $('#slot-coins').text(String(coins).padStart(4, '0'));
+        $('#slot-result-display').addClass('hidden');
+        if (hasSpecialSpin) {
+            $('#special-spin-indicator').removeClass('hidden');
+        } else {
+            $('#special-spin-indicator').addClass('hidden');
+        }
+        updateBoostedSpinsDisplay();
+    } else if (game === 'poker') {
+        $('#casino-modal').addClass('hidden');
+        $('#poker-modal').removeClass('hidden');
+        pokerInit(coins);
     }
+};
+
+$('#openSlotBtn').on('click', async () => {
+    const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+    const coins = userDoc.data().coins || 0;
+    $('#casino-coins-top').text(String(coins).padStart(4, '0'));
+    $('#casino-modal').removeClass('hidden');
 });
 
 // スロットは全画面UIなので背景クリック閉じは不要
