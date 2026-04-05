@@ -138,13 +138,48 @@
     <div id="init-loader"><div>Loading...</div></div>
 
     <div id="auth-container" class="modal-overlay hidden">
-        <div class="responsive-card" style="padding:30px; text-align:center; max-width: 320px;">
-            <h2>ゆきちゃっと</h2>
-            <input type="email" id="email" class="settings-input" placeholder="メール">
-            <input type="password" id="password" class="settings-input" placeholder="パスワード">
-            <button id="loginBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:16px;">ログイン / 登録</button>
-            <div style="margin: 15px 0; border-top: 1px solid #444;"></div>
-            <button id="guestBtn" style="width:100%; padding:12px; background:#4e5058; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:16px;">ゲストで参加 (匿名)</button>
+        <div class="responsive-card" style="padding:28px; text-align:center; max-width:340px;">
+            <h2 style="margin:0 0 20px;">ゆきちゃっと</h2>
+
+            <!-- タブ -->
+            <div style="display:flex; border-radius:8px; overflow:hidden; margin-bottom:20px; border:1px solid rgba(255,255,255,0.1);">
+                <button id="authTabLogin" onclick="switchAuthTab('login')" style="flex:1; padding:10px; background:var(--accent); color:#fff; border:none; cursor:pointer; font-weight:bold; font-size:14px;">ログイン</button>
+                <button id="authTabRegister" onclick="switchAuthTab('register')" style="flex:1; padding:10px; background:transparent; color:var(--txt-m); border:none; cursor:pointer; font-weight:bold; font-size:14px;">新規登録</button>
+            </div>
+
+            <!-- ログインフォーム -->
+            <div id="authFormLogin">
+                <input type="email" id="loginEmail" class="settings-input" placeholder="メールアドレス">
+                <input type="password" id="loginPassword" class="settings-input" placeholder="パスワード">
+                <div id="loginError" style="font-size:12px; color:var(--danger); margin-bottom:8px; display:none;"></div>
+                <button id="loginBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:15px;">ログイン</button>
+                <button id="forgotPasswordBtn" style="width:100%; background:none; border:none; color:var(--txt-m); cursor:pointer; padding:8px; font-size:12px; margin-top:4px;">パスワードを忘れた方はこちら</button>
+            </div>
+
+            <!-- 新規登録フォーム -->
+            <div id="authFormRegister" style="display:none;">
+                <input type="text" id="registerName" class="settings-input" placeholder="ユーザー名">
+                <input type="email" id="registerEmail" class="settings-input" placeholder="メールアドレス">
+                <input type="password" id="registerPassword" class="settings-input" placeholder="パスワード（6文字以上）">
+                <input type="password" id="registerPasswordConfirm" class="settings-input" placeholder="パスワード（確認）">
+                <div id="registerError" style="font-size:12px; color:var(--danger); margin-bottom:8px; display:none;"></div>
+                <button id="registerBtn" style="width:100%; padding:12px; background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:15px;">登録してメール認証</button>
+                <div style="font-size:11px; color:var(--txt-m); margin-top:6px;">登録後に確認メールが届きます。認証してからログインしてください。</div>
+            </div>
+
+            <!-- メール認証待ち -->
+            <div id="authFormVerify" style="display:none;">
+                <div style="font-size:40px; margin:10px 0;">📧</div>
+                <div style="font-weight:bold; margin-bottom:8px;">確認メールを送信しました</div>
+                <div style="font-size:13px; color:var(--txt-m); margin-bottom:16px;" id="verifyEmailAddr"></div>
+                <div style="font-size:12px; color:var(--txt-m); margin-bottom:16px;">メール内のリンクをクリックして認証後、下のボタンを押してください。</div>
+                <button id="verifyCheckBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin-bottom:8px;">認証済み → ログイン</button>
+                <button id="resendVerifyBtn" style="width:100%; padding:10px; background:none; color:var(--txt-m); border:1px solid rgba(255,255,255,0.2); border-radius:6px; cursor:pointer; font-size:13px;">確認メールを再送</button>
+                <button onclick="switchAuthTab('login')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:8px; cursor:pointer; padding:8px; font-size:12px;">← ログインに戻る</button>
+            </div>
+
+            <div style="margin:16px 0; border-top:1px solid #333;"></div>
+            <button id="guestBtn" style="width:100%; padding:11px; background:#4e5058; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px;">ゲストで参加（匿名）</button>
             <div style="font-size:11px; color:var(--txt-m); margin-top:5px;">※ゲストは最終ログインから30日後に自動削除されます</div>
         </div>
     </div>
@@ -451,6 +486,23 @@
                 </button>
             </div>
 
+            <!-- メールアドレス・認証 -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:11px; font-weight:bold; color:var(--txt-m); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">📧 アカウント</div>
+                <div id="account-status-area" style="font-size:13px; color:var(--txt-m); background:rgba(255,255,255,0.04); border-radius:8px; padding:12px; margin-bottom:10px;"></div>
+                <!-- メール未認証ユーザー向け -->
+                <div id="verify-email-section" style="display:none;">
+                    <button id="sendVerifyEmailBtn" style="width:100%; padding:10px; background:rgba(102,126,234,0.2); color:#667eea; border:1px solid #667eea; border-radius:6px; font-weight:bold; cursor:pointer; font-size:13px; margin-bottom:6px;">📧 認証メールを送信</button>
+                </div>
+                <!-- ゲスト・匿名ユーザー向け：メールアドレス追加 -->
+                <div id="add-email-section" style="display:none;">
+                    <input type="email" id="addEmail" class="settings-input" placeholder="メールアドレス">
+                    <input type="password" id="addPassword" class="settings-input" placeholder="パスワード（6文字以上）">
+                    <div id="addEmailError" style="font-size:12px; color:var(--danger); margin-bottom:6px; display:none;"></div>
+                    <button id="addEmailBtn" style="width:100%; padding:10px; background:rgba(102,126,234,0.2); color:#667eea; border:1px solid #667eea; border-radius:6px; font-weight:bold; cursor:pointer; font-size:13px;">メールアドレスを追加</button>
+                </div>
+            </div>
+
             <!-- ログアウト -->
             <button id="logoutBtn" style="width:100%; padding:12px; background:var(--danger); color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:15px; margin-top:4px; cursor:pointer;">ログアウト</button>
             <button onclick="$('#other-settings-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:8px; cursor:pointer; padding:10px;">閉じる</button>
@@ -518,6 +570,7 @@
                     <div class="slot-credits-label">WIN</div>
                     <div id="slot-win-amount" class="slot-win-value">+0000</div>
                 </div>
+                <button onclick="$('#slot-help-modal').removeClass('hidden')" class="slot-exit-btn" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);">？</button>
                 <button onclick="$('#casino-modal').addClass('hidden'); $('#slot-modal').addClass('hidden')" class="slot-exit-btn">✕ EXIT</button>
             </div>
         </div>
@@ -589,6 +642,7 @@
                     <div class="slot-credits-label">CREDITS</div>
                     <div id="poker-coins" class="slot-credits-value">0000</div>
                 </div>
+                <button onclick="$('#poker-help-modal').removeClass('hidden')" class="slot-exit-btn" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);">？</button>
                 <button onclick="$('#casino-modal').addClass('hidden'); $('#poker-modal').addClass('hidden')" class="slot-exit-btn">✕ EXIT</button>
             </div>
         </div>
@@ -767,6 +821,87 @@
             </div>
             <div id="stock-list" style="flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; align-content:start; padding-bottom:20px;"></div>
             <button onclick="stopStockPolling(); $('#stock-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
+        </div>
+    </div>
+
+    <!-- スロットヘルプモーダル -->
+    <div id="slot-help-modal" class="modal-overlay hidden" style="z-index:10000;" onclick="if(event.target===this)$(this).addClass('hidden')">
+        <div class="responsive-card" style="max-width:480px; max-height:85vh; overflow-y:auto; padding:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0;">🎰 スロットの遊び方</h3>
+                <button onclick="$('#slot-help-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:22px; cursor:pointer;">✕</button>
+            </div>
+            <div style="font-size:13px; color:var(--txt); line-height:1.9; display:flex; flex-direction:column; gap:14px;">
+                <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    <div style="font-weight:bold; color:#ffd700; margin-bottom:6px;">📌 基本ルール</div>
+                    コインを賭けてSPINを押すと3つのリールが回ります。3つの絵柄が揃えばコインを獲得！
+                </div>
+                <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    <div style="font-weight:bold; color:#ffd700; margin-bottom:6px;">💰 配当表（ベット×10コイン）</div>
+                    <div style="font-family:monospace; display:grid; grid-template-columns:1fr auto; gap:3px 12px;">
+                        <span>🍒🍒🍒</span><span>×5倍（50コイン）</span>
+                        <span>🍋🍋🍋</span><span>×8倍（80コイン）</span>
+                        <span>🍊🍊🍊</span><span>×12倍（120コイン）</span>
+                        <span>🍇🍇🍇</span><span>×20倍（200コイン）</span>
+                        <span>⭐⭐⭐</span><span>×40倍（400コイン）</span>
+                        <span>💎💎💎</span><span>×100倍 + SPECIAL！</span>
+                        <span>🎁🎁🎁</span><span>🔥 BOOST ×10スピン</span>
+                    </div>
+                </div>
+                <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    <div style="font-weight:bold; color:#ffd700; margin-bottom:6px;">⚡ 特殊効果</div>
+                    <span style="color:#a78bfa;">✨ SPECIAL SPIN</span> ── 💎×3で発動。次のスピンの配当が2倍！<br>
+                    <span style="color:#ff4757;">🔥 BOOSTED SPINS</span> ── 🎁×3で発動。10回スピン当選率60%UP！
+                </div>
+                <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    <div style="font-weight:bold; color:#ffd700; margin-bottom:6px;">🎲 ベット倍率</div>
+                    ×1（10コイン）、×10（100コイン）、×100（1000コイン）から選べます。倍率を上げると配当も比例して増えます。
+                </div>
+            </div>
+            <button onclick="$('#slot-help-modal').addClass('hidden')" style="width:100%; margin-top:20px; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">わかった！</button>
+        </div>
+    </div>
+
+    <!-- ポーカーヘルプモーダル -->
+    <div id="poker-help-modal" class="modal-overlay hidden" style="z-index:10000;" onclick="if(event.target===this)$(this).addClass('hidden')">
+        <div class="responsive-card" style="max-width:480px; max-height:85vh; overflow-y:auto; padding:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0;">🃏 ポーカーの遊び方</h3>
+                <button onclick="$('#poker-help-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:22px; cursor:pointer;">✕</button>
+            </div>
+            <div style="font-size:13px; color:var(--txt); line-height:1.9; display:flex; flex-direction:column; gap:14px;">
+                <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    <div style="font-weight:bold; color:#ffd700; margin-bottom:6px;">📌 基本の流れ</div>
+                    ① ベットを選んで <strong>DEAL</strong> を押す<br>
+                    ② 5枚のカードが配られる<br>
+                    ③ 残したいカードの <strong>HOLD</strong> を押す<br>
+                    ④ <strong>DRAW</strong> を押してホールドしなかったカードを引き直す<br>
+                    ⑤ 役が揃えばコイン獲得！
+                </div>
+                <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    <div style="font-weight:bold; color:#ffd700; margin-bottom:6px;">💰 配当倍率</div>
+                    <div style="display:grid; grid-template-columns:1fr auto; gap:3px 16px; font-family:monospace;">
+                        <span>ロイヤルフラッシュ</span><span style="color:#ffd700;">× 250</span>
+                        <span>ストレートフラッシュ</span><span style="color:#ffd700;">× 50</span>
+                        <span>フォーカード</span><span style="color:#ffd700;">× 25</span>
+                        <span>フルハウス</span><span style="color:#ffd700;">× 9</span>
+                        <span>フラッシュ</span><span style="color:#ffd700;">× 6</span>
+                        <span>ストレート</span><span style="color:#ffd700;">× 4</span>
+                        <span>スリーカード</span><span style="color:#ffd700;">× 3</span>
+                        <span>ツーペア</span><span style="color:#ffd700;">× 2</span>
+                        <span>ワンペア（J以上）</span><span style="color:#ffd700;">× 1</span>
+                        <span>それ以下</span><span style="color:rgba(255,255,255,0.3);">× 0</span>
+                    </div>
+                </div>
+                <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    <div style="font-weight:bold; color:#f093fb; margin-bottom:6px;">⚡ ダブルアップ</div>
+                    役が揃って勝利したあと、獲得コインを賭けてさらに2倍を狙えます。<br><br>
+                    ディーラーのカードが <span style="color:#00c853; font-weight:bold;">HIGH（8以上）</span> か <span style="color:#ff4757; font-weight:bold;">LOW（6以下）</span> かを当てると獲得コインが2倍！<br>
+                    外れると獲得コインが全没収。<strong>7はドロー（負け）</strong>。<br><br>
+                    当たり続ける限り何度でも挑戦できます。
+                </div>
+            </div>
+            <button onclick="$('#poker-help-modal').addClass('hidden')" style="width:100%; margin-top:20px; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">わかった！</button>
         </div>
     </div>
 
