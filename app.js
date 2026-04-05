@@ -2890,8 +2890,10 @@ $("#loginBtn").on("click", async () => {
     try {
         const cred = await signInWithEmailAndPassword(auth, e, p);
         if (!cred.user.emailVerified) {
-            $('#loginError').text('メールアドレスが認証されていません。届いたメールのリンクをクリックしてください。').show();
+            // 認証メールを自動再送
+            await sendEmailVerification(cred.user);
             await signOut(auth);
+            $('#loginError').html('メールアドレスが認証されていません。<br>認証メールを送信しました。届いたメールのリンクをクリックしてからログインしてください。').show();
             return;
         }
         location.reload();
