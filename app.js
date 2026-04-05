@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, startAfter, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, signInAnonymously, sendEmailVerification, linkWithCredential, EmailAuthProvider, reload, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref as rtdbRef, set as rtdbSet, onValue, onDisconnect, serverTimestamp as rtdbServerTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 const firebaseConfig = { apiKey: "AIzaSyA8X7HsOXDERBTy4GvLE8ibg3bk8JhldZg", authDomain: "chat-16746.firebaseapp.com", projectId: "chat-16746", storageBucket: "chat-16746.firebasestorage.app", messagingSenderId: "1009009975164", appId: "1:1009009975164:web:64192371271cb589614ef9" };
@@ -1624,9 +1624,9 @@ window.pokerDoubleUpChoice = async (choice) => {
         </div>
     `);
 
-    // 判定（8が基準：8以上=HIGH, 7以下=LOW、8はどちらも負け）
-    const win = (choice === 'high' && dealerRank >= 8) || (choice === 'low' && dealerRank <= 6);
-    const push = dealerRank === 7; // 7はドロー（負け扱い）
+    // 判定：7(index=5)が基準。8以上=HIGH勝ち、6以下=LOW勝ち、7はドロー（負け扱い）
+    const win = (choice === 'high' && dealerRank >= 6) || (choice === 'low' && dealerRank <= 4);
+    const push = dealerRank === 5; // 7のカード（index=5）はドロー
 
     if (win) {
         pokerDoubleUpWin *= 2;
@@ -2866,13 +2866,120 @@ const setOffline = async () => {
     } catch (e) {}
 };
 
+// ===== 認証タブ切り替え =====
+window.switchAuthTab = (tab) => {
+    $('#authFormLogin, #authFormRegister, #authFormVerify').hide();
+    $('#authTabLogin, #authTabRegister').css({ background: 'transparent', color: 'var(--txt-m)' });
+    if (tab === 'login') {
+        $('#authFormLogin').show();
+        $('#authTabLogin').css({ background: 'var(--accent)', color: '#fff' });
+    } else if (tab === 'register') {
+        $('#authFormRegister').show();
+        $('#authTabRegister').css({ background: 'var(--accent)', color: '#fff' });
+    } else if (tab === 'verify') {
+        $('#authFormVerify').show();
+    }
+};
+
+// ===== ログイン =====
 $("#loginBtn").on("click", async () => {
-    const e = $("#email").val(), p = $("#password").val();
-    try { await signInWithEmailAndPassword(auth, e, p); }
-    catch { const res = await createUserWithEmailAndPassword(auth, e, p); await setDoc(doc(db, "users", res.user.uid), { name: "ゲスト", photo: DEFAULT_AVATAR, status: "online", isTyping: false, isAnonymous: false }); }
-    location.reload();
+    const e = $("#loginEmail").val().trim();
+    const p = $("#loginPassword").val();
+    $('#loginError').hide();
+    if (!e || !p) { $('#loginError').text('メールとパスワードを入力してください').show(); return; }
+    try {
+        const cred = await signInWithEmailAndPassword(auth, e, p);
+        if (!cred.user.emailVerified) {
+            $('#loginError').text('メールアドレスが認証されていません。届いたメールのリンクをクリックしてください。').show();
+            await signOut(auth);
+            return;
+        }
+        location.reload();
+    } catch (err) {
+        const msg = err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential'
+            ? 'メールアドレスまたはパスワードが正しくありません'
+            : 'ログインエラー: ' + err.message;
+        $('#loginError').text(msg).show();
+    }
 });
 
+// ===== 新規登録 =====
+$("#registerBtn").on("click", async () => {
+    const name = $("#registerName").val().trim();
+    const e    = $("#registerEmail").val().trim();
+    const p    = $("#registerPassword").val();
+    const p2   = $("#registerPasswordConfirm").val();
+    $('#registerError').hide();
+    if (!name) { $('#registerError').text('ユーザー名を入力してください').show(); return; }
+    if (!e)    { $('#registerError').text('メールアドレスを入力してください').show(); return; }
+    if (p.length < 6) { $('#registerError').text('パスワードは6文字以上にしてください').show(); return; }
+    if (p !== p2)     { $('#registerError').text('パスワードが一致しません').show(); return; }
+    try {
+        const res = await createUserWithEmailAndPassword(auth, e, p);
+        await updateProfile(res.user, { displayName: name });
+        await setDoc(doc(db, "users", res.user.uid), {
+            name, photo: DEFAULT_AVATAR, status: "offline", isTyping: false, isAnonymous: false
+        });
+        await sendEmailVerification(res.user);
+        await signOut(auth);
+        $('#verifyEmailAddr').text(e);
+        switchAuthTab('verify');
+    } catch (err) {
+        const msg = err.code === 'auth/email-already-in-use'
+            ? 'このメールアドレスは既に使われています'
+            : '登録エラー: ' + err.message;
+        $('#registerError').text(msg).show();
+    }
+});
+
+// ===== 認証確認 =====
+$("#verifyCheckBtn").on("click", async () => {
+    const e = $("#registerEmail").val().trim() || $("#loginEmail").val().trim();
+    const p = $("#registerPassword").val() || $("#loginPassword").val();
+    try {
+        const cred = await signInWithEmailAndPassword(auth, e, p);
+        await reload(cred.user);
+        if (cred.user.emailVerified) {
+            location.reload();
+        } else {
+            alert('まだ認証されていません。メール内のリンクをクリックしてください。');
+            await signOut(auth);
+        }
+    } catch (err) {
+        alert('確認エラー: ' + err.message);
+    }
+});
+
+// ===== 認証メール再送 =====
+$("#resendVerifyBtn").on("click", async () => {
+    const e = $("#registerEmail").val().trim();
+    const p = $("#registerPassword").val();
+    try {
+        const cred = await signInWithEmailAndPassword(auth, e, p);
+        await sendEmailVerification(cred.user);
+        await signOut(auth);
+        alert('確認メールを再送しました。');
+    } catch (err) {
+        alert('再送エラー: ' + err.message);
+    }
+});
+
+// ===== パスワードリセット =====
+$("#forgotPasswordBtn").on("click", async () => {
+    const e = $("#loginEmail").val().trim();
+    if (!e) { $('#loginError').text('メールアドレスを入力してからパスワードを再設定してください').show(); return; }
+    try {
+        await sendPasswordResetEmail(auth, e);
+        alert(`${e} にパスワード再設定メールを送信しました。`);
+    } catch (err) {
+        const msg = err.code === 'auth/user-not-found'
+            ? 'このメールアドレスは登録されていません'
+            : 'エラー: ' + err.message;
+        $('#loginError').text(msg).show();
+    }
+});
+
+// ===== ゲストログイン =====
 $("#guestBtn").on("click", async () => {
     try { await signInAnonymously(auth); location.reload(); }
     catch (e) { alert("ゲストログインエラー: " + e.message); }
@@ -2887,6 +2994,74 @@ $("#logoutBtn, #logoutBtnSide").on("click", doLogout);
 $("#openOtherSettings").on("click", () => {
     $("#other-settings-modal").removeClass("hidden");
     initNotifUI();
+    updateAccountStatusUI();
+});
+
+// ===== アカウント状態表示 =====
+function updateAccountStatusUI() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const isAnon = user.isAnonymous;
+    const hasEmail = !!user.email;
+    const isVerified = user.emailVerified;
+
+    if (isAnon) {
+        $('#account-status-area').html(`
+            <div style="color:#ffd700; margin-bottom:4px;">👤 ゲスト（匿名）</div>
+            <div style="font-size:12px;">メールアドレスを追加するとアカウントが保護されます。</div>
+        `);
+        $('#add-email-section').show();
+        $('#verify-email-section').hide();
+    } else if (hasEmail && !isVerified) {
+        $('#account-status-area').html(`
+            <div style="color:#ff4757; margin-bottom:4px;">⚠️ メール未認証</div>
+            <div style="font-size:12px;">${user.email}</div>
+        `);
+        $('#verify-email-section').show();
+        $('#add-email-section').hide();
+    } else if (hasEmail && isVerified) {
+        $('#account-status-area').html(`
+            <div style="color:#00c853; margin-bottom:4px;">✅ 認証済み</div>
+            <div style="font-size:12px;">${user.email}</div>
+        `);
+        $('#verify-email-section').hide();
+        $('#add-email-section').hide();
+    }
+}
+
+// ===== 認証メール送信（設定から） =====
+$('#sendVerifyEmailBtn').on('click', async () => {
+    try {
+        await sendEmailVerification(auth.currentUser);
+        alert('認証メールを送信しました。メール内のリンクをクリックしてください。');
+    } catch (err) {
+        alert('送信エラー: ' + err.message);
+    }
+});
+
+// ===== ゲストにメールアドレス追加 =====
+$('#addEmailBtn').on('click', async () => {
+    const email = $('#addEmail').val().trim();
+    const password = $('#addPassword').val();
+    $('#addEmailError').hide();
+    if (!email) { $('#addEmailError').text('メールアドレスを入力してください').show(); return; }
+    if (password.length < 6) { $('#addEmailError').text('パスワードは6文字以上にしてください').show(); return; }
+    try {
+        const credential = EmailAuthProvider.credential(email, password);
+        await linkWithCredential(auth.currentUser, credential);
+        await sendEmailVerification(auth.currentUser);
+        await updateDoc(doc(db, "users", auth.currentUser.uid), { isAnonymous: false });
+        alert('メールアドレスを追加しました。確認メールが届きますので認証してください。');
+        updateAccountStatusUI();
+    } catch (err) {
+        const msg = err.code === 'auth/email-already-in-use'
+            ? 'このメールアドレスは既に使われています'
+            : err.code === 'auth/invalid-email'
+            ? 'メールアドレスの形式が正しくありません'
+            : 'エラー: ' + err.message;
+        $('#addEmailError').text(msg).show();
+    }
 });
 
 // ヘッダー⋮メニュー
