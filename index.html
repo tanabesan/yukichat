@@ -222,7 +222,6 @@
                 <!-- PC: 全部表示 -->
                 <div class="header-icons-pc" style="display:flex; gap:15px; align-items:center;">
                     <span id="openRankingBtn" class="material-symbols-outlined op-btn" style="color:#ffd700; opacity:1; font-size:24px;" title="ランキング">leaderboard</span>
-                    <span id="openStockBtn" class="material-symbols-outlined op-btn" style="color:#26c6da; opacity:1; font-size:24px;" title="株">trending_up</span>
                     <span id="openSlotBtn" class="material-symbols-outlined op-btn" style="color:#ff4757; opacity:1; font-size:24px;" title="カジノ">casino</span>
                     <span id="openLoginBonusBtn" class="material-symbols-outlined op-btn" style="color:#ffd700; opacity:1; font-size:24px;" title="ログインボーナス">redeem</span>
                     <span id="openShopBtnHeader" class="material-symbols-outlined op-btn" style="color:#f093fb; opacity:1; font-size:24px;" title="ショップ">shopping_bag</span>
@@ -236,10 +235,6 @@
                         <div class="header-menu-item" onclick="$('#headerMenuDropdown').addClass('hidden'); $('#openRankingBtn').click()">
                             <span class="material-symbols-outlined" style="color:#ffd700; font-size:20px;">leaderboard</span>
                             <span>ランキング</span>
-                        </div>
-                        <div class="header-menu-item" onclick="$('#headerMenuDropdown').addClass('hidden'); $('#openStockBtn').click()">
-                            <span class="material-symbols-outlined" style="color:#26c6da; font-size:20px;">trending_up</span>
-                            <span>株式市場</span>
                         </div>
                         <div class="header-menu-item" onclick="$('#headerMenuDropdown').addClass('hidden'); $('#openSlotBtn').click()">
                             <span class="material-symbols-outlined" style="color:#ff4757; font-size:20px;">casino</span>
@@ -792,35 +787,8 @@
                 <div class="fs-title">🏆 ランキング</div>
                 <button onclick="$('#ranking-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
             </div>
-            <div style="display:flex; gap:8px; margin-bottom:16px; flex-shrink:0;">
-                <button class="rank-tab-btn active" data-tab="coins" onclick="switchRankTab('coins',this)" style="flex:1; padding:10px; border:none; border-radius:8px; background:var(--accent); color:#fff; cursor:pointer; font-weight:bold; font-size:14px;">💰 コイン</button>
-                <button class="rank-tab-btn" data-tab="stocks" onclick="switchRankTab('stocks',this)" style="flex:1; padding:10px; border:none; border-radius:8px; background:rgba(255,255,255,0.08); color:var(--txt); cursor:pointer; font-weight:bold; font-size:14px;">📈 株資産</button>
-            </div>
             <div id="ranking-list" style="flex:1; overflow-y:auto;"></div>
             <button onclick="$('#ranking-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
-        </div>
-    </div>
-
-    <!-- 株全画面 -->
-    <div id="stock-modal" class="fs-screen hidden">
-        <div class="fs-inner" style="max-width:960px;">
-            <div class="fs-header">
-                <div class="fs-title">📈 株式市場</div>
-                <div style="display:flex; gap:12px; align-items:center;">
-                    <div style="background:rgba(255,255,255,0.08); border-radius:10px; padding:6px 16px; text-align:center;">
-                        <div style="font-size:10px; color:rgba(255,255,255,0.5); text-transform:uppercase;">所持コイン</div>
-                        <div style="font-size:18px; font-weight:bold; color:#ffd700;">💰 <span id="stock-coins">0</span></div>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.08); border-radius:10px; padding:6px 16px; text-align:center;">
-                        <div style="font-size:10px; color:rgba(255,255,255,0.5); text-transform:uppercase;">評価額</div>
-                        <div style="font-size:18px; font-weight:bold; color:#26c6da;">📊 <span id="stock-portfolio-value">0</span></div>
-                    </div>
-                    <button onclick="$('#stock-help-modal').removeClass('hidden')" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25); color:#fff; border-radius:50%; width:34px; height:34px; cursor:pointer; font-size:16px; font-weight:bold; flex-shrink:0;" title="株の仕組みを見る">？</button>
-                    <button onclick="stopStockPolling(); $('#stock-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
-                </div>
-            </div>
-            <div id="stock-list" style="flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; align-content:start; padding-bottom:20px;"></div>
-            <button onclick="stopStockPolling(); $('#stock-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
         </div>
     </div>
 
@@ -902,103 +870,6 @@
                 </div>
             </div>
             <button onclick="$('#poker-help-modal').addClass('hidden')" style="width:100%; margin-top:20px; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">わかった！</button>
-        </div>
-    </div>
-
-    <!-- 株ヘルプモーダル -->
-    <div id="stock-help-modal" class="modal-overlay hidden" style="z-index:10000;" onclick="if(event.target===this)$(this).addClass('hidden')">
-        <div class="responsive-card" style="max-width:560px; max-height:85vh; overflow-y:auto; padding:24px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h3 style="margin:0; font-size:18px;">📖 株式市場の仕組み</h3>
-                <button onclick="$('#stock-help-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:22px; cursor:pointer; padding:4px 8px;">✕</button>
-            </div>
-
-            <!-- 基本 -->
-            <div style="margin-bottom:20px;">
-                <div style="font-size:13px; font-weight:bold; color:#26c6da; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">📌 基本の流れ</div>
-                <div style="font-size:13px; color:var(--txt); line-height:1.8; background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
-                    コインを使って銘柄の株を買い、価格が上がったら売って差額を稼ぎます。<br>
-                    株価は <strong style="color:#ffd700;">1分ごと</strong> に自動で変動します。タイミングよく売買してコインを増やしましょう！
-                </div>
-            </div>
-
-            <!-- 銘柄タイプ -->
-            <div style="margin-bottom:20px;">
-                <div style="font-size:13px; font-weight:bold; color:#26c6da; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">🏷️ 銘柄タイプ一覧</div>
-                <div style="display:flex; flex-direction:column; gap:8px; font-size:13px;">
-                    <div style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px;">
-                        <span style="background:#26c6da22; color:#26c6da; border-radius:4px; padding:2px 8px; font-weight:bold; white-space:nowrap; font-size:12px;">🏦 安定型</span>
-                        <span style="color:var(--txt); line-height:1.6;">値動きが小さく倒産しない。リターンは低いが安全。初心者向け。</span>
-                    </div>
-                    <div style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px;">
-                        <span style="background:#00c85322; color:#00c853; border-radius:4px; padding:2px 8px; font-weight:bold; white-space:nowrap; font-size:12px;">📈 成長型</span>
-                        <span style="color:var(--txt); line-height:1.6;">緩やかに上昇するトレンドあり。低確率で倒産する場合も。</span>
-                    </div>
-                    <div style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px;">
-                        <span style="background:#ff475722; color:#ff4757; border-radius:4px; padding:2px 8px; font-weight:bold; white-space:nowrap; font-size:12px;">⚠️ ハイリスク</span>
-                        <span style="color:var(--txt); line-height:1.6;">激しく上下する。大儲けも大損も起きる。倒産確率高め。</span>
-                    </div>
-                    <div style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px;">
-                        <span style="background:#f093fb22; color:#f093fb; border-radius:4px; padding:2px 8px; font-weight:bold; white-space:nowrap; font-size:12px;">🎰 ミーム</span>
-                        <span style="color:var(--txt); line-height:1.6;">最も激しい値動き。急騰・急落が頻繁。倒産率も最高。一発逆転向け。</span>
-                    </div>
-                    <div style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px;">
-                        <span style="background:#ffd70022; color:#ffd700; border-radius:4px; padding:2px 8px; font-weight:bold; white-space:nowrap; font-size:12px;">🔄 循環型</span>
-                        <span style="color:var(--txt); line-height:1.6;">上下を繰り返すサイクルがある。安値で買って高値で売るのがコツ。</span>
-                    </div>
-                    <div style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px;">
-                        <span style="background:#a78bfa22; color:#a78bfa; border-radius:4px; padding:2px 8px; font-weight:bold; white-space:nowrap; font-size:12px;">💎 希少型</span>
-                        <span style="color:var(--txt); line-height:1.6;">値動きが極めて小さく安定。IPO価格が高め。長期保有向け。</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- イベント -->
-            <div style="margin-bottom:20px;">
-                <div style="font-size:13px; font-weight:bold; color:#26c6da; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">⚡ 発生するイベント</div>
-                <div style="font-size:13px; color:var(--txt); line-height:1.8; background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
-                    毎ティックにランダムでイベントが起きることがあります。<br><br>
-                    <span style="color:#00c853;">📈 好決算 / 🚀 急騰</span> ── 株価が大きく上昇<br>
-                    <span style="color:#ff4757;">📉 悪決算 / 💥 炎上</span> ── 株価が大きく下落<br>
-                    <span style="color:#ffd700;">🎉 業界好況 / 📰 業界不況</span> ── <strong>全銘柄</strong>が同時に上昇・下落<br>
-                    <span style="color:#ff4757;">⚠️ 倒産危機</span> ── 毎ティックじわじわ下落し続ける（次項参照）<br>
-                    <span style="color:#00c853;">🏥 V字回復</span> ── 底値付近の銘柄が急回復することがある
-                </div>
-            </div>
-
-            <!-- 倒産 -->
-            <div style="margin-bottom:20px;">
-                <div style="font-size:13px; font-weight:bold; color:#ff4757; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">💀 倒産・上場廃止の仕組み</div>
-                <div style="font-size:13px; color:var(--txt); line-height:1.8; background:rgba(255,71,87,0.06); border:1px solid rgba(255,71,87,0.2); border-radius:8px; padding:12px;">
-                    ⚠️ <strong style="color:#ff4757;">倒産危機フラグ</strong>が立つと、毎ティック 6〜15% ずつ価格が下落し続けます。<br><br>
-                    価格が <strong style="color:#ff4757;">IPO価格の 8% 以下</strong> になると <strong>💀 上場廃止</strong> になります。<br>
-                    上場廃止になると保有株は <strong style="color:#ff4757;">紙切れ（価値ゼロ）</strong> になるので注意！<br><br>
-                    倒産危機中は赤枠で表示されます。早めに売るかV字回復に賭けるか判断しましょう。<br><br>
-                    上場廃止後は自動的に新しい銘柄が <strong style="color:#00c853;">🆕 新規上場</strong> されます。
-                </div>
-            </div>
-
-            <!-- スパークライン -->
-            <div style="margin-bottom:20px;">
-                <div style="font-size:13px; font-weight:bold; color:#26c6da; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">📊 グラフの見方</div>
-                <div style="font-size:13px; color:var(--txt); line-height:1.8; background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
-                    各カードに表示されているグラフは <strong>直近30ティック分</strong>の価格推移です。<br>
-                    上昇中は <span style="color:#00c853;">緑</span>、下落中は <span style="color:#ff4757;">赤</span> で表示されます。<br><br>
-                    <strong>▲ / ▼ %</strong> は前回比、<strong>IPO比 %</strong> は上場時の価格からの変化率です。
-                </div>
-            </div>
-
-            <!-- 売買 -->
-            <div>
-                <div style="font-size:13px; font-weight:bold; color:#26c6da; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">💹 売買のやり方</div>
-                <div style="font-size:13px; color:var(--txt); line-height:1.8; background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
-                    数量を入力（または <strong>全力買</strong>・<strong>全売</strong> ボタン）して、<br>
-                    <span style="color:#00c853; font-weight:bold;">📈 買う</span> ボタンでコインを使って購入、<span style="color:#ff4757; font-weight:bold;">📉 売る</span> ボタンで売却してコインに変換します。<br><br>
-                    コインが足りない場合・保有数が足りない場合は取引できません。
-                </div>
-            </div>
-
-            <button onclick="$('#stock-help-modal').addClass('hidden')" style="width:100%; margin-top:24px; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:15px;">わかった！</button>
         </div>
     </div>
 
