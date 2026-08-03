@@ -20,7 +20,6 @@ function _resumeCtx() {
     if (_audioCtx.state === 'suspended') _audioCtx.resume();
 }
 
-// 基本音生成ユーティリティ
 function _tone(freq, startTime, duration, volume = 0.4, type = 'sine', fadeIn = 0.01) {
     const osc  = _audioCtx.createOscillator();
     const gain = _audioCtx.createGain();
@@ -35,7 +34,6 @@ function _tone(freq, startTime, duration, volume = 0.4, type = 'sine', fadeIn = 
     osc.stop(startTime + duration + 0.05);
 }
 
-// ノイズ生成（スロット回転音用）
 function _noise(startTime, duration, volume = 0.15) {
     const bufSize = _audioCtx.sampleRate * duration;
     const buf = _audioCtx.createBuffer(1, bufSize, _audioCtx.sampleRate);
@@ -56,9 +54,6 @@ function _noise(startTime, duration, volume = 0.15) {
     src.stop(startTime + duration + 0.05);
 }
 
-// --- 各効果音 ---
-
-// 通知音: ポコン♪（チャット受信）
 function playNotifySound() {
     if (!isSoundEnabled) return;
     _resumeCtx();
@@ -67,19 +62,16 @@ function playNotifySound() {
     _tone(1320, t+0.11,  0.10, 0.25, 'sine');
 }
 
-// スロット回転音（ガラガラ）
 function playSlotSpinSound(duration) {
     if (!isSoundEnabled) return;
     _resumeCtx();
     const t = _audioCtx.currentTime;
     _noise(t, duration * 0.001, 0.2);
-    // カタカタ音
     for (let i = 0; i < 6; i++) {
         _tone(200 + Math.random()*100, t + i * duration * 0.00015, 0.04, 0.08, 'square');
     }
 }
 
-// リール停止音（コトン）
 function playReelStopSound(reelIndex) {
     if (!isSoundEnabled) return;
     _resumeCtx();
@@ -89,7 +81,6 @@ function playReelStopSound(reelIndex) {
     _tone(freq * 0.5, t, 0.12, 0.2, 'sine');
 }
 
-// リーチ音（ドキドキ）
 function playReachSound() {
     if (!isSoundEnabled) return;
     _resumeCtx();
@@ -100,7 +91,6 @@ function playReachSound() {
     _tone(660, t+0.40, 0.15, 0.4, 'square');
 }
 
-// 当たり音（コイン）
 function playWinSound() {
     if (!isSoundEnabled) return;
     _resumeCtx();
@@ -110,22 +100,18 @@ function playWinSound() {
     });
 }
 
-// 大当たり音（ジャックポット）
 function playJackpotSound() {
     if (!isSoundEnabled) return;
     _resumeCtx();
     const t = _audioCtx.currentTime;
-    // ファンファーレ
     [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => {
         _tone(f, t + i * 0.07, 0.18, 0.35, 'sine');
     });
-    // コイン音を重ねる
     for (let i = 0; i < 8; i++) {
         _tone(1200 + Math.random()*400, t + 0.5 + i*0.06, 0.06, 0.15, 'triangle');
     }
 }
 
-// 外れ音（ブー）
 function playMissSound() {
     if (!isSoundEnabled) return;
     _resumeCtx();
@@ -134,7 +120,6 @@ function playMissSound() {
     _tone(180, t+0.18, 0.20, 0.3, 'sawtooth');
 }
 
-// BOOSTED発動音
 function playBoostedSound() {
     if (!isSoundEnabled) return;
     _resumeCtx();
@@ -146,9 +131,8 @@ function playBoostedSound() {
 
 
 let unreadCount = 0;
-let unreadRooms = {}; // 各DM部屋の未読数を管理
-let lastSeenTimestamps = {}; // 各チャットの最終閲覧時刻
-// ===== 通知設定（細かく管理） =====
+let unreadRooms = {};
+let lastSeenTimestamps = {};
 const NOTIF_KEYS = {
     soundChat:    'notif_sound_chat',
     soundDm:      'notif_sound_dm',
@@ -162,16 +146,14 @@ const NOTIF_KEYS = {
 
 function getNotif(key) {
     const v = localStorage.getItem(NOTIF_KEYS[key]);
-    return v === null ? true : v === 'true'; // デフォルトON
+    return v === null ? true : v === 'true';
 }
 function setNotif(key, val) {
     localStorage.setItem(NOTIF_KEYS[key], val);
 }
 
-// 後方互換（isSoundEnabledを参照している箇所用）
 let isSoundEnabled = getNotif('soundChat');
 
-// 通知音（MP3）
 const _notifyAudioEl = new Audio('https://tanabesan.github.io/yukichat/file/sound/%E9%80%9A%E7%9F%A5%E9%9F%B3.mp3');
 _notifyAudioEl.volume = 0.6;
 const notifyAudio = {
@@ -183,12 +165,8 @@ const notifyAudio = {
     volume: 0.6
 };
 
-// 設定UIの初期化
 function initNotifUI() {
     Object.keys(NOTIF_KEYS).forEach(key => {
-        const elId = key.replace(/([A-Z])/g, c => c.toLowerCase())
-            .replace('sound', 'sound').replace('push', 'push');
-        // キーをキャメルケース→チェックボックスIDに変換
         const checkId = '#' + key.charAt(0).toLowerCase() + key.slice(1)
             .replace('Chat','ChatMsg').replace('Dm','DmMsg')
             .replace('FriendReq','FriendReq').replace('FriendAcc','FriendAcc');
@@ -199,10 +177,8 @@ function initNotifUI() {
         if ($el.length) $el.prop('checked', getNotif(key));
     });
 
-    // パーミッション表示
     updatePushPermissionMsg();
 
-    // チェックボックス変更時に保存
     $('#soundChatMsg').on('change', function() { setNotif('soundChat', this.checked); isSoundEnabled = this.checked; });
     $('#soundDmMsg').on('change', function() { setNotif('soundDm', this.checked); });
     $('#soundFriendReq').on('change', function() { setNotif('soundFriendReq', this.checked); });
@@ -212,7 +188,6 @@ function initNotifUI() {
     $('#pushFriendReq').on('change', function() { setNotif('pushFriendReq', this.checked); });
     $('#pushFriendAcc').on('change', function() { setNotif('pushFriendAcc', this.checked); });
 
-    // 試聴ボタン
     $('#testSoundBtn').on('click', () => notifyAudio.play());
 }
 
@@ -229,13 +204,11 @@ function updatePushPermissionMsg() {
     }
 }
 
-// 通知音を鳴らす関数（種類別）
 function playNotifSound(type) {
     if (!getNotif(type)) return;
     notifyAudio.play();
 }
 
-// ブラウザ通知を送る関数（種類別）
 function sendPushNotif(type, title, body, icon, tag) {
     if (!getNotif(type)) return;
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -245,24 +218,20 @@ function sendPushNotif(type, title, body, icon, tag) {
 }
 
 function clearUnread() {
-    // 現在のチャットの最終閲覧時刻を記録
     const readKey = currentRoomId || "global";
     lastSeenTimestamps[readKey] = Date.now();
     localStorage.setItem('chat_last_seen_' + readKey, lastSeenTimestamps[readKey].toString());
     
-    // このチャットの未読をクリア
     if(unreadRooms[readKey]) {
         delete unreadRooms[readKey];
         updateDMBadges();
     }
     
-    // 全体の未読数を再計算
     recalculateTotalUnread();
     
     console.log("Cleared unread for:", readKey, "Total unread:", unreadCount);
 }
 
-// 全体の未読数を再計算してバッジを更新
 function recalculateTotalUnread() {
     const total = Object.values(unreadRooms).reduce((sum, count) => sum + count, 0);
     unreadCount = total;
@@ -276,7 +245,6 @@ function recalculateTotalUnread() {
     }
 }
 
-// DMバッジを更新する関数
 function updateDMBadges() {
     Object.keys(unreadRooms).forEach(roomId => {
         const count = unreadRooms[roomId] || 0;
@@ -321,7 +289,7 @@ const STAMP_LIST = [
 
 let pendingImageUrl = null, replyTarget = null, editTargetId = null, pc, localStream, currentCallId = null;
 let currentRoomId = null;
-let currentDMOtherUid = null; // DM相手のuid
+let currentDMOtherUid = null;
 let currentUnsubscribe = null;
 let globalUnsubscribers = [];
 let friendIds = [];
@@ -434,7 +402,7 @@ async function updateSidebarDMList() {
         if(!u) return;
         const roomId = [auth.currentUser.uid, fid].sort().join("_");
         const activeClass = currentRoomId === roomId ? 'active' : '';
-        const statusClass = u.status === 'online' ? 'online' : 'offline';
+        const statusClass = getUserOnlineStatus(fid);
         const unreadCount = unreadRooms[roomId] || 0;
         const badgeHtml = unreadCount > 0 ? `<div class="dm-unread-badge">${unreadCount > 9 ? '9+' : unreadCount}</div>` : '';
         
@@ -458,7 +426,6 @@ function scrollToBottom(force = false) {
     const threshold = 200;
     const isAtBottom = ($box[0].scrollHeight - $box.scrollTop() <= $box[0].clientHeight + threshold);
     if (force || isAtBottom) {
-        // rAF2回で確実にDOM確定後にスクロール
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 $box[0].scrollTop = $box[0].scrollHeight;
@@ -473,7 +440,6 @@ onAuthStateChanged(auth, async (user) => {
     $("#app-wrapper").addClass("visible");
     
     if (user) {
-        // ページロード時に既読状態を復元
         const keys = Object.keys(localStorage);
         keys.forEach(key => {
             if(key.startsWith('chat_last_seen_')) {
@@ -493,89 +459,67 @@ onAuthStateChanged(auth, async (user) => {
             const uRef = doc(db, "users", user.uid);
             const s = await getDoc(uRef);
             if(!s.exists()) {
-                await setDoc(uRef, { name: "ゲスト", photo: DEFAULT_AVATAR, status: "online", isTyping: false, expireAt: exp, isAnonymous: true });
+                await setDoc(uRef, { name: "ゲスト", photo: DEFAULT_AVATAR, isTyping: false, expireAt: exp, isAnonymous: true });
             } else {
                 await updateDoc(uRef, { expireAt: exp, isAnonymous: true });
             }
         }
 
         initPresence(user.uid);
-        setOnline();
         $("#auth-container").addClass("hidden");
         $("#app-wrapper").addClass("visible");
         $("#myName").text(user.displayName || "ゲスト");
         $("#myIconContainer").html(`<div class="icon-container"><img src="${user.photoURL || DEFAULT_AVATAR}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;"><div class="status-dot online"></div></div>`);
         
-        // ユーザー名が「ゲスト」の場合、警告バナーを表示
         if (user.displayName === "ゲスト" || !user.displayName) {
             $("#guest-warning-banner").show();
         }
         
-        // ログインボーナスチェック（匿名ユーザーは除く）
         if (!user.isAnonymous) {
             const canClaim = await checkLoginBonus();
             if (canClaim) {
-                // まだ受け取ってない場合、3秒後に自動表示
                 setTimeout(() => {
                     openLoginBonusModal();
                 }, 3000);
             }
         }
         
-        // テーマを適用
         applyUserTheme();
         
-        // 通知ボタンのUIを初期化
         updateNotificationButtonUI();
         
         const unsubFriends = onSnapshot(collection(db, "friendRequests"), (snap) => {
             friendIds = [];
             
-            // 変更を検知してフレンド申請通知を表示
             snap.docChanges().forEach(change => {
                 const data = change.doc.data();
                 const reqId = change.doc.id;
                 
-                // 新しいフレンド申請が来た場合
                 if (change.type === "added" && data.to === user.uid && data.status === "pending") {
-                    // 送信者の情報を取得
                     const senderData = usersCache[data.from];
                     const senderName = senderData ? senderData.name : "ゲスト";
                     const senderPhoto = senderData ? senderData.photo : DEFAULT_AVATAR;
                     
-                    // バッジとタイトル更新
                     triggerBadge("friend_request_" + reqId);
                     
-                    // 通知音
                     playNotifSound('soundFriendReq');
-                    // ブラウザ通知
                     sendPushNotif('pushFriendReq', '新しいフレンド申請', `${senderName}さんからフレンド申請が届きました`, senderPhoto, 'friend-request-' + reqId);
                     
                     console.log("New friend request from:", senderName);
                 }
                 
-                // フレンド申請が承認された場合
                 if (change.type === "modified" && data.from === user.uid && data.status === "accepted") {
                     const accepterData = usersCache[data.to];
                     const accepterName = accepterData ? accepterData.name : "ゲスト";
                     const accepterPhoto = accepterData ? accepterData.photo : DEFAULT_AVATAR;
                     
-                    // 承認通知
                     playNotifSound('soundFriendAcc');
                     sendPushNotif('pushFriendAcc', 'フレンド申請が承認されました', `${accepterName}さんがフレンド申請を承認しました`, accepterPhoto, 'friend-accepted-' + reqId);
-                    if (false) { // onclick対応のため残す
-                        const n = null;
-                        n?.onclick(() => { 
-                            window.focus(); 
-                            openDM(data.to, accepterName);
-                        });
-                    }
                     
                     console.log("Friend request accepted by:", accepterName);
                 }
             });
             
-            // フレンドリストを更新
             snap.forEach(d => {
                 const data = d.data();
                 if (data.status === "accepted") {
@@ -586,37 +530,9 @@ onAuthStateChanged(auth, async (user) => {
             if ($("#sidebar").hasClass("open")) updateSidebarDMList();
         });
 
-        // ユーザー状態の更新をデバウンス（パフォーマンス向上）
-        const updateUserStatuses = debounce(() => {
-            Object.keys(usersCache).forEach(uid => {
-                const userData = usersCache[uid];
-                const statusClass = userData.status === 'online' ? 'online' : 'offline';
-                
-                // DOM更新を最小限に
-                const $messageDots = $(`.message[data-uid="${uid}"] .status-dot`);
-                const $sidebarDots = $(`.sidebar-item[data-user-id="${uid}"] .status-dot`);
-                
-                if ($messageDots.length) {
-                    $messageDots.removeClass('online offline').addClass(statusClass);
-                }
-                if ($sidebarDots.length) {
-                    $sidebarDots.removeClass('online offline').addClass(statusClass);
-                }
-                
-                // ユーザーリストモーダルが開いている時だけ更新
-                if (!$("#user-list-modal").hasClass("hidden")) {
-                    const $userDots = $(`.user-item[data-uid="${uid}"] .status-dot`);
-                    if ($userDots.length) {
-                        $userDots.removeClass('online offline').addClass(statusClass);
-                    }
-                }
-            });
-        }, 100); // 100ms デバウンス
-        
         const unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
             let typingNames = [];
             
-            // 変更があったユーザーだけ処理（パフォーマンス向上）
             snap.docChanges().forEach(change => {
                 const userDoc = change.doc;
                 const userData = userDoc.data();
@@ -629,28 +545,20 @@ onAuthStateChanged(auth, async (user) => {
                 }
             });
             
-            // タイピングインジケーターの更新
             if(typingNames.length > 0) {
                 $("#typing-indicator").text(typingNames.map(n => escapeHTML(n)).join(", ") + " が入力中...").removeClass("hidden");
             } else {
                 $("#typing-indicator").addClass("hidden");
             }
-            
-            // 状態ドットの更新（デバウンス）
-            updateUserStatuses();
         });
 
-        // --- 新着DM（バックグラウンド）検知用のリスナー ---
-        // 自分が参加している部屋の更新を監視
         const unsubRooms = onSnapshot(query(collection(db, "rooms"), where("users", "array-contains", user.uid)), (snap) => {
             snap.docChanges().forEach(change => {
                 if(change.type === "modified" || change.type === "added") {
                     const d = change.doc.data();
                     const roomId = change.doc.id;
                     
-                    // 自分以外の更新で、かつ現在開いている部屋ではない場合
                     if (d.updatedBy && d.updatedBy !== user.uid && roomId !== currentRoomId) {
-                        // 最終閲覧時刻より新しい更新かチェック
                         const lastSeen = lastSeenTimestamps[roomId] || 0;
                         const updatedTime = d.updatedAt ? d.updatedAt.toMillis() : Date.now();
                         
@@ -661,7 +569,6 @@ onAuthStateChanged(auth, async (user) => {
                 }
             });
             
-            // サイドバーのDMリストを更新
             if ($("#sidebar").hasClass("open")) {
                 updateSidebarDMList();
             }
@@ -685,7 +592,6 @@ const syncProfilePreview = () => {
     $("#editPreviewBanner").attr("src", $("#editBanner").val() || DEFAULT_BANNER);
     $("#editPreviewBio").text($("#editBio").val() || "自己紹介はまだありません。");
     
-    // エフェクトプレビュー
     const selectedEffect = $("#editEquippedEffect").val();
     $("#editPreviewAvatarContainer").removeClass('effect-fire effect-sparkle effect-lightning effect-rainbow effect-shadow effect-ice effect-toxic effect-gold');
     
@@ -698,7 +604,6 @@ const syncProfilePreview = () => {
     else if (selectedEffect === 'toxic_effect') $("#editPreviewAvatarContainer").addClass('effect-toxic');
     else if (selectedEffect === 'gold_effect') $("#editPreviewAvatarContainer").addClass('effect-gold');
     
-    // バッジプレビュー
     const selectedBadge = $("#editEquippedBadge").val();
     const $badgePreview = $("#editPreviewBadge").empty();
     
@@ -739,7 +644,6 @@ window.switchChat = (roomId, otherName = null, otherUid = null) => {
             lastVisibleDoc = snap.docs[snap.docs.length - 1];
         }
         renderMessages(snap, true);
-        // チャット切り替え後、少し待ってから既読マーク
         if(isInitialLoad) {
             setTimeout(() => {
                 if(document.hasFocus() && document.visibilityState === 'visible') {
@@ -750,10 +654,9 @@ window.switchChat = (roomId, otherName = null, otherUid = null) => {
     });
 };
 
-let isLoadingMoreMessages = false; // 過去メッセージ読み込み中フラグ
-let pauseSnapshot = false; // onSnapshotを一時停止するフラグ
+let isLoadingMoreMessages = false;
+let pauseSnapshot = false;
 
-// デバウンス関数（連続実行を防ぐ）
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -769,12 +672,11 @@ function debounce(func, wait) {
 async function loadMoreMessages() {
     if (isFetchingMore || !hasMoreMessages || !lastVisibleDoc) return;
     isFetchingMore = true;
-    isLoadingMoreMessages = true; // フラグを立てる
-    pauseSnapshot = true; // onSnapshotの処理を止める
+    isLoadingMoreMessages = true;
+    pauseSnapshot = true;
     
     const $box = $("#messages");
     
-    // 現在見ている最初のメッセージ要素を基準として保存
     const firstVisibleMessage = $box.children().first()[0];
     const firstMessageId = firstVisibleMessage ? firstVisibleMessage.id : null;
     
@@ -798,16 +700,13 @@ async function loadMoreMessages() {
         let html = "";
         let docs = [];
         snap.forEach(d => docs.push({id: d.id, data: d.data()}));
-        // 逆順にする（古い順に表示するため）
         docs.reverse();
         docs.forEach(item => { html += generateMessageHtml(item.id, item.data); });
         $("#messages").prepend(html);
         
-        // 基準メッセージの位置までスクロール（見た目が変わらないように）
         if (firstMessageId) {
             const firstMessageElement = document.getElementById(firstMessageId);
             if (firstMessageElement) {
-                // 基準メッセージを画面の同じ位置に保つ
                 firstMessageElement.scrollIntoView({ block: 'start', behavior: 'instant' });
                 console.log("Scrolled to preserve message:", firstMessageId);
             }
@@ -818,7 +717,6 @@ async function loadMoreMessages() {
     } catch (err) { console.error("Load more error:", err); } 
     finally { 
         isFetchingMore = false;
-        // 少し待ってからフラグを下ろす
         setTimeout(() => {
             isLoadingMoreMessages = false;
             pauseSnapshot = false;
@@ -831,14 +729,12 @@ function generateMessageHtml(id, d) {
     const isMe = d.uid === auth.currentUser.uid;
     const isFriend = friendIds.includes(d.uid);
     const reactions = d.reactions || {};
-    const userStatus = usersCache[d.uid]?.status || "offline";
+    const userStatus = getUserOnlineStatus(d.uid);
     const isStamp = !!d.stamp;
     
-    // ユーザーの装備アイテムを取得
     const userData = usersCache[d.uid] || {};
     const equipped = userData.equipped || {};
     
-    // 装備されたバッジのみを表示
     let badgeHtml = '';
     const badgeMap = {
         'vip_badge': { icon: '👑', title: 'VIP' },
@@ -850,7 +746,6 @@ function generateMessageHtml(id, d) {
         badgeHtml = `<span class="user-badge" title="${badge.title}">${badge.icon}</span>`;
     }
     
-    // 装備されたエフェクトのみを適用（メッセージ全体に）
     let effectClass = '';
     if (equipped.effect === 'fire_effect') effectClass = 'effect-fire';
     else if (equipped.effect === 'sparkle_effect') effectClass = 'effect-sparkle';
@@ -862,7 +757,6 @@ function generateMessageHtml(id, d) {
     else if (equipped.effect === 'gold_effect') effectClass = 'effect-gold';
     
     let rHtml = '';
-    // リアクションの表示順をreactionEmojisの順で固定（追加順で変わらないように）
     const reactionOrder = ['👍','❤️','😂','😮','😢','😡','🙏','👏','🎉','🔥','✨','💯','👀','🤔','😅','😊','🥰','😎','🤩','😇','🤗','🙌','✅','❌','⭐','💪','👌','🎊','🎈','💕'];
     const sortedReactions = Object.entries(reactions).sort((a, b) => {
         const ai = reactionOrder.indexOf(a[0]);
@@ -879,7 +773,6 @@ function generateMessageHtml(id, d) {
     const replyName = d.replyTo ? escapeHTML(d.replyTo.name) : "";
     const replyText = d.replyTo ? escapeHTML(d.replyTo.text) : "";
 
-    // 投稿時刻
     let timeStr = '';
     if (d.createdAt) {
         const dt = d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
@@ -918,23 +811,12 @@ function generateMessageHtml(id, d) {
 
 $("#messages").on("scroll", function() { if ($(this).scrollTop() === 0) loadMoreMessages(); });
 
-let notificationsEnabled = localStorage.getItem("chat_notifications_enabled") === "true";
-
-// ページ読み込み時に通知権限をチェックして状態を復元
-if ('Notification' in window && Notification.permission === 'granted') {
-    notificationsEnabled = localStorage.getItem("chat_notifications_enabled") !== "false";
-} else {
-    notificationsEnabled = false;
-}
-
 function triggerBadge(roomId = null) {
-    // DM別の未読カウント
     if(roomId) {
         unreadRooms[roomId] = (unreadRooms[roomId] || 0) + 1;
         updateDMBadges();
     }
     
-    // 全体の未読数を再計算
     recalculateTotalUnread();
     
     const isDm = roomId && roomId !== 'global' && !roomId.startsWith('friend_');
@@ -946,7 +828,6 @@ function triggerBadge(roomId = null) {
 }
 
 function renderMessages(snap, isDesc = false) {
-    // onSnapshotが一時停止中なら何もしない
     if (pauseSnapshot) {
         console.log("renderMessages blocked - pauseSnapshot is true");
         return;
@@ -955,7 +836,6 @@ function renderMessages(snap, isDesc = false) {
     const $box = $("#messages");
     const currentMsgCount = snap.size;
     
-    // 過去メッセージ読み込み中は新着メッセージ判定をスキップ
     const hasNewMessage = !isLoadingMoreMessages && (currentMsgCount > lastMsgCount);
     
     let docs = [];
@@ -963,7 +843,6 @@ function renderMessages(snap, isDesc = false) {
     if(isDesc) docs.reverse();
     
     if (isInitialLoad) {
-        // DocumentFragmentを使ってバッチ挿入（パフォーマンス向上）
         const fragment = document.createDocumentFragment();
         const tempDiv = document.createElement('div');
         
@@ -977,7 +856,6 @@ function renderMessages(snap, isDesc = false) {
         $box.empty();
         $box[0].appendChild(fragment);
         
-        // 画像の読み込み完了を待つ
         const images = $box[0].querySelectorAll('img');
         let loadedImages = 0;
         const totalImages = images.length;
@@ -998,12 +876,9 @@ function renderMessages(snap, isDesc = false) {
             }
         });
         
-        // 過去メッセージ読み込み中でなければスクロール
         if (!isLoadingMoreMessages) {
-            // 即座に一番下へ
             $box[0].scrollTop = $box[0].scrollHeight;
             
-            // 画像読み込み待ちで何度も試行（確実に一番下へ）
             requestAnimationFrame(() => {
                 $box[0].scrollTop = $box[0].scrollHeight;
             });
@@ -1025,7 +900,6 @@ function renderMessages(snap, isDesc = false) {
         }
         isInitialLoad = false;
     } else {
-        // 更新が必要なメッセージだけ処理（パフォーマンス向上）
         const updates = [];
         const additions = [];
         
@@ -1038,10 +912,8 @@ function renderMessages(snap, isDesc = false) {
             }
         });
         
-        // バッチ更新
         updates.forEach(({element, html}) => element.replaceWith(html));
         
-        // バッチ追加（DocumentFragment使用）
         if (additions.length > 0) {
             const fragment = document.createDocumentFragment();
             const tempDiv = document.createElement('div');
@@ -1060,7 +932,6 @@ function renderMessages(snap, isDesc = false) {
             const lastDoc = docs[docs.length - 1];
             const isMyMessage = auth.currentUser && lastDoc.data.uid === auth.currentUser.uid;
 
-            // DOM確定後に常に一番下へスクロール
             if (!isLoadingMoreMessages) {
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
@@ -1069,25 +940,20 @@ function renderMessages(snap, isDesc = false) {
                 });
             }
             
-            // --- 通知・バッジ処理（強化版） ---
             if (auth.currentUser && lastDoc.data.uid !== auth.currentUser.uid) {
                 
-                // バッジを表示すべきか判定
                 const isAtBottom = ($box[0].scrollHeight - $box.scrollTop() <= $box[0].clientHeight + 150);
                 const isUnseen = document.visibilityState === 'hidden' || !document.hasFocus() || !isAtBottom;
 
                 if (isUnseen) {
                     const roomIdForBadge = currentRoomId || "global";
                     
-                    // 最終閲覧時刻より新しいメッセージかチェック
                     const lastSeen = lastSeenTimestamps[roomIdForBadge] || 0;
                     const msgTime = lastDoc.data.createdAt ? lastDoc.data.createdAt.toMillis() : Date.now();
                     
-                    // 既読済みのメッセージはスキップ
                     if(msgTime > lastSeen) {
                         triggerBadge(roomIdForBadge);
                         
-                        // ブラウザ通知（許可されている場合のみ）
                         if (document.visibilityState === 'hidden' || !document.hasFocus()) {
                             const notifTitle = `新着: ${lastDoc.data.name || "ゲスト"}`;
                             const notifBody = lastDoc.data.text || (lastDoc.data.stamp ? "スタンプ" : "画像");
@@ -1096,32 +962,26 @@ function renderMessages(snap, isDesc = false) {
                         }
                     }
                 } else {
-                    // 見ている状態なら即座に既読マーク
                     clearUnread();
                 }
             }
-            // -------------------
         }
     }
-    // 過去メッセージ読み込み中でなければlastMsgCountを更新
-    // これにより、過去メッセージ読み込み中にonSnapshotが発火しても新着扱いされない
     if (!isLoadingMoreMessages) {
         lastMsgCount = currentMsgCount;
     }
 }
 
-let isSending = false; // 送信中フラグ
+let isSending = false;
 
 const send = async () => {
-    // 送信中なら何もしない（連打防止）
     if (isSending) return;
     
     const txt = $("#messageInput").val().trim(); 
     if (!txt && !pendingImageUrl) return;
     
-    // 送信中フラグを立てる
     isSending = true;
-    $("#sendBtn").css("opacity", "0.5").css("pointer-events", "none"); // ボタンを無効化
+    $("#sendBtn").css("opacity", "0.5").css("pointer-events", "none");
     
     try {
         const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
@@ -1131,7 +991,6 @@ const send = async () => {
         } else {
             await addDoc(colRef, { text: txt, image: pendingImageUrl, uid: auth.currentUser.uid, name: auth.currentUser.displayName || "ゲスト", photo: auth.currentUser.photoURL || DEFAULT_AVATAR, createdAt: serverTimestamp(), replyTo: replyTarget, reactions: {} });
             
-            // DMの場合、親ルーム情報の更新日時を更新（他のユーザーに通知を飛ばすため）
             if (currentRoomId) {
                 await updateDoc(doc(db, "rooms", currentRoomId), { lastMessage: txt || "画像", updatedAt: serverTimestamp(), updatedBy: auth.currentUser.uid });
             }
@@ -1147,19 +1006,17 @@ const send = async () => {
         console.error("Send error:", error);
         alert("メッセージの送信に失敗しました");
     } finally {
-        // 送信完了後、フラグを下ろしてボタンを有効化
         setTimeout(() => {
             isSending = false;
             $("#sendBtn").css("opacity", "1").css("pointer-events", "auto");
-        }, 500); // 0.5秒のクールダウン
+        }, 500);
     }
 };
 
-let isCurrentlyTyping = false; // 現在の入力中状態を記録
+let isCurrentlyTyping = false;
 
 const updateTypingStatus = async (isTyping) => {
     if(!auth.currentUser) return;
-    // 状態が変わった時だけFirestoreに書き込む
     if (isCurrentlyTyping !== isTyping) {
         isCurrentlyTyping = isTyping;
         await updateDoc(doc(db, "users", auth.currentUser.uid), { isTyping: isTyping });
@@ -1167,7 +1024,6 @@ const updateTypingStatus = async (isTyping) => {
 };
 
 $("#messageInput").on("input", function() {
-    // 入力開始時のみFirestoreに書き込む（連続入力では書き込まない）
     if (!isCurrentlyTyping) {
         updateTypingStatus(true);
     }
@@ -1179,7 +1035,6 @@ window.sendStamp = async (url) => {
     const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
     await addDoc(colRef, { stamp: url, uid: auth.currentUser.uid, name: auth.currentUser.displayName || "ゲスト", photo: auth.currentUser.photoURL || DEFAULT_AVATAR, createdAt: serverTimestamp(), replyTo: replyTarget, reactions: {} });
     
-     // DMの場合、親ルーム情報の更新日時を更新
     if (currentRoomId) {
         await updateDoc(doc(db, "rooms", currentRoomId), { lastMessage: "スタンプ", updatedAt: serverTimestamp(), updatedBy: auth.currentUser.uid });
     }
@@ -1195,17 +1050,14 @@ const initStampPicker = () => {
 
 // ========== アイテム効果適用 ==========
 
-// ユーザーのテーマを適用
 async function applyUserTheme() {
     try {
         const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
         const userData = userDoc.data();
         const equipped = userData.equipped || {};
         
-        // 既存のテーマクラスを削除
         $('body').removeClass('rainbow-theme heart-theme');
         
-        // 装備しているテーマを適用
         if (equipped.theme === 'rainbow_theme') {
             $('body').addClass('rainbow-theme');
             console.log('🌈 Rainbow theme applied');
@@ -1219,13 +1071,6 @@ async function applyUserTheme() {
 }
 
 // ========== ショップシステム ==========
-
-// 🔐 管理者メールアドレスリスト（全アイテム自動解放 + 無限コイン）
-// ⚠️ 本番環境では必ず実際のメールアドレスに変更してください
-const ADMIN_EMAILS = [
-    // 'your-email@example.com',  // ← ここに管理者のメールアドレスを追加
-    // 'admin@example.com'
-];
 
 const shopItems = [
     { id: 'vip_badge', name: 'VIPバッジ', icon: '👑', price: 300, description: '名前の横にVIPバッジが表示されます' },
@@ -1243,60 +1088,26 @@ const shopItems = [
     { id: 'gold_effect', name: 'ゴールドエフェクト', icon: '💛', price: 400, description: '金色に輝く豪華なオーラ' }
 ];
 
-// 管理者かどうかチェック
-function isAdmin(email) {
-    return ADMIN_EMAILS.includes(email);
-}
-
-// 管理者権限の自動付与
-async function unlockAllItemsForAdmin() {
-    if (!auth.currentUser || !auth.currentUser.email) return;
-    
-    if (isAdmin(auth.currentUser.email)) {
-        try {
-            const allItemIds = shopItems.map(item => item.id);
-            
-            await setDoc(doc(db, "users", auth.currentUser.uid), {
-                ownedItems: allItemIds,
-                isAdmin: true,
-                coins: 999999  // 管理者には無限コイン
-            }, { merge: true });
-            
-            console.log('🔓 Admin detected: All items unlocked');
-        } catch (error) {
-            console.error('Admin unlock error:', error);
-        }
-    }
-}
-
-// ログインボーナスのチェック
 async function checkLoginBonus() {
     try {
-        // 管理者チェック
-        await unlockAllItemsForAdmin();
-        
-        // Firestoreから最終ログイン日を取得
         const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
         if (!userDoc.exists()) {
-            return true; // 初回ログイン
+            return true;
         }
         
         const userData = userDoc.data();
         const lastLogin = userData.lastLogin;
         
         if (!lastLogin) {
-            return true; // lastLoginがない場合は受け取り可能
+            return true;
         }
         
-        // Firestoreのタイムスタンプから日付を取得（UTC）
         const lastLoginDate = lastLogin.toDate();
         const now = new Date();
         
-        // 日付を比較（年-月-日のみ）
         const lastLoginDay = new Date(lastLoginDate.getFullYear(), lastLoginDate.getMonth(), lastLoginDate.getDate());
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         
-        // 最終ログインが今日より前なら受け取り可能
         const canClaim = lastLoginDay.getTime() < today.getTime();
         
         console.log('Login bonus check:', {
@@ -1313,10 +1124,8 @@ async function checkLoginBonus() {
     }
 }
 
-// ログインボーナスを受け取る
 async function claimLoginBonus() {
     try {
-        // 再度チェック（二重受け取り防止）
         const canClaim = await checkLoginBonus();
         if (!canClaim) {
             return { success: false, message: '今日のボーナスは既に受け取り済みです' };
@@ -1325,19 +1134,7 @@ async function claimLoginBonus() {
         const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
         const userData = userDoc.data();
         const currentCoins = userData.coins || 0;
-        const isAdminUser = userData.isAdmin || false;
         
-        // 管理者は既に999999コインあるのでボーナス不要
-        if (isAdminUser) {
-            // lastLoginだけ更新
-            await setDoc(doc(db, "users", auth.currentUser.uid), {
-                lastLogin: serverTimestamp()
-            }, { merge: true });
-            
-            return { success: true, message: '管理者は常に無限コインです', coins: 999999, bonus: 0 };
-        }
-        
-        // 通常ユーザー: +100コイン + lastLogin更新
         await setDoc(doc(db, "users", auth.currentUser.uid), {
             coins: currentCoins + 100,
             lastLogin: serverTimestamp()
@@ -1351,25 +1148,20 @@ async function claimLoginBonus() {
     }
 }
 
-// ログインボーナス画面を開く
 async function openLoginBonusModal() {
     $('#login-bonus-modal').removeClass('hidden');
     
-    // 現在のコインを表示
     const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
     const userData = userDoc.data();
     const currentCoins = userData.coins || 0;
     $('#bonus-current-coins').text(currentCoins.toLocaleString());
     
-    // 受け取り状態をチェック
     const canClaim = await checkLoginBonus();
     
     if (canClaim) {
-        // まだ受け取ってない
         $('#bonus-claim-section').removeClass('hidden');
         $('#bonus-already-claimed').addClass('hidden');
     } else {
-        // 既に受け取り済み
         $('#bonus-claim-section').addClass('hidden');
         $('#bonus-already-claimed').removeClass('hidden');
     }
@@ -1396,7 +1188,7 @@ let pokerDeck = [];
 let pokerHand = [];
 let pokerHeld = [false, false, false, false, false];
 let pokerBet = 100;
-let pokerPhase = 'bet'; // bet, draw, result, doubleup
+let pokerPhase = 'bet';
 let pokerCurrentWin = 0;
 let pokerDoubleUpWin = 0;
 
@@ -1407,7 +1199,6 @@ function pokerMakeDeck() {
             deck.push({ suit: s, rank: r });
         }
     }
-    // シャッフル
     for (let i = deck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -1458,7 +1249,6 @@ function pokerEvaluate(hand) {
     const isFlush = suits.every(s => s === suits[0]);
     const sortedRanks = [...ranks].sort((a,b) => a - b);
     const isStr = (sortedRanks[4] - sortedRanks[0] === 4 && new Set(sortedRanks).size === 5);
-    // A-2-3-4-5のストレート
     const isWheel = JSON.stringify(sortedRanks) === JSON.stringify([0,1,2,3,12]);
     const isStraight = isStr || isWheel;
     const isRoyal = isFlush && JSON.stringify(sortedRanks) === JSON.stringify([8,9,10,11,12]);
@@ -1471,10 +1261,9 @@ function pokerEvaluate(hand) {
     if (isStraight)                       return 'ストレート';
     if (counts[0] === 3)                  return 'スリーカード';
     if (counts[0] === 2 && counts[1] === 2) return 'ツーペア';
-    // ワンペア：J(9)以上のペア
     if (counts[0] === 2) {
         const pairRank = parseInt(Object.keys(rankCounts).find(k => rankCounts[k] === 2));
-        if (pairRank >= 9) return 'ワンペア'; // J=9, Q=10, K=11, A=12
+        if (pairRank >= 9) return 'ワンペア';
     }
     return 'ハズレ';
 }
@@ -1510,11 +1299,9 @@ $('#poker-deal-btn').on('click', async () => {
     const coins = userSnap.data().coins || 0;
     if (coins < pokerBet) { alert(`💰 コインが足りません（必要: ${pokerBet.toLocaleString()}）`); return; }
 
-    // ベット分を引く
     await updateDoc(userRef, { coins: coins - pokerBet });
     $('#poker-coins').text(String(coins - pokerBet).padStart(4, '0'));
 
-    // 配る
     pokerDeck = pokerMakeDeck();
     pokerHand = pokerDeck.splice(0, 5);
     pokerHeld = [false,false,false,false,false];
@@ -1534,7 +1321,6 @@ $('#poker-draw-btn').on('click', async () => {
     if (pokerPhase !== 'draw') return;
     pokerPhase = 'result';
 
-    // 捨てたカードを引き直す
     for (let i = 0; i < 5; i++) {
         if (!pokerHeld[i]) pokerHand[i] = pokerDeck.shift();
     }
@@ -1549,7 +1335,6 @@ $('#poker-draw-btn').on('click', async () => {
     $('#poker-hand-name').text(handName);
     $('#poker-draw-btn').addClass('hidden');
 
-    // 結果表示
     $('#poker-result').removeClass('hidden');
     if (pokerCurrentWin > 0) {
         $('#poker-result-text').html(`<span style="color:#ffd700;">🎉 ${handName}！ +${pokerCurrentWin.toLocaleString()} コイン</span>`);
@@ -1559,7 +1344,6 @@ $('#poker-draw-btn').on('click', async () => {
         $('#poker-doubleup-btn').addClass('hidden');
     }
 
-    // 勝利コインを加算
     if (pokerCurrentWin > 0) {
         const userRef = doc(db, "users", auth.currentUser.uid);
         const userSnap = await getDoc(userRef);
@@ -1582,7 +1366,6 @@ $('#poker-collect-btn').on('click', () => {
     $('#poker-bet-area').show();
 });
 
-// ===== ダブルアップ =====
 $('#poker-doubleup-btn').on('click', () => {
     if (pokerPhase !== 'result') return;
     pokerPhase = 'doubleup';
@@ -1592,7 +1375,6 @@ $('#poker-doubleup-btn').on('click', () => {
     $('#poker-du-after-btns').addClass('hidden');
     $('#poker-du-btns').show();
 
-    // ディーラーカード（裏向き）+ 4枚裏向き
     const duDeck = pokerMakeDeck();
     const dealerCard = duDeck.shift();
     window._pokerDuDeck = duDeck;
@@ -1600,7 +1382,6 @@ $('#poker-doubleup-btn').on('click', () => {
 
     $('#poker-doubleup-win').text(`現在の獲得: ${pokerDoubleUpWin.toLocaleString()} コイン → 当たれば ${(pokerDoubleUpWin * 2).toLocaleString()} コイン`);
 
-    // ディーラーカード表示（裏面）
     $('#poker-du-cards').html(`
         <div class="poker-card black" style="background:linear-gradient(135deg,#1a1a2e,#16213e); border:2px solid #ffd700;">
             <div style="font-size:28px;">🂠</div>
@@ -1616,7 +1397,6 @@ window.pokerDoubleUpChoice = async (choice) => {
     const dealerRank = pokerRankValue(dealerCard.rank);
     const isRed = dealerCard.suit === '♥' || dealerCard.suit === '♦';
 
-    // ディーラーカードを公開
     $('#poker-du-cards').html(`
         <div class="poker-card ${isRed ? 'red' : 'black'}">
             <div class="poker-card-rank">${dealerCard.rank}</div>
@@ -1624,18 +1404,16 @@ window.pokerDoubleUpChoice = async (choice) => {
         </div>
     `);
 
-    // 判定：7(index=5)が基準。8以上=HIGH勝ち、6以下=LOW勝ち、7はドロー（負け扱い）
     const win = (choice === 'high' && dealerRank >= 6) || (choice === 'low' && dealerRank <= 4);
-    const push = dealerRank === 5; // 7のカード（index=5）はドロー
+    const push = dealerRank === 5;
 
     if (win) {
         pokerDoubleUpWin *= 2;
         $('#poker-du-result').html(`<span style="color:#00c853;">✅ 当たり！ ${pokerDoubleUpWin.toLocaleString()} コイン</span>`);
-        // 差分を追加（元の勝利分は既に受け取り済みなので差額を追加）
         const userRef = doc(db, "users", auth.currentUser.uid);
         const userSnap = await getDoc(userRef);
         const coins = userSnap.data().coins || 0;
-        const bonus = pokerDoubleUpWin / 2; // 追加分
+        const bonus = pokerDoubleUpWin / 2;
         await updateDoc(userRef, { coins: coins + bonus });
         $('#poker-coins').text(String(coins + bonus).padStart(4, '0'));
         pokerPhase = 'doubleup';
@@ -1644,7 +1422,6 @@ window.pokerDoubleUpChoice = async (choice) => {
         $('#poker-du-again-btn').show();
         $('#poker-du-collect-btn').show();
     } else {
-        // 負け：差額分を没収（既に受け取った勝利分を引く）
         const userRef = doc(db, "users", auth.currentUser.uid);
         const userSnap = await getDoc(userRef);
         const coins = userSnap.data().coins || 0;
@@ -1694,25 +1471,22 @@ const slotPayouts = {
     '🍇': 20,
     '⭐': 40,
     '💎': 100,
-    '🎁': 0  // 強化スピン発動（配当なし）
+    '🎁': 0
 };
 let isSpinning = false;
 let hasSpecialSpin = false;
-let boostedSpinsRemaining = 0; // 強化スピン残り回数
-let currentBet = 1; // ベット倍率
+let boostedSpinsRemaining = 0;
+let currentBet = 1;
 
-// ベット選択
 $('.bet-btn').on('click', function() {
     if (isSpinning) return;
     
     const newBet = parseInt($(this).data('bet'));
     
-    // 強化スピン中にベット変更しようとした場合
     if (boostedSpinsRemaining > 0 && newBet !== currentBet) {
         if (!confirm(`🔥 強化スピン中です！\n\nベットを変更すると強化スピンが消えますがよろしいですか？\n\n残り: ${boostedSpinsRemaining}回`)) {
-            return; // キャンセル
+            return;
         }
-        // 「はい」を押した場合、強化スピンをリセット
         boostedSpinsRemaining = 0;
         updateBoostedSpinsDisplay();
     }
@@ -1725,7 +1499,6 @@ $('.bet-btn').on('click', function() {
     $('#spin-btn-cost').text(`- ${cost} COINS -`);
     $('#bet-multiplier-text').text(`(×${currentBet})`);
     
-    // 配当表を更新
     updatePayTable();
 });
 
@@ -1750,7 +1523,6 @@ function updatePayTable() {
     `);
 }
 
-// リールストリップを初期化
 function initReelStrips() {
     for (let i = 1; i <= 3; i++) {
         const strip = $(`#strip${i}`);
@@ -1764,8 +1536,6 @@ function initReelStrips() {
     }
 }
 
-// スロット画面を開く
-// ===== カジノ =====
 window.openCasinoTop = () => {
     $('#slot-modal').addClass('hidden');
     $('#poker-modal').addClass('hidden');
@@ -1801,18 +1571,13 @@ $('#openSlotBtn').on('click', async () => {
     $('#casino-modal').removeClass('hidden');
 });
 
-// スロットは全画面UIなので背景クリック閉じは不要
-
-// リールをコマ送りで回す（上→下方向のみ、戻り動作なし）
 function spinReel(reelId, targetSymbol, duration) {
     return new Promise((resolve) => {
         const strip = $(`#strip${reelId}`);
 
-        // ストリップを毎回完全再生成
         strip.empty();
         strip.css({ transition: 'none', top: '0px' });
 
-        // 40コマ生成（0〜38はランダム、39=停止シンボル）
         const TOTAL = 40;
         const stopIndex = TOTAL - 1;
         for (let j = 0; j < TOTAL; j++) {
@@ -1822,16 +1587,14 @@ function spinReel(reelId, targetSymbol, duration) {
             strip.append(`<div class="slot-symbol-item">${sym}</div>`);
         }
 
-        // シンボル高さを実測
         const symH = strip.find('.slot-symbol-item').first().outerHeight() || 150;
 
-        // 各フレームの間隔を加速→高速→減速で計算
         const frames = [];
-        const accelFrames  = Math.floor(TOTAL * 0.15); // 加速
-        const decelFrames  = Math.floor(TOTAL * 0.25); // 減速
-        const constFrames  = TOTAL - accelFrames - decelFrames; // 高速
-        const minInterval  = 16;   // 高速時 (ms)
-        const maxInterval  = 120;  // 加速/減速時 (ms)
+        const accelFrames  = Math.floor(TOTAL * 0.15);
+        const decelFrames  = Math.floor(TOTAL * 0.25);
+        const constFrames  = TOTAL - accelFrames - decelFrames;
+        const minInterval  = 16;
+        const maxInterval  = 120;
 
         for (let i = 0; i < accelFrames; i++) {
             frames.push(maxInterval - (maxInterval - minInterval) * (i / accelFrames));
@@ -1848,7 +1611,6 @@ function spinReel(reelId, targetSymbol, duration) {
 
         function nextFrame() {
             if (frame >= TOTAL) {
-                // 最終位置にぴったり合わせる
                 strip.css({ transition: 'none', top: `-${symH * stopIndex}px` });
                 resolve();
                 return;
@@ -1860,13 +1622,11 @@ function spinReel(reelId, targetSymbol, duration) {
             setTimeout(nextFrame, interval);
         }
 
-        // 少し待ってから開始（前のリールとの間隔演出）
         playSlotSpinSound(frames.length);
         setTimeout(nextFrame, 0);
     });
 }
 
-// スピンボタン
 $('#spin-btn').on('click', async () => {
 
     if (isSpinning) return;
@@ -1886,7 +1646,6 @@ $('#spin-btn').on('click', async () => {
     $('#slot-result-display').addClass('hidden');
     hideSlotEffect();
 
-    // コイン消費
     await setDoc(doc(db, "users", auth.currentUser.uid), { coins: currentCoins - betCost }, { merge: true });
     $('#slot-coins').text(String(currentCoins - betCost).padStart(4, '0'));
 
@@ -1925,7 +1684,6 @@ $('#spin-btn').on('click', async () => {
         while (missSymbol === reachSymbol);
         results = [reachSymbol, reachSymbol, missSymbol];
     } else {
-        // バラバラ（1=2にも1=2=3にもならないよう保証）
         do {
             results = [
                 slotSymbols[Math.floor(Math.random() * slotSymbols.length)],
@@ -1935,20 +1693,17 @@ $('#spin-btn').on('click', async () => {
         } while (results[0] === results[1] || results[1] === results[2] || results[0] === results[2]);
     }
 
-    // ===== 演出判定 =====
     const isWin       = willWin;
     const isDiamond   = isWin && results[0] === '💎';
     const isSevenStar = isWin && results[0] === '⭐';
     const isReach     = willReachMiss;
 
-    // 💎は常に確定演出、⭐は50%、通常当たりは20%、リーチは30%の確率で演出あり
     const showPreEffect  = isDiamond ? true
                          : isSevenStar ? Math.random() < 0.50
                          : isWin       ? Math.random() < 0.20
                          : false;
     const showReachEffect = isReach && Math.random() < 0.30;
 
-    // 当たり確定フラッシュ（スピン前）
     if (showPreEffect) {
         if (isDiamond)   { showSlotEffect('jackpot'); await wait(600); }
         else if (isSevenStar) { showSlotEffect('star'); await wait(400); }
@@ -1956,16 +1711,13 @@ $('#spin-btn').on('click', async () => {
         hideSlotEffect();
     }
 
-    // リール1
     await spinReel(1, results[0]);
     playReelStopSound(0);
     await wait(250);
 
-    // リール2
     await spinReel(2, results[1]);
     playReelStopSound(1);
 
-    // リーチ演出（確率で出る）
     if (showReachEffect) {
         await wait(200);
         $('#reach-effect').removeClass('hidden');
@@ -1977,7 +1729,6 @@ $('#spin-btn').on('click', async () => {
         await wait(250);
     }
 
-    // リール3
     await spinReel(3, results[2]);
     playReelStopSound(2);
 
@@ -1989,7 +1740,6 @@ $('#spin-btn').on('click', async () => {
 
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// 演出エフェクト表示
 function showSlotEffect(type) {
     const $container = $('#slot-effect-container');
     if (!$container.length) return;
@@ -2003,7 +1753,6 @@ function hideSlotEffect() {
 async function checkSlotResult(results, currentCoins, isWin, isReachMiss, isDiamond, isSevenStar) {
     const [r1, r2, r3] = results;
     
-    // 強化スピンカウントダウン
     if (boostedSpinsRemaining > 0) {
         boostedSpinsRemaining--;
         updateBoostedSpinsDisplay();
@@ -2016,7 +1765,6 @@ async function checkSlotResult(results, currentCoins, isWin, isReachMiss, isDiam
     };
 
     if (r1 === r2 && r2 === r3) {
-        // 🎁🎁🎁 = 強化スピン発動
         if (r1 === '🎁') {
             boostedSpinsRemaining = 10;
             updateBoostedSpinsDisplay();
@@ -2050,7 +1798,6 @@ async function checkSlotResult(results, currentCoins, isWin, isReachMiss, isDiam
         $('#slot-win-amount').text(`+${String(payout).padStart(4, '0')}`);
         $('#slot-result-display').removeClass('hidden');
 
-        // 当たり演出（💎は常に、⭐は60%、通常は25%）
         const showWinEffect = (r1 === '💎') ? true
                             : (r1 === '⭐') ? Math.random() < 0.60
                             : Math.random() < 0.25;
@@ -2063,7 +1810,6 @@ async function checkSlotResult(results, currentCoins, isWin, isReachMiss, isDiam
         }
 
     } else if (isReachMiss) {
-        // リーチ外れ演出（40%）
         if (Math.random() < 0.40) {
             showSlotEffect('miss');
             playMissSound();
@@ -2079,7 +1825,6 @@ async function checkSlotResult(results, currentCoins, isWin, isReachMiss, isDiam
     resetBtn();
 }
 
-// 強化スピン表示更新
 function updateBoostedSpinsDisplay() {
     const $indicator = $('#boosted-spins-indicator');
     if (boostedSpinsRemaining > 0) {
@@ -2089,10 +1834,8 @@ function updateBoostedSpinsDisplay() {
     }
 }
 
-// ログインボーナスボタン
 $('#openLoginBonusBtn').on('click', openLoginBonusModal);
 
-// ログインボーナス受け取りボタン
 $('#claimBonusBtn').on('click', async () => {
     const $btn = $('#claimBonusBtn');
     $btn.prop('disabled', true).text('受け取り中...');
@@ -2100,15 +1843,12 @@ $('#claimBonusBtn').on('click', async () => {
     const result = await claimLoginBonus();
     
     if (result.success) {
-        // 成功アニメーション
         $('#bonus-amount').text(`+${result.bonus}`);
         $('#bonus-current-coins').text(result.coins.toLocaleString());
         
-        // ボタンを非表示にして受け取り済み表示
         $('#bonus-claim-section').addClass('hidden');
         $('#bonus-already-claimed').removeClass('hidden');
         
-        // 成功メッセージ
         setTimeout(() => {
             alert('🎉 ' + result.message);
         }, 300);
@@ -2119,31 +1859,22 @@ $('#claimBonusBtn').on('click', async () => {
 });
 
 
-// ショップデータ読み込み
 async function loadShopData() {
     const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
     const userData = userDoc.data();
     const userCoins = userData.coins || 0;
     const ownedItems = userData.ownedItems || [];
-    const isAdminUser = userData.isAdmin || false;
     
-    // プレビュー用に現在のユーザー情報を保存
     const currentUserName = userData.name || 'あなた';
     const currentUserPhoto = userData.photo || DEFAULT_AVATAR;
     
-    // 管理者表示
-    if (isAdminUser) {
-        $('#user-coins').html('∞ <span style="font-size:14px; color:rgba(255,255,255,0.7);">(管理者)</span>');
-    } else {
-        $('#user-coins').text(userCoins);
-    }
+    $('#user-coins').text(userCoins);
     
     const $container = $('#shop-items').empty();
     const $preview = $('#item-preview');
     
     shopItems.forEach(item => {
         const owned = ownedItems.includes(item.id);
-        const canAfford = userCoins >= item.price;
         
         const $item = $(`
             <div class="shop-item ${owned ? 'owned' : ''}" data-item-id="${item.id}" onclick="${owned ? '' : `purchaseItem('${item.id}')`}">
@@ -2156,9 +1887,7 @@ async function loadShopData() {
             </div>
         `);
         
-        // PC: ホバーでプレビュー / スマホ: タップ制御
         if (window.matchMedia('(max-width: 600px)').matches) {
-            // スマホはonclickを無効化してJS側で制御
             $item.attr('onclick', '');
             $item.on('click', function(e) {
                 e.preventDefault();
@@ -2170,7 +1899,6 @@ async function loadShopData() {
                 const prevId = $('#item-preview').data('previewId');
                 const isVisible = !$('#item-preview').hasClass('hidden');
                 if (!isVisible || prevId !== item.id) {
-                    // 1回目タップ: プレビュー表示のみ（テーマ適用しない）
                     showItemPreview(item, currentUserName, currentUserPhoto);
                     $('#item-preview').data('previewId', item.id);
                     setTimeout(() => {
@@ -2178,7 +1906,6 @@ async function loadShopData() {
                         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }, 100);
                 } else {
-                    // 2回目タップ: 購入
                     window.purchaseItem(item.id);
                     $('#item-preview').addClass('hidden').data('previewId', null);
                 }
@@ -2192,7 +1919,6 @@ async function loadShopData() {
         $container.append($item);
     });
     
-    // プレビューエリアから出た時だけ非表示
     let previewTimeout;
     $container.on('mouseleave', function() {
         previewTimeout = setTimeout(() => {
@@ -2211,7 +1937,6 @@ async function loadShopData() {
     });
 }
 
-// アイテムプレビュー表示
 function showItemPreview(item, userName, userPhoto) {
     $('#item-preview').removeClass('hidden');
     $('#preview-item-name').text(item.name);
@@ -2219,16 +1944,12 @@ function showItemPreview(item, userName, userPhoto) {
     $('#preview-name').text(userName);
     $('#preview-icon').attr('src', userPhoto);
     
-    // プレビューメッセージのクラスをリセット（全エフェクト）
     $('#preview-message').removeClass('effect-fire effect-sparkle effect-lightning effect-rainbow effect-shadow effect-ice effect-toxic effect-gold');
     $('#preview-icon-container').removeClass('effect-fire effect-sparkle effect-lightning effect-rainbow effect-shadow effect-ice effect-toxic effect-gold');
     $('#preview-badge').empty();
-    // テーマプレビュー用リセット
     $('#item-preview').css('background', '');
     
-    // アイテムタイプに応じてプレビュー
     if (item.id === 'vip_badge' || item.id === 'star_badge' || item.id === 'crown_badge') {
-        // バッジプレビュー
         const badgeMap = {
             'vip_badge': { icon: '👑', title: 'VIP' },
             'star_badge': { icon: '⭐', title: 'スター' },
@@ -2270,7 +1991,6 @@ function showItemPreview(item, userName, userPhoto) {
     }
 }
 
-// アイテム購入
 window.purchaseItem = async (itemId) => {
     const item = shopItems.find(i => i.id === itemId);
     if (!item) return;
@@ -2295,7 +2015,6 @@ window.purchaseItem = async (itemId) => {
             return;
         }
         
-        // 購入処理
         await setDoc(doc(db, "users", auth.currentUser.uid), {
             coins: userCoins - item.price,
             ownedItems: arrayUnion(itemId)
@@ -2303,7 +2022,6 @@ window.purchaseItem = async (itemId) => {
         
         alert(`🎉 ${item.name}を購入しました！`);
         
-        // テーマアイテムを購入した場合、即座に適用
         if (itemId === 'rainbow_theme' || itemId === 'heart_theme') {
             applyUserTheme();
             alert(`✨ テーマが適用されました！\n\n※ 複数のテーマを持っている場合、\n最後に購入したものが優先されます。`);
@@ -2318,14 +2036,12 @@ window.purchaseItem = async (itemId) => {
 };
 
 
-// ショップボタン（ヘッダー + 旧メニュー内）
 $('#openShopBtnHeader, #openShopBtn').on('click', () => {
     $('#other-settings-modal').addClass('hidden');
     $('#shop-modal').removeClass('hidden');
     loadShopData();
 });
 
-// 通知ボタン（設定モーダル内）
 $('#toggleNotificationBtn').on('click', async () => {
     if (!('Notification' in window)) {
         alert('このブラウザはプッシュ通知に対応していません');
@@ -2354,7 +2070,6 @@ window.react = async (id, emoji, currentJson) => {
     await updateDoc(doc(colRef, id), { [`reactions.${emoji}`]: users.includes(auth.currentUser.uid) ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid) });
 };
 
-// リアクションピッカーの絵文字リスト
 const reactionEmojis = [
     '👍', '❤️', '😂', '😮', '😢', '😡',
     '🙏', '👏', '🎉', '🔥', '✨', '💯',
@@ -2367,7 +2082,6 @@ window.openReactionPicker = (msgId, event, currentReactions) => {
     if (event && event.stopPropagation) event.stopPropagation();
     const $picker = $('#reaction-picker');
     
-    // 絵文字を配置
     $picker.empty();
     reactionEmojis.forEach(emoji => {
         const $btn = $(`<div class="reaction-emoji">${emoji}</div>`);
@@ -2380,7 +2094,6 @@ window.openReactionPicker = (msgId, event, currentReactions) => {
         $picker.append($btn);
     });
     
-    // 一旦表示して実際のサイズを取得
     $picker.css({ left: '0px', top: '0px', visibility: 'hidden' }).removeClass('hidden');
     const pickerWidth = $picker.outerWidth();
     const pickerHeight = $picker.outerHeight();
@@ -2390,7 +2103,6 @@ window.openReactionPicker = (msgId, event, currentReactions) => {
     const windowHeight = window.innerHeight;
     const padding = 10;
     
-    // スマホ: タッチ座標 or クリック座標を使う
     let anchorX, anchorY;
     if (event && event.clientX != null && event.clientX !== 0) {
         anchorX = event.clientX;
@@ -2415,7 +2127,6 @@ window.openReactionPicker = (msgId, event, currentReactions) => {
     $picker.css({ left: left + 'px', top: top + 'px' }).removeClass('hidden');
 };
 
-// ピッカー外をクリックしたら閉じる
 $(document).on('click', function(e) {
     if (!$(e.target).closest('#reaction-picker, .op-btn').length) {
         $('#reaction-picker').addClass('hidden');
@@ -2462,17 +2173,14 @@ window.showProfile = async (uid) => {
     if (!snap.exists()) return;
     const d = snap.data(); 
     
-    // 基本情報
     $("#viewName").text(d.name || "ゲスト"); 
     $("#viewAvatar").attr("src", d.photo || DEFAULT_AVATAR); 
     $("#viewBanner").attr("src", d.banner || DEFAULT_BANNER); 
     $("#viewBio").text(d.bio || "No bio.");
     
-    // オンライン状態
-    const statusClass = d.status === 'online' ? 'online' : 'offline';
+    const statusClass = getUserOnlineStatus(uid);
     $("#viewStatusDot").removeClass('online offline').addClass(statusClass);
     
-    // エフェクト適用
     const equipped = d.equipped || {};
     $("#viewAvatarContainer").removeClass('effect-fire effect-sparkle effect-lightning effect-rainbow effect-shadow effect-ice effect-toxic effect-gold');
     
@@ -2485,7 +2193,6 @@ window.showProfile = async (uid) => {
     else if (equipped.effect === 'toxic_effect') $("#viewAvatarContainer").addClass('effect-toxic');
     else if (equipped.effect === 'gold_effect') $("#viewAvatarContainer").addClass('effect-gold');
     
-    // バッジ表示
     const $badges = $("#viewBadges").empty();
     if (equipped.badge === 'vip_badge') {
         $badges.append('<span class="user-badge" title="VIP">👑</span>');
@@ -2495,7 +2202,6 @@ window.showProfile = async (uid) => {
         $badges.append('<span class="user-badge" title="プレミアム">👸</span>');
     }
     
-    // アクションボックス
     const $actionBox = $("#prof-action-box").empty();
     if (uid !== auth.currentUser.uid) {
         const reqId = [auth.currentUser.uid, uid].sort().join("_");
@@ -2526,19 +2232,16 @@ $("#my-profile-trigger").on("click", async () => {
         $("#editBanner").val(d.banner); 
         $("#editBio").val(d.bio);
         
-        // アイテム装備の選択肢を読み込む
         await loadEquipmentOptions(d);
     }
     syncProfilePreview(); 
     $("#settings-modal").removeClass("hidden");
 });
 
-// アイテム装備の選択肢を読み込む
 async function loadEquipmentOptions(userData) {
     const ownedItems = userData.ownedItems || [];
     const equipped = userData.equipped || {};
     
-    // バッジの選択肢
     const $badgeSelect = $('#editEquippedBadge').empty();
     $badgeSelect.append('<option value="">なし</option>');
     if (ownedItems.includes('vip_badge')) $badgeSelect.append('<option value="vip_badge">👑 VIPバッジ</option>');
@@ -2546,14 +2249,12 @@ async function loadEquipmentOptions(userData) {
     if (ownedItems.includes('crown_badge')) $badgeSelect.append('<option value="crown_badge">👸 クラウンバッジ</option>');
     $badgeSelect.val(equipped.badge || '');
     
-    // テーマの選択肢
     const $themeSelect = $('#editEquippedTheme').empty();
     $themeSelect.append('<option value="">デフォルト</option>');
     if (ownedItems.includes('rainbow_theme')) $themeSelect.append('<option value="rainbow_theme">🌈 レインボーテーマ</option>');
     if (ownedItems.includes('heart_theme')) $themeSelect.append('<option value="heart_theme">💕 ハートテーマ</option>');
     $themeSelect.val(equipped.theme || '');
     
-    // エフェクトの選択肢
     const $effectSelect = $('#editEquippedEffect').empty();
     $effectSelect.append('<option value="">なし</option>');
     if (ownedItems.includes('fire_effect')) $effectSelect.append('<option value="fire_effect">🔥 炎エフェクト</option>');
@@ -2582,7 +2283,6 @@ $("#saveProfile").on("click", async () => {
     await updateProfile(auth.currentUser, { displayName: data.name, photoURL: data.photo });
     await setDoc(doc(db, "users", auth.currentUser.uid), data, { merge: true });
     
-    // テーマを即座に適用
     applyUserTheme();
     
     location.reload();
@@ -2595,15 +2295,12 @@ window.switchUserTab = (tab) => {
     else if(tab === 'friends') $(".tab-btn:contains('フレンド')").addClass("active");
     else if(tab === 'requests') {
         $(".tab-btn:contains('申請')").addClass("active");
-        // 申請タブを開いたら、フレンド申請の未読をクリア
         clearFriendRequestUnread();
     }
     loadUserList(); 
 };
 
-// フレンド申請の未読をクリアする関数
 function clearFriendRequestUnread() {
-    // friend_request_で始まるキーを全て削除
     Object.keys(unreadRooms).forEach(key => {
         if(key.startsWith('friend_request_')) {
             delete unreadRooms[key];
@@ -2619,14 +2316,12 @@ window.loadUserList = () => {
         
         reqSnap.forEach(d => {
             reqMap[d.id] = d.data();
-            // 自分宛ての未承認申請をカウント
             const data = d.data();
             if (data.to === auth.currentUser.uid && data.status === "pending") {
                 pendingRequestCount++;
             }
         });
         
-        // 申請タブのバッジを更新
         const $badge = $("#request-count-badge");
         if (pendingRequestCount > 0) {
             $badge.text(pendingRequestCount).show();
@@ -2637,11 +2332,9 @@ window.loadUserList = () => {
         onSnapshot(collection(db, "users"), (userSnap) => {
             const $list = $("#user-list-container").empty();
             
-            // 「申請」タブの場合
             if (currentTab === 'requests') {
                 let hasRequests = false;
                 
-                // 受信した申請を表示
                 $list.append('<div style="padding:10px; font-weight:bold; color:var(--txt-m); font-size:12px; border-bottom:1px solid var(--bg-38);">受信した申請</div>');
                 Object.entries(reqMap).forEach(([reqId, reqData]) => {
                     if (reqData.to === auth.currentUser.uid && reqData.status === "pending") {
@@ -2651,7 +2344,7 @@ window.loadUserList = () => {
                             const d = senderDoc.data();
                             const uid = senderDoc.id;
                             const safeName = escapeHTML(d.name || "ゲスト");
-                            const isOnline = d.status === "online";
+                            const isOnline = getUserOnlineStatus(uid) === 'online';
                             const isGuest = d.name === "ゲスト" || d.isAnonymous === true;
                             const guestLabel = isGuest ? '<span style="background:var(--bg-38); color:var(--txt-m); font-size:10px; padding:2px 6px; border-radius:3px; margin-left:5px;">ゲスト</span>' : '';
                             
@@ -2676,7 +2369,6 @@ window.loadUserList = () => {
                     $list.append('<div style="padding:20px; text-align:center; color:var(--txt-m); font-size:14px;">受信した申請はありません</div>');
                 }
                 
-                // 送信した申請を表示
                 $list.append('<div style="padding:10px; font-weight:bold; color:var(--txt-m); font-size:12px; border-bottom:1px solid var(--bg-38); margin-top:15px;">送信した申請</div>');
                 let hasSentRequests = false;
                 
@@ -2688,7 +2380,7 @@ window.loadUserList = () => {
                             const d = targetDoc.data();
                             const uid = targetDoc.id;
                             const safeName = escapeHTML(d.name || "ゲスト");
-                            const isOnline = d.status === "online";
+                            const isOnline = getUserOnlineStatus(uid) === 'online';
                             
                             $list.append(`<div class="user-item" data-uid="${uid}">
                                 <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="showProfile('${uid}')">
@@ -2711,19 +2403,17 @@ window.loadUserList = () => {
                     $list.append('<div style="padding:20px; text-align:center; color:var(--txt-m); font-size:14px;">送信した申請はありません</div>');
                 }
                 
-                return; // 申請タブの処理はここで終了
+                return;
             }
             
-            // 「すべて」「フレンド」タブの処理（既存のロジック）
             userSnap.forEach((uDoc) => {
                 const uid = uDoc.id; if (uid === auth.currentUser.uid) return;
                 const d = uDoc.data();
                 
-                // 匿名ユーザーまたは「ゲスト」という名前のユーザーを除外
                 if (d.isAnonymous === true) return;
                 if (d.name === "ゲスト") return;
                 
-                const isOnline = d.status === "online"; const reqId = [auth.currentUser.uid, uid].sort().join("_"); const req = reqMap[reqId];
+                const isOnline = getUserOnlineStatus(uid) === 'online'; const reqId = [auth.currentUser.uid, uid].sort().join("_"); const req = reqMap[reqId];
                 const safeName = escapeHTML(d.name || "ゲスト");
                 let btn = `<button onclick="sendRequest('${uid}')" class="btn-sm" style="background:var(--accent);">申請</button>`;
                 let isF = false;
@@ -2743,7 +2433,6 @@ window.loadUserList = () => {
     });
 };
 window.sendRequest = async (uid) => { 
-    // ゲストユーザーは申請できない
     if (auth.currentUser.isAnonymous || auth.currentUser.displayName === "ゲスト") {
         alert("フレンド機能を使うには、メールアドレスでログインしてください。\n\n右上のメニュー → ログアウト → メールでログイン");
         return;
@@ -2782,89 +2471,57 @@ function listenForCalls() {
         });
     });
 }
-let currentOnlineStatus = null; // 現在のステータスを記録（null, 'online', 'offline'）
 
-// ===== Realtime Database プレゼンス管理 =====
-// onDisconnectでサーバー側から確実にofflineにする
+// ===== Realtime Database プレゼンス管理（RTDBのみ、Firestore書き込みなし） =====
+let statusCache = {}; // { uid: 'online' | 'offline' }
 let presenceInitialized = false;
 
 const initPresence = (uid) => {
     if (presenceInitialized) return;
     presenceInitialized = true;
 
-    const statusRef   = rtdbRef(rtdb, `status/${uid}`);
+    const myStatusRef  = rtdbRef(rtdb, `status/${uid}`);
     const connectedRef = rtdbRef(rtdb, '.info/connected');
 
-    // .info/connected でRTDB接続状態を監視
-    onValue(connectedRef, async (snap) => {
-        if (!snap.val()) {
-            // RTDBから切断 → Firestoreをofflineに
-            updateDoc(doc(db, "users", uid), {
-                status: "offline", lastSeen: serverTimestamp(), isTyping: false
-            }).catch(() => {});
-            currentOnlineStatus = 'offline';
-            return;
-        }
+    onValue(connectedRef, (snap) => {
+        if (snap.val() === false) return; // 切断中は何もしない
 
-        // ① 切断時にサーバーが自動でRTDB+Firestoreをofflineに（タブを閉じても確実に動く）
-        await onDisconnect(statusRef).set({
+        // ① 切断時にサーバー側で自動的にofflineにする設定を先に仕込む
+        onDisconnect(myStatusRef).set({
             state: 'offline',
             lastSeen: rtdbServerTimestamp()
+        }).then(() => {
+            // ② 仕込み完了後にonlineをセット
+            rtdbSet(myStatusRef, {
+                state: 'online',
+                lastSeen: rtdbServerTimestamp()
+            });
         });
-
-        // ② 接続確立 → onlineにセット
-        await rtdbSet(statusRef, {
-            state: 'online',
-            lastSeen: rtdbServerTimestamp()
-        });
-        updateDoc(doc(db, "users", uid), {
-            status: "online", lastSeen: serverTimestamp()
-        }).catch(() => {});
-        currentOnlineStatus = 'online';
     });
 
-    // RTDBのstatus変化をFirestoreに同期（onDisconnectで書き換わったときに反映）
-    onValue(statusRef, (snap) => {
-        if (!snap.val()) return;
-        const state = snap.val().state;
-        if (state === currentOnlineStatus) return; // 変化なければスキップ
-        updateDoc(doc(db, "users", uid), {
-            status: state,
-            lastSeen: serverTimestamp(),
-            ...(state === 'offline' ? { isTyping: false } : {})
-        }).catch(() => {});
-        currentOnlineStatus = state;
+    // 全ユーザーのステータスをRTDBから直接購読（Firestoreは経由しない）
+    onValue(rtdbRef(rtdb, 'status'), (snap) => {
+        const data = snap.val() || {};
+        Object.keys(data).forEach(u => {
+            statusCache[u] = data[u]?.state || 'offline';
+        });
+        updateAllStatusDots();
     });
 };
 
-const setOnline = async () => {
-    if (!auth.currentUser) return;
-    initPresence(auth.currentUser.uid);
-    if (currentOnlineStatus === 'online') return;
-    currentOnlineStatus = 'online';
-    try {
-        await rtdbSet(rtdbRef(rtdb, `status/${auth.currentUser.uid}`), {
-            state: 'online', lastSeen: rtdbServerTimestamp()
-        });
-        updateDoc(doc(db, "users", auth.currentUser.uid), {
-            status: "online", lastSeen: serverTimestamp()
-        }).catch(() => {});
-    } catch (e) {}
-};
+function updateAllStatusDots() {
+    Object.keys(statusCache).forEach(uid => {
+        const cls = statusCache[uid] === 'online' ? 'online' : 'offline';
+        $(`.message[data-uid="${uid}"] .status-dot`).removeClass('online offline').addClass(cls);
+        $(`.sidebar-item[data-user-id="${uid}"] .status-dot`).removeClass('online offline').addClass(cls);
+        $(`.user-item[data-uid="${uid}"] .status-dot`).removeClass('online offline').addClass(cls);
+    });
+}
 
-const setOffline = async () => {
-    if (!auth.currentUser) return;
-    if (currentOnlineStatus === 'offline') return;
-    currentOnlineStatus = 'offline';
-    try {
-        await rtdbSet(rtdbRef(rtdb, `status/${auth.currentUser.uid}`), {
-            state: 'offline', lastSeen: rtdbServerTimestamp()
-        });
-        await updateDoc(doc(db, "users", auth.currentUser.uid), {
-            status: "offline", lastSeen: serverTimestamp(), isTyping: false
-        });
-    } catch (e) {}
-};
+// 個別ユーザーのオンライン状態を取得するヘルパー
+function getUserOnlineStatus(uid) {
+    return statusCache[uid] === 'online' ? 'online' : 'offline';
+}
 
 // ===== 認証タブ切り替え =====
 window.switchAuthTab = (tab) => {
@@ -2890,7 +2547,6 @@ $("#loginBtn").on("click", async () => {
     try {
         const cred = await signInWithEmailAndPassword(auth, e, p);
         if (!cred.user.emailVerified) {
-            // 認証メールを自動再送
             await sendEmailVerification(cred.user);
             await signOut(auth);
             $('#loginError').html('メールアドレスが認証されていません。<br>認証メールを送信しました。届いたメールのリンクをクリックしてからログインしてください。').show();
@@ -2920,7 +2576,7 @@ $("#registerBtn").on("click", async () => {
         const res = await createUserWithEmailAndPassword(auth, e, p);
         await updateProfile(res.user, { displayName: name });
         await setDoc(doc(db, "users", res.user.uid), {
-            name, photo: DEFAULT_AVATAR, status: "offline", isTyping: false, isAnonymous: false
+            name, photo: DEFAULT_AVATAR, isTyping: false, isAnonymous: false
         });
         await sendEmailVerification(res.user);
         await signOut(auth);
@@ -2988,7 +2644,14 @@ $("#guestBtn").on("click", async () => {
 });
 
 const doLogout = async () => { 
-    await setOffline();
+    if (auth.currentUser) {
+        try {
+            await rtdbSet(rtdbRef(rtdb, `status/${auth.currentUser.uid}`), {
+                state: 'offline',
+                lastSeen: rtdbServerTimestamp()
+            });
+        } catch (e) {}
+    }
     signOut(auth).then(() => location.reload()); 
 };
 
@@ -3071,7 +2734,6 @@ $("#headerMenuBtn").on("click", (e) => {
     e.stopPropagation();
     $("#headerMenuDropdown").toggleClass("hidden");
 });
-// 外側クリックで閉じる
 $(document).on("click", (e) => {
     if (!$(e.target).closest("#headerMenuBtn, #headerMenuDropdown").length) {
         $("#headerMenuDropdown").addClass("hidden");
@@ -3080,31 +2742,22 @@ $(document).on("click", (e) => {
 
 // --- イベント監視 ---
 
-// タブ表示/非表示でオンライン状態を切り替え
+// タブ表示/非表示: 未読クリアのみ（オンライン判定はRTDBのonDisconnect/接続状態が自動処理する）
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-        setOnline();
         clearUnread();
-    } else {
-        setOffline();
     }
 }, true);
 
-// フォーカス取得時にオンラインに戻す
 window.addEventListener("focus", () => {
-    setOnline();
     clearUnread();
 });
 
-// フォーカス喪失時はオフラインにしない（別ウィンドウ操作などで誤判定するため）
-// タブを閉じたときはonDisconnectが確実に処理する
-
-// ユーザーアクションで未読クリア
+// ユーザーアクションで未読クリア（オンライン状態のFirestore書き込みは行わない）
 window.addEventListener("mousemove", () => { if (document.hasFocus()) clearUnread(); });
 window.addEventListener("click", () => { clearUnread(); });
 window.addEventListener("keydown", () => { clearUnread(); });
 
-// タッチイベント（モバイル）
 let lastTouchTime = 0;
 window.addEventListener("touchstart", () => {
     const now = Date.now();
@@ -3115,7 +2768,6 @@ window.addEventListener("touchstart", () => {
 // スマホ長押しコンテキストメニュー
 // ============================================================
 (function() {
-    // メニューとオーバーレイをbodyに追加
     const menuEl = document.createElement('div');
     menuEl.id = 'msg-context-menu';
     menuEl.classList.add('hidden');
@@ -3149,30 +2801,23 @@ window.addEventListener("touchstart", () => {
         const name    = msgEl.dataset.name || '';
         const text    = msgEl.dataset.text || '';
 
-        // リアクションデータをop-btnから取得（既存のonclick属性から流用）
-        const reactionBtn = msgEl.querySelector('.op-btn[title="リアクション"]');
-
         let items = [];
 
-        // リアクション
         items.push(`<div class="ctx-item" data-action="reaction">
             <span class="material-symbols-outlined">add_reaction</span> リアクション
         </div>`);
 
-        // 返信
         const replyLabel = isStamp ? 'スタンプ' : (text || '画像');
         items.push(`<div class="ctx-item" data-action="reply" data-id="${id}" data-name="${name}" data-text="${replyLabel}">
             <span class="material-symbols-outlined">reply</span> 返信
         </div>`);
 
-        // 編集（自分のメッセージかつスタンプでない場合）
         if (isMe && !isStamp) {
             items.push(`<div class="ctx-item" data-action="edit" data-id="${id}" data-text="${text}">
                 <span class="material-symbols-outlined">edit</span> 編集
             </div>`);
         }
 
-        // 削除（自分のメッセージ）
         if (isMe) {
             items.push(`<div class="ctx-item danger" data-action="delete" data-id="${id}">
                 <span class="material-symbols-outlined">delete</span> 削除
@@ -3183,7 +2828,6 @@ window.addEventListener("touchstart", () => {
         menuEl.classList.remove('hidden');
         overlayEl.classList.remove('hidden');
 
-        // 位置調整（画面外に出ないように）
         const menuW = 200;
         const menuH = items.length * 46;
         const vw = window.innerWidth;
@@ -3196,15 +2840,12 @@ window.addEventListener("touchstart", () => {
         menuEl.style.left = px + 'px';
         menuEl.style.top  = py + 'px';
 
-        // アイテムのクリックイベント
         menuEl.querySelectorAll('.ctx-item').forEach(item => {
             item.addEventListener('click', function() {
                 const action = this.dataset.action;
                 const _id   = this.dataset.id || id;
                 if (action === 'reaction') {
-                    // リアクションピッカーを開く（既存関数流用）
                     const fakeEvent = { clientX: px, clientY: py, target: menuEl, stopPropagation: () => {} };
-                    // reactions情報はop-btnから取得できないためmsgElから取得
                     const existingReactions = {};
                     msgEl.querySelectorAll('.reaction-badge').forEach(b => {
                         const parts = b.textContent.trim().split(' ');
@@ -3225,18 +2866,15 @@ window.addEventListener("touchstart", () => {
         });
     }
 
-    // イベント委譲: #messages上のタッチを監視
     document.addEventListener('touchstart', function(e) {
         if (!isMobile()) return;
         const msgEl = e.target.closest('.message');
         if (!msgEl) return;
-        // アイコンクリックや既存ボタンは除外
         if (e.target.closest('.icon-container, .op-btn, .reaction-badge, .reply-in-bubble, .sent-img, .stamp-display')) return;
 
         targetMsg = msgEl;
         pressTimer = setTimeout(() => {
             if (targetMsg) {
-                // 長押し振動フィードバック
                 if (navigator.vibrate) navigator.vibrate(30);
                 const touch = e.touches[0];
                 showMenu(msgEl, touch.clientX, touch.clientY);
@@ -3258,7 +2896,6 @@ window.addEventListener("touchstart", () => {
 // ============================================================
 $('#callDMBtn').on('click', async () => {
     if (!currentDMOtherUid) return;
-    // 既存のWebRTC通話を発信
     $('#other-settings-modal').addClass('hidden');
     await setupWebRTC();
     const callDoc = doc(collection(db, "calls"));
@@ -3305,7 +2942,6 @@ async function loadRanking(tab) {
         if (tab === 'coins') {
             users.sort((a, b) => (b.coins || 0) - (a.coins || 0));
         } else {
-            // 株資産 = 保有数 × 現在株価
             const priceSnap = await getDocs(collection(db, "stocks"));
             const prices = {};
             priceSnap.docs.forEach(d => { prices[d.id] = d.data().price || 0; });
@@ -3347,7 +2983,6 @@ async function loadRanking(tab) {
 // 株ゲーム（倒産・IPOサイクル対応）
 // ============================================================
 
-// 銘柄タイプの表示設定
 const STOCK_TYPE_LABELS = {
     stable:   { label: '安定型',     color: '#26c6da', icon: '🏦' },
     growth:   { label: '成長型',     color: '#00c853', icon: '📈' },
@@ -3357,20 +2992,18 @@ const STOCK_TYPE_LABELS = {
     rare:     { label: '希少型',     color: '#a78bfa', icon: '💎' },
 };
 
-let activeStockIds  = [];  // 現在上場中のID一覧
-let stockData       = {};  // { id: {name,price,history,...} }
-let stockPrices     = {};  // { id: 現在価格 }
-let stockHistory    = {};  // { id: 価格履歴 }
-let stockEvents     = {};  // { id: 直近イベント }
+let activeStockIds  = [];
+let stockData       = {};
+let stockPrices     = {};
+let stockHistory    = {};
+let stockEvents     = {};
 let userCoinsCache  = 0;
 let userHoldings    = {};
 
-// ===== 毎分ポーリング =====
 let stockPollTimer = null;
 
 function startStockPolling() {
     stopStockPolling();
-    // 即時1回実行してから毎分繰り返す
     pollStockData();
     stockPollTimer = setInterval(pollStockData, 60 * 1000);
 }
@@ -3386,12 +3019,10 @@ async function pollStockData() {
     if ($('#stock-modal').hasClass('hidden')) return;
 
     try {
-        // stock_listを取得
         const listSnap = await getDoc(doc(db, "stocks", "stock_list"));
         if (!listSnap.exists()) return;
         const newIds = listSnap.data().activeIds || [];
 
-        // 上場廃止で消えたIDを検知
         activeStockIds.forEach(id => {
             if (!newIds.includes(id)) {
                 if (userHoldings[id]) {
@@ -3407,7 +3038,6 @@ async function pollStockData() {
         const prevIds = [...activeStockIds];
         activeStockIds = [...newIds];
 
-        // 全銘柄データを取得
         for (const id of newIds) {
             const snap = await getDoc(doc(db, "stocks", id));
             if (!snap.exists()) continue;
@@ -3422,7 +3052,6 @@ async function pollStockData() {
             }
         }
 
-        // 新銘柄が増えていたら一覧を再描画、そうでなければ各カードだけ更新
         const hasNewStock = newIds.some(id => !prevIds.includes(id));
         if (hasNewStock) {
             renderStockList();
@@ -3430,7 +3059,6 @@ async function pollStockData() {
             newIds.forEach(id => refreshStockCard(id));
         }
 
-        // ユーザーデータも再取得して保有数・コインを同期
         const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
         const userData = userSnap.data() || {};
         userCoinsCache = userData.coins || 0;
@@ -3447,7 +3075,6 @@ function handleDelisted(id, d) {
         showDelistNotice(id, d.name);
         userHoldings[id] = 0;
         delete userHoldings[id];
-        // Firestoreにも反映
         updateDoc(doc(db, "users", auth.currentUser.uid), {
             stockHoldings: userHoldings
         }).catch(() => {});
@@ -3466,14 +3093,12 @@ function showDelistNotice(id, name) {
     setTimeout(() => $notice.fadeOut(500, () => $notice.remove()), 4000);
 }
 
-// ===== 株画面初期化 =====
 async function initStockData() {
     const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
     const userData = userSnap.data() || {};
     userCoinsCache = userData.coins || 0;
     userHoldings   = { ...(userData.stockHoldings || {}) };
 
-    // __list__を取得
     const listSnap = await getDoc(doc(db, "stocks", "stock_list"));
     if (!listSnap.exists()) {
         $('#stock-list').html('<div style="text-align:center; padding:40px; color:var(--txt-m);">初期化中... 少し待ってください</div>');
@@ -3482,7 +3107,6 @@ async function initStockData() {
 
     activeStockIds = listSnap.data().activeIds || [];
 
-    // 各銘柄のデータ取得
     for (const id of activeStockIds) {
         const snap = await getDoc(doc(db, "stocks", id));
         if (!snap.exists()) continue;
@@ -3498,12 +3122,10 @@ async function initStockData() {
     startStockPolling();
 }
 
-// ===== ポートフォリオ表示更新 =====
 function refreshPortfolio(coins, holdings) {
     const c = (coins !== undefined) ? coins : userCoinsCache;
     const h = (holdings !== undefined) ? holdings : userHoldings;
 
-    // 評価額 = 保有数 × 現在株価
     let portfolioValue = 0;
     Object.entries(h).forEach(([id, qty]) => {
         portfolioValue += (stockPrices[id] || 0) * qty;
@@ -3512,14 +3134,12 @@ function refreshPortfolio(coins, holdings) {
     $('#stock-coins').text(c.toLocaleString());
     $('#stock-portfolio-value').text(portfolioValue.toLocaleString());
 
-    // 各カードの保有数表示も更新
     Object.keys(stockData).forEach(id => {
         const owned = h[id] || 0;
         $(`#stock-card-${id} .stock-owned`).text(`保有: ${owned}株`);
     });
 }
 
-// ===== カード一覧描画 =====
 function renderStockList() {
     const $list = $('#stock-list').empty();
     activeStockIds.forEach(id => {
@@ -3540,18 +3160,15 @@ function refreshStockCard(stockId) {
     const inCrisis = d.inCrisis || false;
     const typeConf = STOCK_TYPE_LABELS[d.stockType] || STOCK_TYPE_LABELS.highRisk;
 
-    // 前回比
     const prevPrice = hist.length >= 2 ? hist[hist.length - 2].price : ipoPrice;
     const changePct = ((price - prevPrice) / prevPrice * 100).toFixed(1);
     const up        = price >= prevPrice;
     const changeColor = up ? '#00c853' : '#ff4757';
     const changeSign  = up ? '▲' : '▼';
 
-    // IPO比
     const ipoChange = ((price - ipoPrice) / ipoPrice * 100).toFixed(1);
     const ipoColor  = price >= ipoPrice ? '#00c853' : '#ff4757';
 
-    // スパークライン
     let sparkSvg = '';
     const pts = hist.slice(-30);
     if (pts.length >= 2) {
@@ -3606,14 +3223,12 @@ function refreshStockCard(stockId) {
     $(`#stock-card-${stockId}`).html(card);
 }
 
-// ===== 数量調整ボタン =====
 window.adjustStockQty = (stockId, delta) => {
     const $input = $(`#qty-${stockId}`);
     const val = parseInt($input.val()) || 1;
     $input.val(Math.max(1, val + delta));
 };
 
-// ===== 全力買・全売ボタン =====
 window.setStockQtyMax = (stockId, action) => {
     const price = stockPrices[stockId] || 1;
     if (action === 'buy') {
@@ -3625,7 +3240,6 @@ window.setStockQtyMax = (stockId, action) => {
     }
 };
 
-// ===== 売買実行 =====
 window.tradeStockQty = async (stockId, action) => {
     const qty = parseInt($(`#qty-${stockId}`).val()) || 1;
     await window.tradeStock(stockId, action, qty);
