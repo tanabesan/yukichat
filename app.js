@@ -300,7 +300,7 @@ let currentUnsubscribe = null;
 let globalUnsubscribers = [];
 let friendIds = [];
 const servers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
-let currentTab = 'all', usersCache = {}, isInitialLoad = true, lastMsgCount = 0;
+let currentTab = 'all', usersCache = {}, isInitialLoad = true, lastRenderedMsgId = null;
 let typingTimeout;
 
 let lastVisibleDoc = null; 
@@ -627,7 +627,7 @@ window.switchChat = (roomId, otherName = null, otherUid = null) => {
     currentRoomId = roomId;
     currentDMOtherUid = otherUid;
     isInitialLoad = true;
-    lastMsgCount = 0;
+    lastRenderedMsgId = null;
     lastVisibleDoc = null;
     hasMoreMessages = true;
     $("#messages").empty();
@@ -868,9 +868,6 @@ function renderMessages(snap, isDesc = false) {
     }
     
     const $box = $("#messages");
-    const currentMsgCount = snap.size;
-    
-    const hasNewMessage = !isLoadingMoreMessages && (currentMsgCount > lastMsgCount);
     
     let docs = [];
     snap.forEach(d => docs.push({id: d.id, data: d.data()}));
@@ -934,6 +931,7 @@ function renderMessages(snap, isDesc = false) {
             }, 600);
         }
         isInitialLoad = false;
+        lastRenderedMsgId = docs.length ? docs[docs.length - 1].id : null;
     } else {
         const updates = [];
         const additions = [];
@@ -964,8 +962,11 @@ function renderMessages(snap, isDesc = false) {
             $box[0].appendChild(fragment);
         }
         
+        const newestDoc = docs.length ? docs[docs.length - 1] : null;
+        const hasNewMessage = !isLoadingMoreMessages && newestDoc && newestDoc.id !== lastRenderedMsgId;
+
         if (hasNewMessage) {
-            const lastDoc = docs[docs.length - 1];
+            const lastDoc = newestDoc;
             const isMyMessage = auth.currentUser && lastDoc.data.uid === auth.currentUser.uid;
 
             if (!isLoadingMoreMessages) {
@@ -1007,9 +1008,9 @@ function renderMessages(snap, isDesc = false) {
                 }
             }
         }
-    }
-    if (!isLoadingMoreMessages) {
-        lastMsgCount = currentMsgCount;
+        if (newestDoc && !isLoadingMoreMessages) {
+            lastRenderedMsgId = newestDoc.id;
+        }
     }
 }
 
