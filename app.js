@@ -165,15 +165,21 @@ const notifyAudio = {
     volume: 0.6
 };
 
+// NOTIF_KEYSの各キーと、実際のチェックボックスIDの対応表
+const NOTIF_CHECKBOX_IDS = {
+    soundChat: 'soundChatMsg',
+    soundDm: 'soundDmMsg',
+    soundFriendReq: 'soundFriendReq',
+    soundFriendAcc: 'soundFriendAcc',
+    pushChat: 'pushChatMsg',
+    pushDm: 'pushDmMsg',
+    pushFriendReq: 'pushFriendReq',
+    pushFriendAcc: 'pushFriendAcc',
+};
+
 function initNotifUI() {
     Object.keys(NOTIF_KEYS).forEach(key => {
-        const checkId = '#' + key.charAt(0).toLowerCase() + key.slice(1)
-            .replace('Chat','ChatMsg').replace('Dm','DmMsg')
-            .replace('FriendReq','FriendReq').replace('FriendAcc','FriendAcc');
-        const $el = $(checkId.replace('soundChat','soundChatMsg')
-            .replace('soundDm','soundDmMsg')
-            .replace('pushChat','pushChatMsg')
-            .replace('pushDm','pushDmMsg'));
+        const $el = $('#' + NOTIF_CHECKBOX_IDS[key]);
         if ($el.length) $el.prop('checked', getNotif(key));
     });
 
@@ -701,8 +707,22 @@ async function loadMoreMessages() {
         let docs = [];
         snap.forEach(d => docs.push({id: d.id, data: d.data()}));
         docs.reverse();
-        docs.forEach(item => { html += generateMessageHtml(item.id, item.data); });
+        const groupedFlags = computeGroupedFlags(docs);
+        docs.forEach((item, idx) => { html += generateMessageHtml(item.id, item.data, groupedFlags[idx]); });
         $("#messages").prepend(html);
+
+        // 直前まで先頭だったメッセージが、今読み込んだ古いメッセージと同一グループになる場合はグループ化する
+        if (firstVisibleMessage && docs.length > 0) {
+            const lastOlder = docs[docs.length - 1].data;
+            const boundaryUid = firstVisibleMessage.dataset.uid;
+            const boundaryTimeMs = parseInt(firstVisibleMessage.dataset.timeMs || '0', 10);
+            const lastOlderTimeMs = lastOlder.createdAt?.toMillis ? lastOlder.createdAt.toMillis() : Date.now();
+            const notStamp = !lastOlder.stamp && firstVisibleMessage.dataset.isStamp !== 'true';
+            const shouldGroup = notStamp && lastOlder.uid === boundaryUid && Math.abs(boundaryTimeMs - lastOlderTimeMs) <= GROUP_WINDOW_MS;
+            if (shouldGroup) {
+                $(firstVisibleMessage).addClass('grouped');
+            }
+        }
         
         if (firstMessageId) {
             const firstMessageElement = document.getElementById(firstMessageId);
@@ -725,7 +745,22 @@ async function loadMoreMessages() {
     }
 }
 
-function generateMessageHtml(id, d) {
+// 直前のメッセージと同じ投稿者・10分以内かどうかを判定し、まとめて表示するためのフラグ配列を作る
+const GROUP_WINDOW_MS = 10 * 60 * 1000;
+function computeGroupedFlags(docsAsc) {
+    return docsAsc.map((item, idx) => {
+        if (idx === 0) return false;
+        const prev = docsAsc[idx - 1].data;
+        const curr = item.data;
+        if (prev.uid !== curr.uid) return false;
+        if (curr.stamp || prev.stamp) return false; // スタンプは常に区切って表示
+        const prevTime = prev.createdAt?.toMillis ? prev.createdAt.toMillis() : Date.now();
+        const currTime = curr.createdAt?.toMillis ? curr.createdAt.toMillis() : Date.now();
+        return Math.abs(currTime - prevTime) <= GROUP_WINDOW_MS;
+    });
+}
+
+function generateMessageHtml(id, d, isGrouped = false) {
     const isMe = d.uid === auth.currentUser.uid;
     const isFriend = friendIds.includes(d.uid);
     const reactions = d.reactions || {};
@@ -774,6 +809,7 @@ function generateMessageHtml(id, d) {
     const replyText = d.replyTo ? escapeHTML(d.replyTo.text) : "";
 
     let timeStr = '';
+    let timeMs = d.createdAt?.toMillis ? d.createdAt.toMillis() : Date.now();
     if (d.createdAt) {
         const dt = d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
         const now = new Date();
@@ -786,7 +822,15 @@ function generateMessageHtml(id, d) {
         else { timeStr = dt.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' }) + ' ' + hm; }
     }
 
-    return `<div class="message ${isMe?'me':''} ${isStamp?'is-stamp':''} ${isFriend?'is-friend':''} ${effectClass}" id="msg-${id}" data-uid="${d.uid}" data-msgid="${id}" data-is-me="${isMe}" data-is-stamp="${isStamp}" data-name="${safeName.replace(/"/g,'&quot;')}" data-text="${safeText.replace(/"/g,'&quot;').replace(/\n/g,' ')}">
+    // 自分のメッセージはリアクションをメニューの右（画面端側）に出す。増えるほどメニューが押し出される形。
+    const opsIconsHtml = `
+                <span class="material-symbols-outlined op-btn" onclick="openReactionPicker('${id}', event, ${JSON.stringify(reactions).replace(/"/g, '&quot;')})" title="リアクション">add_reaction</span>
+                <span class="material-symbols-outlined op-btn" onclick="setReply('${id}','${safeName.replace(/'/g, "\\'")}','${(safeText || (isStamp?"スタンプ":"画像")).replace(/'/g, "\\'").replace(/\n/g, " ")}')" title="返信">reply</span>
+                ${isMe && !isStamp ? `<span class="material-symbols-outlined op-btn" onclick="setEdit('${id}','${safeText.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" title="編集">edit</span>` : ''}
+                ${isMe ? `<span class="material-symbols-outlined op-btn" style="color:var(--danger);" onclick="deleteMsg('${id}')" title="削除">delete</span>` : ''}`;
+    const msgOpsHtml = isMe ? (opsIconsHtml + rHtml) : (rHtml + opsIconsHtml);
+
+    return `<div class="message ${isMe?'me':''} ${isStamp?'is-stamp':''} ${isFriend?'is-friend':''} ${isGrouped?'grouped':''} ${effectClass}" id="msg-${id}" data-uid="${d.uid}" data-msgid="${id}" data-is-me="${isMe}" data-is-stamp="${isStamp}" data-time-ms="${timeMs}" data-time="${timeStr}" data-name="${safeName.replace(/"/g,'&quot;')}" data-text="${safeText.replace(/"/g,'&quot;').replace(/\n/g,' ')}">
         <div class="icon-container" onclick="showProfile('${d.uid}')">
             <img src="${d.photo || DEFAULT_AVATAR}" class="icon">
             <div class="status-dot ${userStatus === 'online' ? 'online' : 'offline'}"></div>
@@ -800,11 +844,7 @@ function generateMessageHtml(id, d) {
                 ${stampHtml}
             </div>
             <div class="msg-ops">
-                ${rHtml}
-                <span class="material-symbols-outlined op-btn" onclick="openReactionPicker('${id}', event, ${JSON.stringify(reactions).replace(/"/g, '&quot;')})" title="リアクション">add_reaction</span>
-                <span class="material-symbols-outlined op-btn" onclick="setReply('${id}','${safeName.replace(/'/g, "\\'")}','${(safeText || (isStamp?"スタンプ":"画像")).replace(/'/g, "\\'").replace(/\n/g, " ")}')" title="返信">reply</span>
-                ${isMe && !isStamp ? `<span class="material-symbols-outlined op-btn" onclick="setEdit('${id}','${safeText.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" title="編集">edit</span>` : ''}
-                ${isMe ? `<span class="material-symbols-outlined op-btn" style="color:var(--danger);" onclick="deleteMsg('${id}')" title="削除">delete</span>` : ''}
+                ${msgOpsHtml}
             </div>
         </div></div>`;
 }
@@ -845,9 +885,10 @@ function renderMessages(snap, isDesc = false) {
     if (isInitialLoad) {
         const fragment = document.createDocumentFragment();
         const tempDiv = document.createElement('div');
-        
-        docs.forEach((item) => {
-            tempDiv.innerHTML = generateMessageHtml(item.id, item.data);
+        const groupedFlags = computeGroupedFlags(docs);
+
+        docs.forEach((item, idx) => {
+            tempDiv.innerHTML = generateMessageHtml(item.id, item.data, groupedFlags[idx]);
             while (tempDiv.firstChild) {
                 fragment.appendChild(tempDiv.firstChild);
             }
@@ -902,13 +943,14 @@ function renderMessages(snap, isDesc = false) {
     } else {
         const updates = [];
         const additions = [];
-        
-        docs.forEach((item) => {
+        const groupedFlags = computeGroupedFlags(docs);
+
+        docs.forEach((item, idx) => {
             const existing = $(`#msg-${item.id}`);
             if (existing.length) {
-                updates.push({element: existing, html: generateMessageHtml(item.id, item.data)});
+                updates.push({element: existing, html: generateMessageHtml(item.id, item.data, groupedFlags[idx])});
             } else {
-                additions.push(generateMessageHtml(item.id, item.data));
+                additions.push(generateMessageHtml(item.id, item.data, groupedFlags[idx]));
             }
         });
         
@@ -1564,12 +1606,12 @@ window.openCasinoGame = async (game) => {
     }
 };
 
-$('#openSlotBtn').on('click', async () => {
+window.openCasinoFromMenu = async () => {
     const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
     const coins = userDoc.data().coins || 0;
     $('#casino-coins-top').text(String(coins).padStart(4, '0'));
     $('#casino-modal').removeClass('hidden');
-});
+};
 
 function spinReel(reelId, targetSymbol, duration) {
     return new Promise((resolve) => {
@@ -1834,7 +1876,7 @@ function updateBoostedSpinsDisplay() {
     }
 }
 
-$('#openLoginBonusBtn').on('click', openLoginBonusModal);
+window.openLoginBonusFromMenu = () => openLoginBonusModal();
 
 $('#claimBonusBtn').on('click', async () => {
     const $btn = $('#claimBonusBtn');
@@ -2036,11 +2078,10 @@ window.purchaseItem = async (itemId) => {
 };
 
 
-$('#openShopBtnHeader, #openShopBtn').on('click', () => {
-    $('#other-settings-modal').addClass('hidden');
+window.openShopFromMenu = () => {
     $('#shop-modal').removeClass('hidden');
     loadShopData();
-});
+};
 
 $('#toggleNotificationBtn').on('click', async () => {
     if (!('Notification' in window)) {
@@ -2452,7 +2493,7 @@ async function setupWebRTC() {
     $("#call-overlay").removeClass("hidden");
 }
 window.startCall = async () => {
-    $("#other-settings-modal").addClass("hidden"); await setupWebRTC();
+    toggleSettingsDrawer(false); await setupWebRTC();
     const callDoc = doc(collection(db, "calls")); currentCallId = callDoc.id;
     const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
     await setDoc(callDoc, { offer: { type: offer.type, sdp: offer.sdp }, caller: auth.currentUser.displayName });
@@ -2656,11 +2697,20 @@ const doLogout = async () => {
 };
 
 $("#logoutBtn, #logoutBtnSide").on("click", doLogout);
-$("#openOtherSettings").on("click", () => {
-    $("#other-settings-modal").removeClass("hidden");
-    initNotifUI();
-    updateAccountStatusUI();
-});
+
+// ===== 設定ドロワー（右からスライド） =====
+window.toggleSettingsDrawer = (show) => {
+    if (show) {
+        $("#other-settings-modal").addClass("open");
+        $("#settings-drawer-overlay").fadeIn(200);
+        initNotifUI();
+        updateAccountStatusUI();
+    } else {
+        $("#other-settings-modal").removeClass("open");
+        $("#settings-drawer-overlay").fadeOut(200);
+    }
+};
+$("#settings-drawer-overlay").on("click", () => toggleSettingsDrawer(false));
 
 // ===== アカウント状態表示 =====
 function updateAccountStatusUI() {
@@ -2726,17 +2776,6 @@ $('#addEmailBtn').on('click', async () => {
             ? 'メールアドレスの形式が正しくありません'
             : 'エラー: ' + err.message;
         $('#addEmailError').text(msg).show();
-    }
-});
-
-// ヘッダー⋮メニュー
-$("#headerMenuBtn").on("click", (e) => {
-    e.stopPropagation();
-    $("#headerMenuDropdown").toggleClass("hidden");
-});
-$(document).on("click", (e) => {
-    if (!$(e.target).closest("#headerMenuBtn, #headerMenuDropdown").length) {
-        $("#headerMenuDropdown").addClass("hidden");
     }
 });
 
@@ -2896,7 +2935,7 @@ window.addEventListener("touchstart", () => {
 // ============================================================
 $('#callDMBtn').on('click', async () => {
     if (!currentDMOtherUid) return;
-    $('#other-settings-modal').addClass('hidden');
+    toggleSettingsDrawer(false);
     await setupWebRTC();
     const callDoc = doc(collection(db, "calls"));
     currentCallId = callDoc.id;
@@ -2917,10 +2956,10 @@ $('#callDMBtn').on('click', async () => {
 // ============================================================
 // ランキング
 // ============================================================
-$('#openRankingBtn').on('click', () => {
+window.openRankingFromMenu = () => {
     $('#ranking-modal').removeClass('hidden');
     loadRanking();
-});
+};
 
 async function loadRanking() {
     const $list = $('#ranking-list').html('<div style="text-align:center; padding:20px; color:var(--txt-m);">読み込み中...</div>');
