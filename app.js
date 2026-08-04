@@ -1913,7 +1913,6 @@ async function loadShopData() {
     $('#user-coins').text(userCoins);
     
     const $container = $('#shop-items').empty();
-    const $preview = $('#item-preview');
     
     shopItems.forEach(item => {
         const owned = ownedItems.includes(item.id);
@@ -1936,11 +1935,11 @@ async function loadShopData() {
                 e.stopPropagation();
                 if (owned) {
                     showItemPreview(item, currentUserName, currentUserPhoto);
+                    $('#item-preview').data('previewId', item.id);
                     return;
                 }
                 const prevId = $('#item-preview').data('previewId');
-                const isVisible = !$('#item-preview').hasClass('hidden');
-                if (!isVisible || prevId !== item.id) {
+                if (prevId !== item.id) {
                     showItemPreview(item, currentUserName, currentUserPhoto);
                     $('#item-preview').data('previewId', item.id);
                     setTimeout(() => {
@@ -1949,7 +1948,7 @@ async function loadShopData() {
                     }, 100);
                 } else {
                     window.purchaseItem(item.id);
-                    $('#item-preview').addClass('hidden').data('previewId', null);
+                    resetItemPreview();
                 }
             });
         } else {
@@ -1961,26 +1960,21 @@ async function loadShopData() {
         $container.append($item);
     });
     
-    let previewTimeout;
     $container.on('mouseleave', function() {
-        previewTimeout = setTimeout(() => {
-            if (!$preview.is(':hover')) {
-                $preview.addClass('hidden');
-            }
-        }, 200);
-    });
-    
-    $preview.on('mouseenter', function() {
-        clearTimeout(previewTimeout);
-    });
-    
-    $preview.on('mouseleave', function() {
-        $preview.addClass('hidden');
+        resetItemPreview();
     });
 }
 
+function resetItemPreview() {
+    $('#item-preview').data('previewId', null).css('background', '');
+    $('#preview-item-name').text('アイテムにマウスを乗せてね');
+    $('#preview-item-desc').text('気になるアイテムをホバー（スマホはタップ）すると、ここに詳細が表示されます');
+    $('#preview-message').removeClass('effect-fire effect-sparkle effect-lightning effect-rainbow effect-shadow effect-ice effect-toxic effect-gold');
+    $('#preview-icon-container').removeClass('effect-fire effect-sparkle effect-lightning effect-rainbow effect-shadow effect-ice effect-toxic effect-gold');
+    $('#preview-badge').empty();
+}
+
 function showItemPreview(item, userName, userPhoto) {
-    $('#item-preview').removeClass('hidden');
     $('#preview-item-name').text(item.name);
     $('#preview-item-desc').text(item.description);
     $('#preview-name').text(userName);
