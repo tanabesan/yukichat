@@ -858,13 +858,7 @@ function triggerBadge(roomId = null) {
     }
     
     recalculateTotalUnread();
-    
-    const isDm = roomId && roomId !== 'global' && !roomId.startsWith('friend_');
-    if (isDm) {
-        playNotifSound('soundDm');
-    } else {
-        playNotifSound('soundChat');
-    }
+    // 通知音はここでは鳴らさない（呼び出し元でメッセージ種別に応じて鳴らす）
 }
 
 function renderMessages(snap, isDesc = false) {
@@ -985,21 +979,26 @@ function renderMessages(snap, isDesc = false) {
             if (auth.currentUser && lastDoc.data.uid !== auth.currentUser.uid) {
                 
                 const isAtBottom = ($box[0].scrollHeight - $box.scrollTop() <= $box[0].clientHeight + 150);
-                const isUnseen = document.visibilityState === 'hidden' || !document.hasFocus() || !isAtBottom;
+                const isHiddenOrUnfocused = document.visibilityState === 'hidden' || !document.hasFocus();
+                const isUnseen = isHiddenOrUnfocused || !isAtBottom;
+
+                const roomIdForBadge = currentRoomId || "global";
+                const lastSeen = lastSeenTimestamps[roomIdForBadge] || 0;
+                const msgTime = lastDoc.data.createdAt ? lastDoc.data.createdAt.toMillis() : Date.now();
+                const isDmNotif = !!currentRoomId;
+
+                if (msgTime > lastSeen) {
+                    // 通知音は「見ているかどうか」に関わらず、新着メッセージなら鳴らす
+                    playNotifSound(isDmNotif ? 'soundDm' : 'soundChat');
+                }
 
                 if (isUnseen) {
-                    const roomIdForBadge = currentRoomId || "global";
-                    
-                    const lastSeen = lastSeenTimestamps[roomIdForBadge] || 0;
-                    const msgTime = lastDoc.data.createdAt ? lastDoc.data.createdAt.toMillis() : Date.now();
-                    
                     if(msgTime > lastSeen) {
                         triggerBadge(roomIdForBadge);
                         
-                        if (document.visibilityState === 'hidden' || !document.hasFocus()) {
+                        if (isHiddenOrUnfocused) {
                             const notifTitle = `新着: ${lastDoc.data.name || "ゲスト"}`;
                             const notifBody = lastDoc.data.text || (lastDoc.data.stamp ? "スタンプ" : "画像");
-                            const isDmNotif = !!currentRoomId;
                             sendPushNotif(isDmNotif ? 'pushDm' : 'pushChat', notifTitle, notifBody, lastDoc.data.photo || DEFAULT_AVATAR, 'chat-msg');
                         }
                     }
