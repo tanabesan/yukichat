@@ -16,28 +16,6 @@
             opacity: 0.7;
             white-space: nowrap;
         }
-        /* PC: ⋮ボタン非表示、全アイコン表示 */
-        .header-icons-pc { display: flex !important; }
-        .header-icons-sp { display: none !important; }
-        /* スマホ: 全アイコン非表示、⋮ボタン表示 */
-        @media (max-width: 600px) {
-            .header-icons-pc { display: none !important; }
-            .header-icons-sp { display: block !important; }
-        }
-        .header-menu-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            color: var(--txt);
-            transition: background 0.15s;
-        }
-        .header-menu-item:hover {
-            background: rgba(255,255,255,0.08);
-        }
         .notif-toggle-row {
             display: flex;
             align-items: center;
@@ -131,6 +109,61 @@
             transition: background 0.15s;
         }
         .poker-hold-btn.held { background: #ffd700; color: #000; }
+
+        /* 設定ドロワー（右からスライド） */
+        :root {
+            --settings-drawer-w: 320px;
+        }
+        #settings-drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 3499;
+            display: none;
+        }
+        .right-drawer {
+            position: fixed;
+            top: 0;
+            right: calc(-1 * var(--settings-drawer-w));
+            width: var(--settings-drawer-w);
+            max-width: 88vw;
+            height: 100%;
+            background: var(--bg-2b);
+            transition: transform 0.3s ease;
+            z-index: 3500;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.5);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .right-drawer.open {
+            transform: translateX(calc(-1 * var(--settings-drawer-w)));
+        }
+        .right-drawer-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        /* メッセージのグルーピング表示（同一投稿者・10分以内の連続投稿はアイコンを省略） */
+        #messages { gap: 3px; }
+        .message:not(.grouped):not(:first-child) { margin-top: 13px; }
+        .message.grouped .icon-container { visibility: hidden; }
+        .message.grouped .user-info { display: none; }
+        .message.grouped { position: relative; }
+        .message.grouped:hover::before {
+            content: attr(data-time);
+            position: absolute;
+            left: -50px;
+            top: 3px;
+            font-size: 10px;
+            color: var(--txt-m);
+            white-space: nowrap;
+        }
+        .message.me.grouped:hover::before {
+            left: auto;
+            right: -50px;
+        }
     </style>
 </head>
 <body id="body-container">
@@ -201,6 +234,28 @@
             </div>
             <div class="sidebar-label">ダイレクトメッセージ</div>
             <div id="dm-list"></div>
+            <div class="sidebar-label">ゲーム＆特典</div>
+            <div class="sidebar-item" onclick="toggleSidebar(false); openShopFromMenu();">
+                <span class="material-symbols-outlined" style="color:#f093fb;">shopping_bag</span>
+                <span>ショップ</span>
+            </div>
+            <div class="sidebar-item" onclick="toggleSidebar(false); openCasinoFromMenu();">
+                <span class="material-symbols-outlined" style="color:#ff4757;">casino</span>
+                <span>カジノ</span>
+            </div>
+            <div class="sidebar-item" onclick="toggleSidebar(false); openRankingFromMenu();">
+                <span class="material-symbols-outlined" style="color:#ffd700;">leaderboard</span>
+                <span>ランキング</span>
+            </div>
+            <div class="sidebar-item" onclick="toggleSidebar(false); openLoginBonusFromMenu();">
+                <span class="material-symbols-outlined" style="color:#ffd700;">redeem</span>
+                <span>ログインボーナス</span>
+            </div>
+            <div class="sidebar-label">その他</div>
+            <div class="sidebar-item" onclick="toggleSidebar(false); toggleSettingsDrawer(true);">
+                <span class="material-symbols-outlined">settings</span>
+                <span>設定</span>
+            </div>
         </div>
         <div style="padding: 15px; border-top: 1px solid #222;">
             <div class="sidebar-item" id="logoutBtnSide" style="color: var(--danger);">
@@ -218,43 +273,6 @@
             </div>
             <div style="display:flex; gap:15px; align-items:center;">
                 <span id="callDMBtn" class="material-symbols-outlined op-btn hidden" style="color:#00c853; opacity:1; font-size:24px;" title="通話">call</span>
-
-                <!-- PC: 全部表示 -->
-                <div class="header-icons-pc" style="display:flex; gap:15px; align-items:center;">
-                    <span id="openRankingBtn" class="material-symbols-outlined op-btn" style="color:#ffd700; opacity:1; font-size:24px;" title="ランキング">leaderboard</span>
-                    <span id="openSlotBtn" class="material-symbols-outlined op-btn" style="color:#ff4757; opacity:1; font-size:24px;" title="カジノ">casino</span>
-                    <span id="openLoginBonusBtn" class="material-symbols-outlined op-btn" style="color:#ffd700; opacity:1; font-size:24px;" title="ログインボーナス">redeem</span>
-                    <span id="openShopBtnHeader" class="material-symbols-outlined op-btn" style="color:#f093fb; opacity:1; font-size:24px;" title="ショップ">shopping_bag</span>
-                    <span id="openOtherSettings" class="material-symbols-outlined op-btn" style="opacity:1;" title="設定">settings</span>
-                </div>
-
-                <!-- スマホ: ⋮ボタン -->
-                <div class="header-icons-sp" style="position:relative;">
-                    <span id="headerMenuBtn" class="material-symbols-outlined op-btn" style="opacity:1; font-size:24px;" title="メニュー">more_vert</span>
-                    <div id="headerMenuDropdown" class="hidden" style="position:fixed; top:52px; right:10px; background:var(--bg-2b); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.5); padding:8px; z-index:9999; min-width:160px;">
-                        <div class="header-menu-item" onclick="$('#headerMenuDropdown').addClass('hidden'); $('#openRankingBtn').click()">
-                            <span class="material-symbols-outlined" style="color:#ffd700; font-size:20px;">leaderboard</span>
-                            <span>ランキング</span>
-                        </div>
-                        <div class="header-menu-item" onclick="$('#headerMenuDropdown').addClass('hidden'); $('#openSlotBtn').click()">
-                            <span class="material-symbols-outlined" style="color:#ff4757; font-size:20px;">casino</span>
-                            <span>スロット</span>
-                        </div>
-                        <div class="header-menu-item" onclick="$('#headerMenuDropdown').addClass('hidden'); $('#openLoginBonusBtn').click()">
-                            <span class="material-symbols-outlined" style="color:#ffd700; font-size:20px;">redeem</span>
-                            <span>ログインボーナス</span>
-                        </div>
-                        <div class="header-menu-item" onclick="$('#headerMenuDropdown').addClass('hidden'); $('#openShopBtnHeader').click()">
-                            <span class="material-symbols-outlined" style="color:#f093fb; font-size:20px;">shopping_bag</span>
-                            <span>ショップ</span>
-                        </div>
-                        <div style="border-top:1px solid rgba(255,255,255,0.1); margin:6px 0;"></div>
-                        <div class="header-menu-item" onclick="$('#headerMenuDropdown').addClass('hidden'); $('#openOtherSettings').click()">
-                            <span class="material-symbols-outlined" style="font-size:20px;">settings</span>
-                            <span>設定</span>
-                        </div>
-                    </div>
-                </div>
             </div>
         </header>
 
@@ -426,9 +444,13 @@
         </div>
     </div>
 
-    <div id="other-settings-modal" class="modal-overlay hidden">
-        <div class="responsive-card" style="padding:24px; max-width:360px; max-height:90vh; overflow-y:auto;">
-            <h3 style="margin:0 0 20px;">⚙️ 設定</h3>
+    <div id="settings-drawer-overlay"></div>
+    <div id="other-settings-modal" class="right-drawer">
+        <div class="sidebar-header">
+            <span>⚙️ 設定</span>
+            <span class="material-symbols-outlined op-btn" onclick="toggleSettingsDrawer(false)">close</span>
+        </div>
+        <div class="right-drawer-content">
 
             <!-- 通知音セクション -->
             <div style="margin-bottom:20px;">
@@ -500,7 +522,6 @@
 
             <!-- ログアウト -->
             <button id="logoutBtn" style="width:100%; padding:12px; background:var(--danger); color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:15px; margin-top:4px; cursor:pointer;">ログアウト</button>
-            <button onclick="$('#other-settings-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:8px; cursor:pointer; padding:10px;">閉じる</button>
         </div>
     </div>
 
