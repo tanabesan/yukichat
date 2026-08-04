@@ -589,6 +589,9 @@ onAuthStateChanged(auth, async (user) => {
         $("#auth-container").removeClass("hidden");
         globalUnsubscribers.forEach(unsub => unsub());
         globalUnsubscribers = [];
+        // 自動ログアウト・トークン失効などでユーザーがいなくなった場合も、
+        // 直前まで自分だったuidのオンライン状態を明示的にoffline化する
+        clearPresenceOnSignedOut();
     }
 });
 
@@ -2509,23 +2512,55 @@ function listenForCalls() {
 
 // ===== Realtime Database プレゼンス管理（RTDBのみ、Firestore書き込みなし） =====
 let statusCache = {}; // { uid: 'online' | 'offline' }
-let presenceInitialized = false;
+let presenceUid = null;       // 現在プレゼンスを設定しているuid
+let unsubConnected = null;    // .info/connected の購読解除用
+let statusListenerStarted = false;
+
+function markUserOffline(uid) {
+    if (!uid) return;
+    rtdbSet(rtdbRef(rtdb, `status/${uid}`), {
+        state: 'offline',
+        lastSeen: rtdbServerTimestamp()
+    }).catch(() => {});
+}
+
+// ログアウト（自動ログアウトも含む）でユーザーがいなくなった時に呼ぶ
+function clearPresenceOnSignedOut() {
+    markUserOffline(presenceUid);
+    presenceUid = null;
+    if (unsubConnected) {
+        unsubConnected();
+        unsubConnected = null;
+    }
+}
 
 const initPresence = (uid) => {
-    if (presenceInitialized) return;
-    presenceInitialized = true;
+    if (presenceUid === uid) return; // 既に同じユーザーで設定済み
+
+    // 別ユーザーに切り替わる場合は、前のユーザーを明示的にオフラインにしておく
+    if (presenceUid && presenceUid !== uid) {
+        markUserOffline(presenceUid);
+    }
+    if (unsubConnected) {
+        unsubConnected();
+        unsubConnected = null;
+    }
+
+    presenceUid = uid;
 
     const myStatusRef  = rtdbRef(rtdb, `status/${uid}`);
     const connectedRef = rtdbRef(rtdb, '.info/connected');
 
-    onValue(connectedRef, (snap) => {
+    unsubConnected = onValue(connectedRef, (snap) => {
         if (snap.val() === false) return; // 切断中は何もしない
+        if (presenceUid !== uid) return;  // その間に別ユーザーへ切り替わっていたら無視
 
         // ① 切断時にサーバー側で自動的にofflineにする設定を先に仕込む
         onDisconnect(myStatusRef).set({
             state: 'offline',
             lastSeen: rtdbServerTimestamp()
         }).then(() => {
+            if (presenceUid !== uid) return;
             // ② 仕込み完了後にonlineをセット
             rtdbSet(myStatusRef, {
                 state: 'online',
@@ -2534,14 +2569,17 @@ const initPresence = (uid) => {
         });
     });
 
-    // 全ユーザーのステータスをRTDBから直接購読（Firestoreは経由しない）
-    onValue(rtdbRef(rtdb, 'status'), (snap) => {
-        const data = snap.val() || {};
-        Object.keys(data).forEach(u => {
-            statusCache[u] = data[u]?.state || 'offline';
+    // 全ユーザーのステータス購読は一度だけ張ればよい
+    if (!statusListenerStarted) {
+        statusListenerStarted = true;
+        onValue(rtdbRef(rtdb, 'status'), (snap) => {
+            const data = snap.val() || {};
+            Object.keys(data).forEach(u => {
+                statusCache[u] = data[u]?.state || 'offline';
+            });
+            updateAllStatusDots();
         });
-        updateAllStatusDots();
-    });
+    }
 };
 
 function updateAllStatusDots() {
