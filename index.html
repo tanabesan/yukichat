@@ -224,16 +224,6 @@
             <span class="material-symbols-outlined op-btn" onclick="toggleSidebar(false)">close</span>
         </div>
         <div class="sidebar-content">
-            <div class="sidebar-item active" onclick="switchChat(null); toggleSidebar(false);">
-                <span class="material-symbols-outlined">public</span>
-                <span>パブリックチャット</span>
-            </div>
-            <div class="sidebar-item" onclick="$('#user-list-modal').removeClass('hidden'); toggleSidebar(false); switchUserTab('all');">
-                <span class="material-symbols-outlined">person_search</span>
-                <span>ユーザーを探す</span>
-            </div>
-            <div class="sidebar-label">ダイレクトメッセージ</div>
-            <div id="dm-list"></div>
             <div class="sidebar-label">ゲーム＆特典</div>
             <div class="sidebar-item" onclick="toggleSidebar(false); openShopFromMenu();">
                 <span class="material-symbols-outlined" style="color:#f093fb;">shopping_bag</span>
@@ -251,11 +241,16 @@
                 <span class="material-symbols-outlined" style="color:#ffd700;">redeem</span>
                 <span>ログインボーナス</span>
             </div>
-            <div class="sidebar-label">その他</div>
-            <div class="sidebar-item" onclick="toggleSidebar(false); toggleSettingsDrawer(true);">
-                <span class="material-symbols-outlined">settings</span>
-                <span>設定</span>
+            <div class="sidebar-item active" onclick="switchChat(null); toggleSidebar(false);">
+                <span class="material-symbols-outlined">public</span>
+                <span>パブリックチャット</span>
             </div>
+            <div class="sidebar-item" onclick="$('#user-list-modal').removeClass('hidden'); toggleSidebar(false); switchUserTab('all');">
+                <span class="material-symbols-outlined">person_search</span>
+                <span>ユーザーを探す</span>
+            </div>
+            <div class="sidebar-label">ダイレクトメッセージ</div>
+            <div id="dm-list"></div>
         </div>
         <div style="padding: 15px; border-top: 1px solid #222;">
             <div class="sidebar-item" id="logoutBtnSide" style="color: var(--danger);">
@@ -273,6 +268,7 @@
             </div>
             <div style="display:flex; gap:15px; align-items:center;">
                 <span id="callDMBtn" class="material-symbols-outlined op-btn hidden" style="color:#00c853; opacity:1; font-size:24px;" title="通話">call</span>
+                <span id="openOtherSettings" class="material-symbols-outlined op-btn" style="opacity:1; font-size:24px;" title="設定" onclick="toggleSettingsDrawer(true)">settings</span>
             </div>
         </header>
 
