@@ -803,7 +803,9 @@ async function loadLinkPreview(msgId, url) {
             };
             linkPreviewCache[url] = data;
         }
-        if (!data || (!data.title && !data.description && !data.image)) return;
+        // 画像や説明文など、URL自体以上の情報が取れなかった場合はカードを出さない
+        // （タイトルだけだと「リンクをそのまま繰り返しているだけ」に見えてしまうため）
+        if (!data || (!data.description && !data.image)) return;
 
         const el = document.getElementById(`link-preview-${msgId}`);
         if (!el) return; // メッセージがもうDOMに無い（別チャットに移動した等）
@@ -826,14 +828,24 @@ async function loadLinkPreview(msgId, url) {
 }
 
 // メッセージの「見た目に関わる部分」だけを軽くハッシュ化して、変化検知に使う
+// （HTML属性に直接埋め込むため、特殊文字を含まない短い文字列にする）
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = (hash * 31 + str.charCodeAt(i)) | 0;
+    }
+    return (hash >>> 0).toString(36);
+}
+
 function computeMsgFingerprint(d) {
-    return JSON.stringify({
+    const raw = JSON.stringify({
         text: d.text || '',
         isEdited: !!d.isEdited,
         reactions: d.reactions || {},
         image: d.image || '',
         stamp: d.stamp || '',
     });
+    return simpleHash(raw);
 }
 
 function generateMessageHtml(id, d, isGrouped = false) {
@@ -909,7 +921,7 @@ function generateMessageHtml(id, d, isGrouped = false) {
                 ${isMe ? `<span class="material-symbols-outlined op-btn" style="color:var(--danger);" onclick="deleteMsg('${id}')" title="削除">delete</span>` : ''}`;
     const msgOpsHtml = isMe ? (opsIconsHtml + rHtml) : (rHtml + opsIconsHtml);
 
-    return `<div class="message ${isMe?'me':''} ${isStamp?'is-stamp':''} ${isFriend?'is-friend':''} ${isGrouped?'grouped':''} ${effectClass}" id="msg-${id}" data-uid="${d.uid}" data-msgid="${id}" data-is-me="${isMe}" data-is-stamp="${isStamp}" data-time-ms="${timeMs}" data-time="${timeStr}" data-fp="${escapeHTML(computeMsgFingerprint(d))}" data-name="${safeName.replace(/"/g,'&quot;')}" data-text="${safeText.replace(/"/g,'&quot;').replace(/\n/g,' ')}">
+    return `<div class="message ${isMe?'me':''} ${isStamp?'is-stamp':''} ${isFriend?'is-friend':''} ${isGrouped?'grouped':''} ${effectClass}" id="msg-${id}" data-uid="${d.uid}" data-msgid="${id}" data-is-me="${isMe}" data-is-stamp="${isStamp}" data-time-ms="${timeMs}" data-time="${timeStr}" data-fp="${computeMsgFingerprint(d)}" data-name="${safeName.replace(/"/g,'&quot;')}" data-text="${safeText.replace(/"/g,'&quot;').replace(/\n/g,' ')}">
         <div class="icon-container" onclick="showProfile('${d.uid}')">
             <img src="${d.photo || DEFAULT_AVATAR}" class="icon">
             <div class="status-dot ${userStatus === 'online' ? 'online' : 'offline'}"></div>
@@ -1020,7 +1032,7 @@ function renderMessages(snap, isDesc = false) {
         docs.forEach((item, idx) => {
             const existing = $(`#msg-${item.id}`);
             if (existing.length) {
-                const newFp = escapeHTML(computeMsgFingerprint(item.data));
+                const newFp = computeMsgFingerprint(item.data);
                 if (existing.attr('data-fp') === newFp) {
                     return; // 内容に変化が無いメッセージは作り直さない（プレビュー再取得や表示のガタつきを防ぐ）
                 }
