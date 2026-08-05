@@ -763,6 +763,68 @@ function computeGroupedFlags(docsAsc) {
     });
 }
 
+// ===== リンクプレビュー（Cloud Functions不要、公開APIを直接利用） =====
+// microlink.io の無料公開エンドポイント。CORS対応済みでブラウザから直接呼べる。
+// 無料枠のレート制限があるため、同一URLはキャッシュして再取得しない。
+const LINK_PREVIEW_API_URL = "https://api.microlink.io/";
+const linkPreviewCache = {}; // url -> {title, description, image, siteName}
+const URL_REGEX = /(https?:\/\/[^\s<>"']+)/gi;
+
+function extractFirstUrl(text) {
+    if (!text) return null;
+    const m = text.match(URL_REGEX);
+    if (!m) return null;
+    return m[0].replace(/[),.;!?]+$/, '');
+}
+
+// 本文中のURLをクリック可能なリンクにする（safeText は既にHTMLエスケープ済みの前提）
+function linkifyText(escapedText) {
+    return escapedText.replace(URL_REGEX, (url) => {
+        const cleanUrl = url.replace(/[),.;!?]+$/, '');
+        const trail = url.slice(cleanUrl.length);
+        return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="msg-link">${cleanUrl}</a>${trail}`;
+    });
+}
+
+async function loadLinkPreview(msgId, url) {
+    try {
+        let data = linkPreviewCache[url];
+        if (!data) {
+            const res = await fetch(`${LINK_PREVIEW_API_URL}?url=${encodeURIComponent(url)}`);
+            if (!res.ok) throw new Error('failed to fetch preview');
+            const json = await res.json();
+            if (json.status !== 'success' || !json.data) throw new Error('no preview data');
+            const d2 = json.data;
+            data = {
+                title: d2.title || null,
+                description: d2.description || null,
+                image: (d2.image && d2.image.url) || (d2.logo && d2.logo.url) || null,
+                siteName: d2.publisher || null,
+            };
+            linkPreviewCache[url] = data;
+        }
+        if (!data || (!data.title && !data.description && !data.image)) return;
+
+        const el = document.getElementById(`link-preview-${msgId}`);
+        if (!el) return; // メッセージがもうDOMに無い（別チャットに移動した等）
+
+        let hostname = '';
+        try { hostname = new URL(url).hostname; } catch (e) {}
+
+        el.innerHTML = `
+            <a href="${url}" target="_blank" rel="noopener noreferrer" class="link-preview-card">
+                ${data.image ? `<img src="${escapeHTML(data.image)}" class="link-preview-img" loading="lazy" onerror="this.remove()">` : ''}
+                <div class="link-preview-body">
+                    ${hostname ? `<div class="link-preview-site">${escapeHTML(hostname)}</div>` : ''}
+                    ${data.title ? `<div class="link-preview-title">${escapeHTML(data.title)}</div>` : ''}
+                    ${data.description ? `<div class="link-preview-desc">${escapeHTML(data.description)}</div>` : ''}
+                </div>
+            </a>`;
+    } catch (e) {
+        // 取得失敗時は何も表示しない（サイレントに諦める）
+    }
+}
+
 function generateMessageHtml(id, d, isGrouped = false) {
     const isMe = d.uid === auth.currentUser.uid;
     const isFriend = friendIds.includes(d.uid);
@@ -806,6 +868,9 @@ function generateMessageHtml(id, d, isGrouped = false) {
     }
     const imgHtml = d.image ? `<img src="${d.image}" class="sent-img" onclick="window.open('${d.image}')">` : '';
     const stampHtml = d.stamp ? `<img src="${d.stamp}" class="stamp-display">` : '';
+    const firstUrl = (!isStamp && d.text) ? extractFirstUrl(d.text) : null;
+    const linkPreviewHtml = firstUrl ? `<div class="link-preview-slot" id="link-preview-${id}"></div>` : '';
+    if (firstUrl) loadLinkPreview(id, firstUrl);
     const safeName = escapeHTML(d.name || "ゲスト");
     const safeText = escapeHTML(d.text || "");
     const replyName = d.replyTo ? escapeHTML(d.replyTo.name) : "";
@@ -842,7 +907,8 @@ function generateMessageHtml(id, d, isGrouped = false) {
             <div class="user-info">${safeName}${badgeHtml}${timeStr ? `<span class="msg-time">${timeStr}</span>` : ''}</div>
             <div class="bubble">
                 ${d.replyTo ? `<div class="reply-in-bubble" onclick="scrollToMsg('${d.replyTo.id}')">@${replyName} ${replyText}</div>` : ''}
-                ${d.text ? `<div>${safeText}${d.isEdited ? '<span class="edited-mark">(編集済)</span>' : ''}</div>` : ''}
+                ${d.text ? `<div>${linkifyText(safeText)}${d.isEdited ? '<span class="edited-mark">(編集済)</span>' : ''}</div>` : ''}
+                ${linkPreviewHtml}
                 ${imgHtml}
                 ${stampHtml}
             </div>
