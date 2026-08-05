@@ -825,6 +825,17 @@ async function loadLinkPreview(msgId, url) {
     }
 }
 
+// メッセージの「見た目に関わる部分」だけを軽くハッシュ化して、変化検知に使う
+function computeMsgFingerprint(d) {
+    return JSON.stringify({
+        text: d.text || '',
+        isEdited: !!d.isEdited,
+        reactions: d.reactions || {},
+        image: d.image || '',
+        stamp: d.stamp || '',
+    });
+}
+
 function generateMessageHtml(id, d, isGrouped = false) {
     const isMe = d.uid === auth.currentUser.uid;
     const isFriend = friendIds.includes(d.uid);
@@ -898,7 +909,7 @@ function generateMessageHtml(id, d, isGrouped = false) {
                 ${isMe ? `<span class="material-symbols-outlined op-btn" style="color:var(--danger);" onclick="deleteMsg('${id}')" title="削除">delete</span>` : ''}`;
     const msgOpsHtml = isMe ? (opsIconsHtml + rHtml) : (rHtml + opsIconsHtml);
 
-    return `<div class="message ${isMe?'me':''} ${isStamp?'is-stamp':''} ${isFriend?'is-friend':''} ${isGrouped?'grouped':''} ${effectClass}" id="msg-${id}" data-uid="${d.uid}" data-msgid="${id}" data-is-me="${isMe}" data-is-stamp="${isStamp}" data-time-ms="${timeMs}" data-time="${timeStr}" data-name="${safeName.replace(/"/g,'&quot;')}" data-text="${safeText.replace(/"/g,'&quot;').replace(/\n/g,' ')}">
+    return `<div class="message ${isMe?'me':''} ${isStamp?'is-stamp':''} ${isFriend?'is-friend':''} ${isGrouped?'grouped':''} ${effectClass}" id="msg-${id}" data-uid="${d.uid}" data-msgid="${id}" data-is-me="${isMe}" data-is-stamp="${isStamp}" data-time-ms="${timeMs}" data-time="${timeStr}" data-fp="${escapeHTML(computeMsgFingerprint(d))}" data-name="${safeName.replace(/"/g,'&quot;')}" data-text="${safeText.replace(/"/g,'&quot;').replace(/\n/g,' ')}">
         <div class="icon-container" onclick="showProfile('${d.uid}')">
             <img src="${d.photo || DEFAULT_AVATAR}" class="icon">
             <div class="status-dot ${userStatus === 'online' ? 'online' : 'offline'}"></div>
@@ -1009,6 +1020,10 @@ function renderMessages(snap, isDesc = false) {
         docs.forEach((item, idx) => {
             const existing = $(`#msg-${item.id}`);
             if (existing.length) {
+                const newFp = escapeHTML(computeMsgFingerprint(item.data));
+                if (existing.attr('data-fp') === newFp) {
+                    return; // 内容に変化が無いメッセージは作り直さない（プレビュー再取得や表示のガタつきを防ぐ）
+                }
                 updates.push({element: existing, html: generateMessageHtml(item.id, item.data, groupedFlags[idx])});
             } else {
                 additions.push(generateMessageHtml(item.id, item.data, groupedFlags[idx]));
