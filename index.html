@@ -246,6 +246,16 @@
             display: none;
             margin: 0;
         }
+        /* 外部style.cssのスマホ用「.msg-ops常に非表示」を上書きする。
+           今はアイコンを描画しておらずリアクションバッジしか入らないので、スマホでも表示させる */
+        @media (max-width: 600px) {
+            .msg-ops {
+                display: flex !important;
+            }
+            .msg-ops:empty {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body id="body-container">
