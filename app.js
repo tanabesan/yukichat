@@ -713,6 +713,7 @@ async function loadMoreMessages() {
         const groupedFlags = computeGroupedFlags(docs);
         docs.forEach((item, idx) => { html += generateMessageHtml(item.id, item.data, groupedFlags[idx]); });
         $("#messages").prepend(html);
+        triggerLinkPreviews(docs);
 
         // 直前まで先頭だったメッセージが、今読み込んだ古いメッセージと同一グループになる場合はグループ化する
         if (firstVisibleMessage && docs.length > 0) {
@@ -941,6 +942,17 @@ function simpleHash(str) {
     return (hash >>> 0).toString(36);
 }
 
+// DOM挿入・入れ替えが完全に終わった後に、渡されたメッセージ群の中でURLを含むものだけ
+// リンクプレビュー取得を呼び出す（呼び出し元は各insert/replace処理が終わった直後で使う）
+function triggerLinkPreviews(docsList) {
+    docsList.forEach(item => {
+        const d = item.data;
+        if (d.stamp || !d.text) return;
+        const url = extractFirstUrl(d.text);
+        if (url) loadLinkPreview(item.id, url);
+    });
+}
+
 function computeMsgFingerprint(d) {
     const raw = JSON.stringify({
         text: d.text || '',
@@ -997,8 +1009,9 @@ function generateMessageHtml(id, d, isGrouped = false) {
     const stampHtml = d.stamp ? `<img src="${d.stamp}" class="stamp-display">` : '';
     const firstUrl = (!isStamp && d.text) ? extractFirstUrl(d.text) : null;
     const linkPreviewHtml = firstUrl ? `<div class="link-preview-slot" id="link-preview-${id}"></div>` : '';
-    console.log('[link-preview] generateMessageHtml呼び出し', { id, text: d.text, isStamp, firstUrl });
-    if (firstUrl) loadLinkPreview(id, firstUrl);
+    // ここではloadLinkPreviewを呼ばない。DOM挿入・入れ替えが完全に終わった後に呼び出し元から呼ぶ
+    // （先に呼んでしまうと、要素が入れ替わる前の古いDOMにプレビューを差し込んでしまい、
+    //   直後のreplaceWith等で空のプレビュー枠に戻ってしまうため）
     const safeName = escapeHTML(d.name || "ゲスト");
     const safeText = escapeHTML(d.text || "");
     const replyName = d.replyTo ? escapeHTML(d.replyTo.name) : "";
@@ -1125,10 +1138,12 @@ function renderMessages(snap, isDesc = false) {
         }
         isInitialLoad = false;
         lastRenderedMsgId = docs.length ? docs[docs.length - 1].id : null;
+        triggerLinkPreviews(docs);
     } else {
         const updates = [];
         const additions = [];
         const groupedFlags = computeGroupedFlags(docs);
+        const touchedItems = []; // 実際に作り直した（＝プレビュー再取得が必要な）メッセージだけ集める
 
         docs.forEach((item, idx) => {
             const existing = $(`#msg-${item.id}`);
@@ -1140,9 +1155,11 @@ function renderMessages(snap, isDesc = false) {
                 }
                 console.log('[link-preview] 更新として再生成', item.id);
                 updates.push({element: existing, html: generateMessageHtml(item.id, item.data, groupedFlags[idx])});
+                touchedItems.push(item);
             } else {
                 console.log('[link-preview] 新規追加として生成', item.id, item.data.text);
                 additions.push(generateMessageHtml(item.id, item.data, groupedFlags[idx]));
+                touchedItems.push(item);
             }
         });
         
@@ -1161,6 +1178,9 @@ function renderMessages(snap, isDesc = false) {
             
             $box[0].appendChild(fragment);
         }
+
+        // ここまででDOMの入れ替え・追加が完全に終わっているので、ここでプレビュー取得を呼ぶ
+        triggerLinkPreviews(touchedItems);
         
         const newestDoc = docs.length ? docs[docs.length - 1] : null;
         const hasNewMessage = !isLoadingMoreMessages && newestDoc && newestDoc.id !== lastRenderedMsgId;
