@@ -879,6 +879,9 @@ async function loadLinkPreview(msgId, url, isRetry = false, isDomRetry = false) 
         }
 
         console.log('[link-preview] カードを描画します', msgId, url);
+        // 高さが増える前に「一番下を見ていたか」を判定しておく（挿入後だと必ずfalseになってしまうため）
+        const $box = $("#messages");
+        const wasAtBottom = $box.length > 0 && ($box[0].scrollHeight - $box.scrollTop() <= $box[0].clientHeight + 200);
         let hostname = '';
         try { hostname = new URL(url).hostname; } catch (e) {}
 
@@ -893,7 +896,7 @@ async function loadLinkPreview(msgId, url, isRetry = false, isDomRetry = false) 
             </a>`;
 
         // カード分だけ高さが増えるので、元々一番下を見ていた場合は追従してスクロールする
-        scrollToBottom();
+        scrollToBottom(wasAtBottom);
     } catch (e) {
         // 取得失敗時は何も表示しない（サイレントに諦める）
         console.log('[link-preview] 取得失敗', url, e);
