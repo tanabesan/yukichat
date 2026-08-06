@@ -218,6 +218,22 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
+
+        /* スマホの長押しで出る標準のコピー選択ポップアップを無効化（代わりに独自の長押しメニューを使う） */
+        @media (max-width: 600px) {
+            .message .bubble,
+            .message .msg-body,
+            .message .icon-container,
+            .message .user-info {
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                user-select: none;
+            }
+            /* リンクだけは長押しでも通常のタップ操作を優先させたいので選択除外はそのまま維持 */
+            .message .msg-link {
+                -webkit-touch-callout: default;
+            }
+        }
     </style>
 </head>
 <body id="body-container">
