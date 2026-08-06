@@ -786,7 +786,7 @@ function linkifyText(escapedText) {
     });
 }
 
-async function loadLinkPreview(msgId, url) {
+async function loadLinkPreview(msgId, url, isRetry = false) {
     try {
         let data = linkPreviewCache[url];
         if (!data) {
@@ -801,7 +801,15 @@ async function loadLinkPreview(msgId, url) {
                 image: (d2.image && d2.image.url) || (d2.logo && d2.logo.url) || null,
                 siteName: d2.publisher || null,
             };
-            linkPreviewCache[url] = data;
+            const hasUsefulContent = !!(data.image || data.description);
+            if (hasUsefulContent) {
+                linkPreviewCache[url] = data; // 十分な情報が取れた時だけキャッシュする
+            } else if (!isRetry) {
+                // 初回だけ情報が薄いことがある（unfurl先が裏で処理中で、少し後にリッチな情報が揃うケース）
+                // ので、少し待って1回だけ再取得を試みる
+                setTimeout(() => loadLinkPreview(msgId, url, true), 1500);
+                return;
+            }
         }
         // 画像や説明文など、URL自体以上の情報が取れなかった場合はカードを出さない
         // （タイトルだけだと「リンクをそのまま繰り返しているだけ」に見えてしまうため）
