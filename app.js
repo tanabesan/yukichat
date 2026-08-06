@@ -835,8 +835,8 @@ function linkifyText(escapedText) {
     });
 }
 
-async function loadLinkPreview(msgId, url, isRetry = false) {
-    console.log('[link-preview] loadLinkPreview開始', msgId, url, 'isRetry=' + isRetry);
+async function loadLinkPreview(msgId, url, isRetry = false, isDomRetry = false) {
+    console.log('[link-preview] loadLinkPreview開始', msgId, url, 'isRetry=' + isRetry, 'isDomRetry=' + isDomRetry);
     try {
         let data = linkPreviewCache[url];
         if (!data) {
@@ -867,14 +867,21 @@ async function loadLinkPreview(msgId, url, isRetry = false) {
 
         const el = document.getElementById(`link-preview-${msgId}`);
         if (!el) {
-            console.log('[link-preview] DOM要素が見つからない', `link-preview-${msgId}`);
-            return; // メッセージがもうDOMに無い（別チャットに移動した等）
+            // generateMessageHtmlの呼び出し時点ではまだDOMに挿入されていないことがある
+            // （特にキャッシュ利用時は取得が速すぎてDOM挿入より先に実行されてしまう）ので、少し待って1回だけ再試行する
+            if (!isDomRetry) {
+                console.log('[link-preview] DOM要素がまだ無いので少し待って再試行', `link-preview-${msgId}`);
+                setTimeout(() => loadLinkPreview(msgId, url, isRetry, true), 150);
+            } else {
+                console.log('[link-preview] 再試行してもDOM要素が見つからない', `link-preview-${msgId}`);
+            }
+            return;
         }
 
+        console.log('[link-preview] カードを描画します', msgId, url);
         let hostname = '';
         try { hostname = new URL(url).hostname; } catch (e) {}
 
-        console.log('[link-preview] カードを描画します', msgId, url);
         el.innerHTML = `
             <a href="${url}" target="_blank" rel="noopener noreferrer" class="link-preview-card">
                 ${data.image ? `<img src="${escapeHTML(data.image)}" class="link-preview-img" loading="lazy" onerror="this.remove()">` : ''}
