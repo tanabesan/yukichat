@@ -767,6 +767,55 @@ function computeGroupedFlags(docsAsc) {
 // microlink.io の無料公開エンドポイント。CORS対応済みでブラウザから直接呼べる。
 // 無料枠のレート制限があるため、同一URLはキャッシュして再取得しない。
 const LINK_PREVIEW_API_URL = "https://api.microlink.io/";
+
+// YouTubeは公開のoEmbed APIを使う（microlinkの無料枠だとボット対策で取得できないため）
+const YOUTUBE_URL_REGEX = /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)/i;
+
+async function fetchYoutubeOembed(url) {
+    const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+    if (!res.ok) throw new Error('youtube oembed failed: ' + res.status);
+    const json = await res.json();
+    return {
+        title: json.title || null,
+        description: json.author_name ? `${json.author_name}` : null,
+        image: json.thumbnail_url || null,
+        siteName: 'YouTube',
+    };
+}
+
+// microlinkでURLをunfurlして、こちらの共通フォーマットに変換する
+async function fetchMicrolinkPreview(url) {
+    const res = await fetch(`${LINK_PREVIEW_API_URL}?url=${encodeURIComponent(url)}`);
+    if (!res.ok) {
+        let bodyText = '';
+        try { bodyText = await res.text(); } catch (e) {}
+        console.warn('[link-preview] HTTPエラー', res.status, url, bodyText);
+        throw new Error('failed to fetch preview');
+    }
+    const json = await res.json();
+    if (json.status !== 'success' || !json.data) {
+        console.warn('[link-preview] status不正 or data無し', url, json);
+        throw new Error('no preview data');
+    }
+    const d2 = json.data;
+    return {
+        title: d2.title || null,
+        description: d2.description || null,
+        image: (d2.image && d2.image.url) || (d2.logo && d2.logo.url) || null,
+        siteName: d2.publisher || null,
+    };
+}
+
+async function fetchPreviewData(url) {
+    if (YOUTUBE_URL_REGEX.test(url)) {
+        try {
+            return await fetchYoutubeOembed(url);
+        } catch (e) {
+            console.warn('[link-preview] YouTube oEmbed失敗、通常取得にフォールバック', url, e);
+        }
+    }
+    return await fetchMicrolinkPreview(url);
+}
 const linkPreviewCache = {}; // url -> {title, description, image, siteName}
 const URL_REGEX = /(https?:\/\/[^\s<>"']+)/gi;
 
@@ -790,26 +839,7 @@ async function loadLinkPreview(msgId, url, isRetry = false) {
     try {
         let data = linkPreviewCache[url];
         if (!data) {
-            const res = await fetch(`${LINK_PREVIEW_API_URL}?url=${encodeURIComponent(url)}`);
-            if (!res.ok) {
-                let bodyText = '';
-                try { bodyText = await res.text(); } catch (e) {}
-                console.warn('[link-preview] HTTPエラー', res.status, url, bodyText);
-                throw new Error('failed to fetch preview');
-            }
-            const json = await res.json();
-            console.log('[link-preview] レスポンス', url, json);
-            if (json.status !== 'success' || !json.data) {
-                console.warn('[link-preview] status不正 or data無し', url, json);
-                throw new Error('no preview data');
-            }
-            const d2 = json.data;
-            data = {
-                title: d2.title || null,
-                description: d2.description || null,
-                image: (d2.image && d2.image.url) || (d2.logo && d2.logo.url) || null,
-                siteName: d2.publisher || null,
-            };
+            data = await fetchPreviewData(url);
             const hasUsefulContent = !!(data.image || data.description);
             if (hasUsefulContent) {
                 linkPreviewCache[url] = data; // 十分な情報が取れた時だけキャッシュする
@@ -914,6 +944,7 @@ function generateMessageHtml(id, d, isGrouped = false) {
     const stampHtml = d.stamp ? `<img src="${d.stamp}" class="stamp-display">` : '';
     const firstUrl = (!isStamp && d.text) ? extractFirstUrl(d.text) : null;
     const linkPreviewHtml = firstUrl ? `<div class="link-preview-slot" id="link-preview-${id}"></div>` : '';
+    console.log('[link-preview] generateMessageHtml呼び出し', { id, text: d.text, isStamp, firstUrl });
     if (firstUrl) loadLinkPreview(id, firstUrl);
     const safeName = escapeHTML(d.name || "ゲスト");
     const safeText = escapeHTML(d.text || "");
@@ -1055,10 +1086,13 @@ function renderMessages(snap, isDesc = false) {
             if (existing.length) {
                 const newFp = computeMsgFingerprint(item.data);
                 if (existing.attr('data-fp') === newFp) {
+                    console.log('[link-preview] 変化なしでスキップ', item.id);
                     return; // 内容に変化が無いメッセージは作り直さない（プレビュー再取得や表示のガタつきを防ぐ）
                 }
+                console.log('[link-preview] 更新として再生成', item.id);
                 updates.push({element: existing, html: generateMessageHtml(item.id, item.data, groupedFlags[idx])});
             } else {
+                console.log('[link-preview] 新規追加として生成', item.id, item.data.text);
                 additions.push(generateMessageHtml(item.id, item.data, groupedFlags[idx]));
             }
         });
