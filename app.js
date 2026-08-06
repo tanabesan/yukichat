@@ -299,7 +299,30 @@ let currentDMOtherUid = null;
 let currentUnsubscribe = null;
 let globalUnsubscribers = [];
 let friendIds = [];
-const servers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
+// STUNだけでは互いに厳しいネットワーク（モバイル回線・企業/学校ネットワーク等）にいると接続できないため、
+// 中継役のTURNサーバーも用意する。
+// 下記は無料公開デモ用のTURN（Open Relay Project / metered.ca）。共有の無料枠なので、
+// 利用者が増えて不安定になったら https://www.metered.ca/tools/openrelay/ 等で自分専用の認証情報を取得すること。
+const servers = {
+    iceServers: [
+        { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
+        {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+        },
+        {
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+        },
+        {
+            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+        },
+    ],
+};
 let currentTab = 'all', usersCache = {}, isInitialLoad = true, lastRenderedMsgId = null;
 let typingTimeout;
 
@@ -2698,6 +2721,15 @@ window.sendRequest = async (uid) => {
 window.acceptRequest = async (id) => { await updateDoc(doc(db, "friendRequests", id), { status: "accepted" }); };
 window.removeFriend = async (id) => { if (confirm("解除しますか？")) await deleteDoc(doc(db, "friendRequests", id)); };
 
+// ===== 通話（WebRTC） =====
+// このチャットではDM相手を指定した1対1通話のみサポートする（宛先の無い全体ブロードキャスト通話はしない）。
+let callUnsubscribers = []; // 今の通話に関連するFirestore購読の解除関数をまとめて持つ
+
+function stopCallListeners() {
+    callUnsubscribers.forEach(unsub => { try { unsub(); } catch (e) {} });
+    callUnsubscribers = [];
+}
+
 async function setupWebRTC() {
     pc = new RTCPeerConnection(servers);
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -2705,27 +2737,149 @@ async function setupWebRTC() {
     $("#localVideo")[0].srcObject = localStream;
     pc.ontrack = (e) => { $("#remoteVideo")[0].srcObject = e.streams[0]; };
     $("#call-overlay").removeClass("hidden");
+
+    // ミュート/カメラボタンの見た目を通話開始時にリセット
+    $("#toggleMic").removeClass("off").find(".material-symbols-outlined").text("mic");
+    $("#toggleCam").removeClass("off").find(".material-symbols-outlined").text("videocam");
 }
-window.startCall = async () => {
-    toggleSettingsDrawer(false); await setupWebRTC();
-    const callDoc = doc(collection(db, "calls")); currentCallId = callDoc.id;
-    const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
-    await setDoc(callDoc, { offer: { type: offer.type, sdp: offer.sdp }, caller: auth.currentUser.displayName });
-    onSnapshot(callDoc, (s) => { if (!pc.currentRemoteDescription && s.data()?.answer) pc.setRemoteDescription(new RTCSessionDescription(s.data().answer)); });
-};
-function listenForCalls() {
-    onSnapshot(collection(db, "calls"), (snap) => {
-        snap.docChanges().forEach(async (change) => {
-            const data = change.doc.data();
-            if (change.type === "added" && data.offer && !data.answer && data.caller !== auth.currentUser.displayName) {
-                currentCallId = change.doc.id; await setupWebRTC();
-                await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-                const answer = await pc.createAnswer(); await pc.setLocalDescription(answer);
-                await updateDoc(doc(db, "calls", currentCallId), { answer: { type: answer.type, sdp: answer.sdp } });
+
+// 発信者側: ICE candidateをFirestoreに書き出しつつ相手のanswer/candidateを待つ
+async function startCallTo(targetUid, targetName) {
+    await setupWebRTC();
+    const callDoc = doc(collection(db, "calls"));
+    currentCallId = callDoc.id;
+
+    pc.onicecandidate = (e) => {
+        if (e.candidate) {
+            addDoc(collection(db, "calls", currentCallId, "callerCandidates"), e.candidate.toJSON()).catch(() => {});
+        }
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    await setDoc(callDoc, {
+        callerUid: auth.currentUser.uid,
+        targetUid: targetUid,
+        caller: auth.currentUser.displayName || "ゲスト",
+        offer: { type: offer.type, sdp: offer.sdp },
+        createdAt: serverTimestamp(),
+    });
+
+    const unsubDoc = onSnapshot(callDoc, (s) => {
+        const data = s.data();
+        if (data?.answer && !pc.currentRemoteDescription) {
+            pc.setRemoteDescription(new RTCSessionDescription(data.answer)).catch(() => {});
+        }
+        if (!s.exists()) {
+            // 相手が切った、または自分で削除した
+            endCall(false);
+        }
+    });
+    const unsubCandidates = onSnapshot(collection(db, "calls", currentCallId, "calleeCandidates"), (snap) => {
+        snap.docChanges().forEach(change => {
+            if (change.type === "added") {
+                pc.addIceCandidate(new RTCIceCandidate(change.doc.data())).catch(() => {});
             }
         });
     });
+    callUnsubscribers.push(unsubDoc, unsubCandidates);
 }
+
+// 着信側: 自分宛のオファーを見つけたら応答する
+function listenForCalls() {
+    onSnapshot(collection(db, "calls"), (snap) => {
+        snap.docChanges().forEach(async (change) => {
+            if (change.type !== "added") return;
+            const data = change.doc.data();
+            // 自分宛（targetUid一致）で、まだ誰も応答していない着信だけ拾う
+            if (!data.offer || data.answer || data.targetUid !== auth.currentUser.uid) return;
+            if (currentCallId) return; // 既に別の通話中なら無視（多重着信防止）
+
+            currentCallId = change.doc.id;
+            await setupWebRTC();
+
+            pc.onicecandidate = (e) => {
+                if (e.candidate) {
+                    addDoc(collection(db, "calls", currentCallId, "calleeCandidates"), e.candidate.toJSON()).catch(() => {});
+                }
+            };
+
+            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            await updateDoc(doc(db, "calls", currentCallId), { answer: { type: answer.type, sdp: answer.sdp } });
+
+            const callDocRef = doc(db, "calls", currentCallId);
+            const unsubDoc = onSnapshot(callDocRef, (s) => {
+                if (!s.exists()) endCall(false); // 相手が切った
+            });
+            const unsubCandidates = onSnapshot(collection(db, "calls", currentCallId, "callerCandidates"), (csnap) => {
+                csnap.docChanges().forEach(c => {
+                    if (c.type === "added") {
+                        pc.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(() => {});
+                    }
+                });
+            });
+            callUnsubscribers.push(unsubDoc, unsubCandidates);
+        });
+    });
+}
+
+// 通話終了（自分から切る場合はFirestoreの通話ドキュメントも削除して相手に伝える）
+async function endCall(deleteRemote = true) {
+    stopCallListeners();
+
+    if (pc) {
+        pc.close();
+        pc = null;
+    }
+    if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+    }
+    $("#localVideo, #remoteVideo").each(function() { this.srcObject = null; });
+    $("#call-overlay").addClass("hidden");
+
+    const callIdToClean = currentCallId;
+    currentCallId = null;
+
+    if (deleteRemote && callIdToClean) {
+        try {
+            const [callerCands, calleeCands] = await Promise.all([
+                getDocs(collection(db, "calls", callIdToClean, "callerCandidates")),
+                getDocs(collection(db, "calls", callIdToClean, "calleeCandidates")),
+            ]);
+            await Promise.all([
+                ...callerCands.docs.map(d => deleteDoc(d.ref)),
+                ...calleeCands.docs.map(d => deleteDoc(d.ref)),
+            ]);
+            await deleteDoc(doc(db, "calls", callIdToClean));
+        } catch (e) {
+            console.log('[call] 通話ドキュメントの削除に失敗', e);
+        }
+    }
+}
+
+$("#hangupBtn").on("click", () => endCall(true));
+
+$("#toggleMic").on("click", function() {
+    if (!localStream) return;
+    const audioTrack = localStream.getAudioTracks()[0];
+    if (!audioTrack) return;
+    audioTrack.enabled = !audioTrack.enabled;
+    $(this).toggleClass("off", !audioTrack.enabled)
+        .find(".material-symbols-outlined").text(audioTrack.enabled ? "mic" : "mic_off");
+});
+
+$("#toggleCam").on("click", function() {
+    if (!localStream) return;
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (!videoTrack) return;
+    videoTrack.enabled = !videoTrack.enabled;
+    $(this).toggleClass("off", !videoTrack.enabled)
+        .find(".material-symbols-outlined").text(videoTrack.enabled ? "videocam" : "videocam_off");
+});
 
 // ===== Realtime Database プレゼンス管理（RTDBのみ、Firestore書き込みなし） =====
 let statusCache = {}; // { uid: 'online' | 'offline' }
@@ -3197,22 +3351,9 @@ window.addEventListener("touchstart", () => {
 // ============================================================
 $('#callDMBtn').on('click', async () => {
     if (!currentDMOtherUid) return;
+    if (currentCallId) { alert('すでに通話中です'); return; }
     toggleSettingsDrawer(false);
-    await setupWebRTC();
-    const callDoc = doc(collection(db, "calls"));
-    currentCallId = callDoc.id;
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    await setDoc(callDoc, {
-        offer: { type: offer.type, sdp: offer.sdp },
-        caller: auth.currentUser.displayName,
-        callerUid: auth.currentUser.uid,
-        targetUid: currentDMOtherUid
-    });
-    onSnapshot(callDoc, (s) => {
-        if (!pc.currentRemoteDescription && s.data()?.answer)
-            pc.setRemoteDescription(new RTCSessionDescription(s.data().answer));
-    });
+    await startCallTo(currentDMOtherUid);
 });
 
 // ============================================================
