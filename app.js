@@ -891,6 +891,9 @@ async function loadLinkPreview(msgId, url, isRetry = false, isDomRetry = false) 
                     ${data.description ? `<div class="link-preview-desc">${escapeHTML(data.description)}</div>` : ''}
                 </div>
             </a>`;
+
+        // カード分だけ高さが増えるので、元々一番下を見ていた場合は追従してスクロールする
+        scrollToBottom();
     } catch (e) {
         // 取得失敗時は何も表示しない（サイレントに諦める）
         console.log('[link-preview] 取得失敗', url, e);
