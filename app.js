@@ -1018,13 +1018,9 @@ function generateMessageHtml(id, d, isGrouped = false) {
         else { timeStr = dt.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' }) + ' ' + hm; }
     }
 
-    // 自分のメッセージはリアクションをメニューの右（画面端側）に出す。増えるほどメニューが押し出される形。
-    const opsIconsHtml = `
-                <span class="material-symbols-outlined op-btn" onclick="openReactionPicker('${id}', event, ${JSON.stringify(reactions).replace(/"/g, '&quot;')})" title="リアクション">add_reaction</span>
-                <span class="material-symbols-outlined op-btn" onclick="setReply('${id}','${safeName.replace(/'/g, "\\'")}','${(safeText || (isStamp?"スタンプ":"画像")).replace(/'/g, "\\'").replace(/\n/g, " ")}')" title="返信">reply</span>
-                ${isMe && !isStamp ? `<span class="material-symbols-outlined op-btn" onclick="setEdit('${id}','${safeText.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" title="編集">edit</span>` : ''}
-                ${isMe ? `<span class="material-symbols-outlined op-btn" style="color:var(--danger);" onclick="deleteMsg('${id}')" title="削除">delete</span>` : ''}`;
-    const msgOpsHtml = isMe ? (opsIconsHtml + rHtml) : (rHtml + opsIconsHtml);
+    // アイコン列（リアクション追加・返信・編集・削除）は右クリック/長押しの独自メニューに統一したので、
+    // メッセージ内にはリアクションバッジだけを表示する
+    const msgOpsHtml = rHtml;
 
     return `<div class="message ${isMe?'me':''} ${isStamp?'is-stamp':''} ${isFriend?'is-friend':''} ${isGrouped?'grouped':''} ${effectClass}" id="msg-${id}" data-uid="${d.uid}" data-msgid="${id}" data-is-me="${isMe}" data-is-stamp="${isStamp}" data-time-ms="${timeMs}" data-time="${timeStr}" data-fp="${computeMsgFingerprint(d)}" data-name="${safeName.replace(/"/g,'&quot;')}" data-text="${safeText.replace(/"/g,'&quot;').replace(/\n/g,' ')}">
         <div class="icon-container" onclick="showProfile('${d.uid}')">
@@ -3113,7 +3109,8 @@ window.addEventListener("touchstart", () => {
         menuEl.style.top  = py + 'px';
 
         menuEl.querySelectorAll('.ctx-item').forEach(item => {
-            item.addEventListener('click', function() {
+            item.addEventListener('click', function(ev) {
+                ev.stopPropagation(); // documentのクリック監視でリアクションピッカーが即閉じてしまうのを防ぐ
                 const action = this.dataset.action;
                 const _id   = this.dataset.id || id;
                 if (action === 'reaction') {
