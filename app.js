@@ -791,9 +791,18 @@ async function loadLinkPreview(msgId, url, isRetry = false) {
         let data = linkPreviewCache[url];
         if (!data) {
             const res = await fetch(`${LINK_PREVIEW_API_URL}?url=${encodeURIComponent(url)}`);
-            if (!res.ok) throw new Error('failed to fetch preview');
+            if (!res.ok) {
+                let bodyText = '';
+                try { bodyText = await res.text(); } catch (e) {}
+                console.warn('[link-preview] HTTPエラー', res.status, url, bodyText);
+                throw new Error('failed to fetch preview');
+            }
             const json = await res.json();
-            if (json.status !== 'success' || !json.data) throw new Error('no preview data');
+            console.log('[link-preview] レスポンス', url, json);
+            if (json.status !== 'success' || !json.data) {
+                console.warn('[link-preview] status不正 or data無し', url, json);
+                throw new Error('no preview data');
+            }
             const d2 = json.data;
             data = {
                 title: d2.title || null,
@@ -805,10 +814,13 @@ async function loadLinkPreview(msgId, url, isRetry = false) {
             if (hasUsefulContent) {
                 linkPreviewCache[url] = data; // 十分な情報が取れた時だけキャッシュする
             } else if (!isRetry) {
+                console.log('[link-preview] 情報が薄いので1.5秒後に再取得', url, data);
                 // 初回だけ情報が薄いことがある（unfurl先が裏で処理中で、少し後にリッチな情報が揃うケース）
                 // ので、少し待って1回だけ再取得を試みる
                 setTimeout(() => loadLinkPreview(msgId, url, true), 1500);
                 return;
+            } else {
+                console.log('[link-preview] 再取得しても情報薄いまま。カードなしで諦める', url, data);
             }
         }
         // 画像や説明文など、URL自体以上の情報が取れなかった場合はカードを出さない
@@ -832,6 +844,7 @@ async function loadLinkPreview(msgId, url, isRetry = false) {
             </a>`;
     } catch (e) {
         // 取得失敗時は何も表示しない（サイレントに諦める）
+        console.warn('[link-preview] 取得失敗', url, e);
     }
 }
 
