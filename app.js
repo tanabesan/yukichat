@@ -793,11 +793,13 @@ async function fetchMicrolinkPreview(url) {
         throw new Error('failed to fetch preview');
     }
     const json = await res.json();
-    if (json.status !== 'success' || !json.data) {
-        console.log('[link-preview] status不正 or data無し', url, JSON.stringify(json));
-        throw new Error('no preview data');
+    if (json.status !== 'success') {
+        console.log('[link-preview] status不正', url, JSON.stringify(json));
+        throw new Error('preview fetch not successful');
     }
-    const d2 = json.data;
+    // status:successでもdataがnull/空のことがある（処理中など）。
+    // その場合はエラーにせず「情報が薄い結果」として扱い、呼び出し側の再取得ロジックに委ねる
+    const d2 = json.data || {};
     return {
         title: d2.title || null,
         description: d2.description || null,
