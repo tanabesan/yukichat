@@ -3161,6 +3161,18 @@ window.addEventListener("touchstart", () => {
     document.addEventListener('touchmove', function() {
         if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
     }, { passive: true });
+
+    // PC: 右クリックでブラウザ標準メニューの代わりに同じメニューを出す
+    document.addEventListener('contextmenu', function(e) {
+        if (isMobile()) return; // スマホは長押しメニューのみ
+        const msgEl = e.target.closest('.message');
+        if (!msgEl) return;
+        if (e.target.closest('.icon-container, .op-btn, .reaction-badge, .reply-in-bubble, .sent-img, .stamp-display')) return;
+
+        e.preventDefault();
+        targetMsg = msgEl;
+        showMenu(msgEl, e.clientX, e.clientY);
+    });
 })();
 
 // ============================================================
