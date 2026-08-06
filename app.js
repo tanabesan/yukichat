@@ -771,6 +771,25 @@ const LINK_PREVIEW_API_URL = "https://api.microlink.io/";
 // YouTubeは公開のoEmbed APIを使う（microlinkの無料枠だとボット対策で取得できないため）
 const YOUTUBE_URL_REGEX = /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)/i;
 
+// GitHubも一般的なスクレイパーがブロックされがちなので、公開REST APIから直接取る
+const GITHUB_REPO_REGEX = /^https?:\/\/(www\.)?github\.com\/([^\/?#]+)\/([^\/?#]+)/i;
+
+async function fetchGithubRepoPreview(url) {
+    const match = url.match(GITHUB_REPO_REGEX);
+    if (!match) throw new Error('not a github repo url');
+    const owner = match[2];
+    const repo = match[3].replace(/\.git$/, '');
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+    if (!res.ok) throw new Error('github api failed: ' + res.status);
+    const json = await res.json();
+    return {
+        title: json.full_name || `${owner}/${repo}`,
+        description: json.description || (json.stargazers_count != null ? `⭐ ${json.stargazers_count}` : null),
+        image: (json.owner && json.owner.avatar_url) || null,
+        siteName: 'GitHub',
+    };
+}
+
 async function fetchYoutubeOembed(url) {
     const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
     if (!res.ok) throw new Error('youtube oembed failed: ' + res.status);
@@ -814,6 +833,13 @@ async function fetchPreviewData(url) {
             return await fetchYoutubeOembed(url);
         } catch (e) {
             console.log('[link-preview] YouTube oEmbed失敗、通常取得にフォールバック', url, e);
+        }
+    }
+    if (GITHUB_REPO_REGEX.test(url)) {
+        try {
+            return await fetchGithubRepoPreview(url);
+        } catch (e) {
+            console.log('[link-preview] GitHub API失敗、通常取得にフォールバック', url, e);
         }
     }
     return await fetchMicrolinkPreview(url);
