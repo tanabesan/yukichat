@@ -789,12 +789,12 @@ async function fetchMicrolinkPreview(url) {
     if (!res.ok) {
         let bodyText = '';
         try { bodyText = await res.text(); } catch (e) {}
-        console.warn('[link-preview] HTTPエラー', res.status, url, bodyText);
+        console.log('[link-preview] HTTPエラー', res.status, url, bodyText);
         throw new Error('failed to fetch preview');
     }
     const json = await res.json();
     if (json.status !== 'success' || !json.data) {
-        console.warn('[link-preview] status不正 or data無し', url, json);
+        console.log('[link-preview] status不正 or data無し', url, json);
         throw new Error('no preview data');
     }
     const d2 = json.data;
@@ -811,7 +811,7 @@ async function fetchPreviewData(url) {
         try {
             return await fetchYoutubeOembed(url);
         } catch (e) {
-            console.warn('[link-preview] YouTube oEmbed失敗、通常取得にフォールバック', url, e);
+            console.log('[link-preview] YouTube oEmbed失敗、通常取得にフォールバック', url, e);
         }
     }
     return await fetchMicrolinkPreview(url);
@@ -836,10 +836,13 @@ function linkifyText(escapedText) {
 }
 
 async function loadLinkPreview(msgId, url, isRetry = false) {
+    console.log('[link-preview] loadLinkPreview開始', msgId, url, 'isRetry=' + isRetry);
     try {
         let data = linkPreviewCache[url];
         if (!data) {
+            console.log('[link-preview] キャッシュ無し、取得開始', url);
             data = await fetchPreviewData(url);
+            console.log('[link-preview] 取得結果', url, data);
             const hasUsefulContent = !!(data.image || data.description);
             if (hasUsefulContent) {
                 linkPreviewCache[url] = data; // 十分な情報が取れた時だけキャッシュする
@@ -852,17 +855,26 @@ async function loadLinkPreview(msgId, url, isRetry = false) {
             } else {
                 console.log('[link-preview] 再取得しても情報薄いまま。カードなしで諦める', url, data);
             }
+        } else {
+            console.log('[link-preview] キャッシュ使用', url, data);
         }
         // 画像や説明文など、URL自体以上の情報が取れなかった場合はカードを出さない
         // （タイトルだけだと「リンクをそのまま繰り返しているだけ」に見えてしまうため）
-        if (!data || (!data.description && !data.image)) return;
+        if (!data || (!data.description && !data.image)) {
+            console.log('[link-preview] 画像も説明文も無いのでカード出さずに終了', url);
+            return;
+        }
 
         const el = document.getElementById(`link-preview-${msgId}`);
-        if (!el) return; // メッセージがもうDOMに無い（別チャットに移動した等）
+        if (!el) {
+            console.log('[link-preview] DOM要素が見つからない', `link-preview-${msgId}`);
+            return; // メッセージがもうDOMに無い（別チャットに移動した等）
+        }
 
         let hostname = '';
         try { hostname = new URL(url).hostname; } catch (e) {}
 
+        console.log('[link-preview] カードを描画します', msgId, url);
         el.innerHTML = `
             <a href="${url}" target="_blank" rel="noopener noreferrer" class="link-preview-card">
                 ${data.image ? `<img src="${escapeHTML(data.image)}" class="link-preview-img" loading="lazy" onerror="this.remove()">` : ''}
@@ -874,7 +886,7 @@ async function loadLinkPreview(msgId, url, isRetry = false) {
             </a>`;
     } catch (e) {
         // 取得失敗時は何も表示しない（サイレントに諦める）
-        console.warn('[link-preview] 取得失敗', url, e);
+        console.log('[link-preview] 取得失敗', url, e);
     }
 }
 
