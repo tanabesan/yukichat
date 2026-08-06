@@ -241,6 +241,11 @@
                 pointer-events: none;
             }
         }
+        /* アイコンを描画しなくなったので、リアクションが無いメッセージは行自体を詰める */
+        .msg-ops:empty {
+            display: none;
+            margin: 0;
+        }
     </style>
 </head>
 <body id="body-container">
