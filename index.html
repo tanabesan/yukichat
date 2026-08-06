@@ -234,6 +234,13 @@
                 -webkit-touch-callout: default;
             }
         }
+        /* PC: ホバーで出る操作アイコン列は右クリックメニューに統一するので非表示にする（リアクション表示自体は残す） */
+        @media (min-width: 601px) {
+            .message:hover .msg-ops .op-btn {
+                opacity: 0 !important;
+                pointer-events: none;
+            }
+        }
     </style>
 </head>
 <body id="body-container">
