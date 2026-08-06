@@ -794,7 +794,7 @@ async function fetchMicrolinkPreview(url) {
     }
     const json = await res.json();
     if (json.status !== 'success' || !json.data) {
-        console.log('[link-preview] status不正 or data無し', url, json);
+        console.log('[link-preview] status不正 or data無し', url, JSON.stringify(json));
         throw new Error('no preview data');
     }
     const d2 = json.data;
@@ -842,7 +842,7 @@ async function loadLinkPreview(msgId, url, isRetry = false, isDomRetry = false) 
         if (!data) {
             console.log('[link-preview] キャッシュ無し、取得開始', url);
             data = await fetchPreviewData(url);
-            console.log('[link-preview] 取得結果', url, data);
+            console.log('[link-preview] 取得結果', url, JSON.stringify(data));
             const hasUsefulContent = !!(data.image || data.description);
             if (hasUsefulContent) {
                 linkPreviewCache[url] = data; // 十分な情報が取れた時だけキャッシュする
@@ -856,7 +856,7 @@ async function loadLinkPreview(msgId, url, isRetry = false, isDomRetry = false) 
                 console.log('[link-preview] 再取得しても情報薄いまま。カードなしで諦める', url, data);
             }
         } else {
-            console.log('[link-preview] キャッシュ使用', url, data);
+            console.log('[link-preview] キャッシュ使用', url, JSON.stringify(data));
         }
         // 画像や説明文など、URL自体以上の情報が取れなかった場合はカードを出さない
         // （タイトルだけだと「リンクをそのまま繰り返しているだけ」に見えてしまうため）
