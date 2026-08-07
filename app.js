@@ -2730,6 +2730,46 @@ function stopCallListeners() {
     callUnsubscribers = [];
 }
 
+// カメラ/マイクの許可が得られなかった時に、ブラウザ設定への案内を出す
+// （JSからブラウザの設定画面を直接開くことはできないため、手順を案内して再試行ボタンを出す）
+function getPermissionHelpText() {
+    const ua = navigator.userAgent;
+    const isIOS = /iPhone|iPad|iPod/.test(ua);
+    const isAndroid = /Android/.test(ua);
+
+    if (isIOS) {
+        return `iPhoneの「設定」アプリ →「Safari」→「カメラ」「マイク」の項目で「許可」または「確認」に変更してください。<br><br>
+すでに許可している場合は、「設定」→「Safari」→「詳細」→「Webサイトの設定」から、このサイトの設定をリセットしてみてください。`;
+    }
+    if (isAndroid) {
+        return `アドレスバー左側の🔒（鍵）またはアイコンをタップ →「サイトの設定」→「カメラ」「マイク」を「許可」に変更してください。`;
+    }
+    return `アドレスバー左側の🔒（鍵）アイコンをクリック →「カメラ」「マイク」の設定を「許可」に変更してください。変更後、ページの再読み込みが必要な場合があります。`;
+}
+
+function showPermissionHelp(onRetry) {
+    $('#permission-help-text').html(getPermissionHelpText());
+    $('#permission-help-modal').removeClass('hidden');
+    $('#permissionRetryBtn').off('click').on('click', async () => {
+        $('#permission-help-modal').addClass('hidden');
+        if (onRetry) await onRetry();
+    });
+}
+
+// getUserMediaの失敗理由に応じて出し分ける
+function handleCallError(e, retryFn) {
+    console.log('[call] エラー', e.name, e.message);
+    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError' || e.name === 'SecurityError') {
+        showPermissionHelp(retryFn);
+    } else if (e.name === 'NotFoundError' || e.name === 'DevicesNotFoundError') {
+        alert('カメラまたはマイクが見つかりませんでした。デバイスが接続されているか確認してください。');
+    } else if (e.name === 'NotReadableError' || e.name === 'TrackStartError') {
+        alert('カメラ/マイクが他のアプリで使用中の可能性があります。他のアプリを閉じてから再度お試しください。');
+    } else {
+        alert('通話の処理に失敗しました: ' + (e.message || e.name || '不明なエラー'));
+    }
+}
+
 async function setupWebRTC() {
     pc = new RTCPeerConnection(servers);
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -2786,9 +2826,8 @@ async function startCallTo(targetUid, targetName) {
         });
         callUnsubscribers.push(unsubDoc, unsubCandidates);
     } catch (e) {
-        console.log('[call] 発信処理に失敗', e);
-        alert('通話の発信に失敗しました（カメラ/マイクの許可を確認してください）');
         await endCall(true); // 失敗時も必ず状態をリセットする
+        handleCallError(e, () => startCallTo(targetUid, targetName));
     }
 }
 
@@ -2829,13 +2868,7 @@ function dismissIncomingCall() {
 }
 
 // 「応答」ボタンが押された時だけカメラ/マイクを取得する（スマホはユーザー操作なしでのアクセスを許可しないため）
-$("#acceptCallBtn").on("click", async () => {
-    if (!pendingIncomingCall) return;
-    const { callId, offer } = pendingIncomingCall;
-    if (pendingIncomingCall.unsubRing) pendingIncomingCall.unsubRing();
-    pendingIncomingCall = null;
-    $("#incoming-call-modal").addClass("hidden");
-
+async function acceptIncomingCall(callId, offer) {
     currentCallId = callId;
     try {
         await setupWebRTC();
@@ -2864,10 +2897,19 @@ $("#acceptCallBtn").on("click", async () => {
         });
         callUnsubscribers.push(unsubDoc, unsubCandidates);
     } catch (e) {
-        console.log('[call] 応答処理に失敗', e);
-        alert('通話への応答に失敗しました（カメラ/マイクの許可を確認してください）');
         await endCall(true); // 失敗時も必ず状態をリセットする（currentCallIdが固まって「通話中」から抜けられなくなるのを防ぐ）
+        handleCallError(e, () => acceptIncomingCall(callId, offer));
     }
+}
+
+$("#acceptCallBtn").on("click", async () => {
+    if (!pendingIncomingCall) return;
+    const { callId, offer } = pendingIncomingCall;
+    if (pendingIncomingCall.unsubRing) pendingIncomingCall.unsubRing();
+    pendingIncomingCall = null;
+    $("#incoming-call-modal").addClass("hidden");
+
+    await acceptIncomingCall(callId, offer);
 });
 
 $("#declineCallBtn").on("click", async () => {
