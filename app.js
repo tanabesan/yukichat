@@ -2790,6 +2790,9 @@ async function startCallTo(targetUid, targetName) {
         const callDoc = doc(collection(db, "calls"));
         currentCallId = callDoc.id;
 
+        // answer(相手の応答)が確定する前にICE candidateが届くことがあるので、その間は一旦保留しておく
+        let pendingIceCandidates = [];
+
         pc.onicecandidate = (e) => {
             if (e.candidate) {
                 addDoc(collection(db, "calls", currentCallId, "callerCandidates"), e.candidate.toJSON()).catch(() => {});
@@ -2810,7 +2813,13 @@ async function startCallTo(targetUid, targetName) {
         const unsubDoc = onSnapshot(callDoc, (s) => {
             const data = s.data();
             if (data?.answer && !pc.currentRemoteDescription) {
-                pc.setRemoteDescription(new RTCSessionDescription(data.answer)).catch(() => {});
+                pc.setRemoteDescription(new RTCSessionDescription(data.answer)).then(() => {
+                    // 保留していたcandidateをまとめて追加する
+                    pendingIceCandidates.forEach(c => {
+                        pc.addIceCandidate(c).catch(err => console.log('[call] addIceCandidate失敗(保留分)', err));
+                    });
+                    pendingIceCandidates = [];
+                }).catch(err => console.log('[call] setRemoteDescription失敗', err));
             }
             if (!s.exists()) {
                 // 相手が切った、または自分で削除した
@@ -2820,7 +2829,12 @@ async function startCallTo(targetUid, targetName) {
         const unsubCandidates = onSnapshot(collection(db, "calls", currentCallId, "calleeCandidates"), (snap) => {
             snap.docChanges().forEach(change => {
                 if (change.type === "added") {
-                    pc.addIceCandidate(new RTCIceCandidate(change.doc.data())).catch(() => {});
+                    const candidate = new RTCIceCandidate(change.doc.data());
+                    if (pc.remoteDescription) {
+                        pc.addIceCandidate(candidate).catch(err => console.log('[call] addIceCandidate失敗', err));
+                    } else {
+                        pendingIceCandidates.push(candidate);
+                    }
                 }
             });
         });
@@ -2891,7 +2905,13 @@ async function acceptIncomingCall(callId, offer) {
         const unsubCandidates = onSnapshot(collection(db, "calls", currentCallId, "callerCandidates"), (csnap) => {
             csnap.docChanges().forEach(c => {
                 if (c.type === "added") {
-                    pc.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(() => {});
+                    const candidate = new RTCIceCandidate(c.doc.data());
+                    if (pc.remoteDescription) {
+                        pc.addIceCandidate(candidate).catch(err => console.log('[call] addIceCandidate失敗', err));
+                    } else {
+                        // この時点ではsetRemoteDescription済みのはずだが、念のため保険として保留する
+                        setTimeout(() => pc.addIceCandidate(candidate).catch(err => console.log('[call] addIceCandidate失敗(遅延)', err)), 500);
+                    }
                 }
             });
         });
