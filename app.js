@@ -2745,90 +2745,145 @@ async function setupWebRTC() {
 
 // 発信者側: ICE candidateをFirestoreに書き出しつつ相手のanswer/candidateを待つ
 async function startCallTo(targetUid, targetName) {
-    await setupWebRTC();
-    const callDoc = doc(collection(db, "calls"));
-    currentCallId = callDoc.id;
+    try {
+        await setupWebRTC();
+        const callDoc = doc(collection(db, "calls"));
+        currentCallId = callDoc.id;
 
-    pc.onicecandidate = (e) => {
-        if (e.candidate) {
-            addDoc(collection(db, "calls", currentCallId, "callerCandidates"), e.candidate.toJSON()).catch(() => {});
-        }
-    };
+        pc.onicecandidate = (e) => {
+            if (e.candidate) {
+                addDoc(collection(db, "calls", currentCallId, "callerCandidates"), e.candidate.toJSON()).catch(() => {});
+            }
+        };
 
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
 
-    await setDoc(callDoc, {
-        callerUid: auth.currentUser.uid,
-        targetUid: targetUid,
-        caller: auth.currentUser.displayName || "ゲスト",
-        offer: { type: offer.type, sdp: offer.sdp },
-        createdAt: serverTimestamp(),
-    });
+        await setDoc(callDoc, {
+            callerUid: auth.currentUser.uid,
+            targetUid: targetUid,
+            caller: auth.currentUser.displayName || "ゲスト",
+            offer: { type: offer.type, sdp: offer.sdp },
+            createdAt: serverTimestamp(),
+        });
 
-    const unsubDoc = onSnapshot(callDoc, (s) => {
-        const data = s.data();
-        if (data?.answer && !pc.currentRemoteDescription) {
-            pc.setRemoteDescription(new RTCSessionDescription(data.answer)).catch(() => {});
-        }
-        if (!s.exists()) {
-            // 相手が切った、または自分で削除した
-            endCall(false);
-        }
-    });
-    const unsubCandidates = onSnapshot(collection(db, "calls", currentCallId, "calleeCandidates"), (snap) => {
-        snap.docChanges().forEach(change => {
-            if (change.type === "added") {
-                pc.addIceCandidate(new RTCIceCandidate(change.doc.data())).catch(() => {});
+        const unsubDoc = onSnapshot(callDoc, (s) => {
+            const data = s.data();
+            if (data?.answer && !pc.currentRemoteDescription) {
+                pc.setRemoteDescription(new RTCSessionDescription(data.answer)).catch(() => {});
+            }
+            if (!s.exists()) {
+                // 相手が切った、または自分で削除した
+                endCall(false);
             }
         });
-    });
-    callUnsubscribers.push(unsubDoc, unsubCandidates);
+        const unsubCandidates = onSnapshot(collection(db, "calls", currentCallId, "calleeCandidates"), (snap) => {
+            snap.docChanges().forEach(change => {
+                if (change.type === "added") {
+                    pc.addIceCandidate(new RTCIceCandidate(change.doc.data())).catch(() => {});
+                }
+            });
+        });
+        callUnsubscribers.push(unsubDoc, unsubCandidates);
+    } catch (e) {
+        console.log('[call] 発信処理に失敗', e);
+        alert('通話の発信に失敗しました（カメラ/マイクの許可を確認してください）');
+        await endCall(true); // 失敗時も必ず状態をリセットする
+    }
 }
 
 // 着信側: 自分宛のオファーを見つけたら応答する
+let pendingIncomingCall = null; // { callId, offer, callerName }
+
 function listenForCalls() {
     onSnapshot(collection(db, "calls"), (snap) => {
-        snap.docChanges().forEach(async (change) => {
+        snap.docChanges().forEach((change) => {
             if (change.type !== "added") return;
             const data = change.doc.data();
             // 自分宛（targetUid一致）で、まだ誰も応答していない着信だけ拾う
             if (!data.offer || data.answer || data.targetUid !== auth.currentUser.uid) return;
-            if (currentCallId) return; // 既に別の通話中なら無視（多重着信防止）
+            // 古い（クリーンアップされずに残っていた）通話ドキュメントは無視する
+            const createdMs = data.createdAt?.toMillis ? data.createdAt.toMillis() : 0;
+            if (!createdMs || (Date.now() - createdMs) > 30000) return;
+            if (currentCallId || pendingIncomingCall) return; // 既に通話中/着信中なら無視（多重着信防止）
 
-            currentCallId = change.doc.id;
-            await setupWebRTC();
+            pendingIncomingCall = { callId: change.doc.id, offer: data.offer, callerName: data.caller || "ゲスト" };
+            $("#incoming-call-name").text(pendingIncomingCall.callerName);
+            $("#incoming-call-modal").removeClass("hidden");
 
-            pc.onicecandidate = (e) => {
-                if (e.candidate) {
-                    addDoc(collection(db, "calls", currentCallId, "calleeCandidates"), e.candidate.toJSON()).catch(() => {});
+            // 発信者が応答前に切った場合は着信ポップアップを自動で下げる
+            const unsubRing = onSnapshot(change.doc.ref, (s) => {
+                if (!s.exists() && pendingIncomingCall?.callId === change.doc.id) {
+                    dismissIncomingCall();
                 }
-            };
-
-            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            await updateDoc(doc(db, "calls", currentCallId), { answer: { type: answer.type, sdp: answer.sdp } });
-
-            const callDocRef = doc(db, "calls", currentCallId);
-            const unsubDoc = onSnapshot(callDocRef, (s) => {
-                if (!s.exists()) endCall(false); // 相手が切った
             });
-            const unsubCandidates = onSnapshot(collection(db, "calls", currentCallId, "callerCandidates"), (csnap) => {
-                csnap.docChanges().forEach(c => {
-                    if (c.type === "added") {
-                        pc.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(() => {});
-                    }
-                });
-            });
-            callUnsubscribers.push(unsubDoc, unsubCandidates);
+            pendingIncomingCall.unsubRing = unsubRing;
         });
     });
 }
 
+function dismissIncomingCall() {
+    if (pendingIncomingCall?.unsubRing) pendingIncomingCall.unsubRing();
+    pendingIncomingCall = null;
+    $("#incoming-call-modal").addClass("hidden");
+}
+
+// 「応答」ボタンが押された時だけカメラ/マイクを取得する（スマホはユーザー操作なしでのアクセスを許可しないため）
+$("#acceptCallBtn").on("click", async () => {
+    if (!pendingIncomingCall) return;
+    const { callId, offer } = pendingIncomingCall;
+    if (pendingIncomingCall.unsubRing) pendingIncomingCall.unsubRing();
+    pendingIncomingCall = null;
+    $("#incoming-call-modal").addClass("hidden");
+
+    currentCallId = callId;
+    try {
+        await setupWebRTC();
+
+        pc.onicecandidate = (e) => {
+            if (e.candidate) {
+                addDoc(collection(db, "calls", currentCallId, "calleeCandidates"), e.candidate.toJSON()).catch(() => {});
+            }
+        };
+
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await updateDoc(doc(db, "calls", currentCallId), { answer: { type: answer.type, sdp: answer.sdp } });
+
+        const callDocRef = doc(db, "calls", currentCallId);
+        const unsubDoc = onSnapshot(callDocRef, (s) => {
+            if (!s.exists()) endCall(false); // 相手が切った
+        });
+        const unsubCandidates = onSnapshot(collection(db, "calls", currentCallId, "callerCandidates"), (csnap) => {
+            csnap.docChanges().forEach(c => {
+                if (c.type === "added") {
+                    pc.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(() => {});
+                }
+            });
+        });
+        callUnsubscribers.push(unsubDoc, unsubCandidates);
+    } catch (e) {
+        console.log('[call] 応答処理に失敗', e);
+        alert('通話への応答に失敗しました（カメラ/マイクの許可を確認してください）');
+        await endCall(true); // 失敗時も必ず状態をリセットする（currentCallIdが固まって「通話中」から抜けられなくなるのを防ぐ）
+    }
+});
+
+$("#declineCallBtn").on("click", async () => {
+    if (!pendingIncomingCall) return;
+    const { callId } = pendingIncomingCall;
+    dismissIncomingCall();
+    // 拒否したことを発信者に伝えるため、ドキュメント自体を削除する
+    try {
+        await deleteDoc(doc(db, "calls", callId));
+    } catch (e) {}
+});
+
 // 通話終了（自分から切る場合はFirestoreの通話ドキュメントも削除して相手に伝える）
 async function endCall(deleteRemote = true) {
     stopCallListeners();
+    dismissIncomingCall(); // 着信ポップアップが出ていた場合も一緒に消す
 
     if (pc) {
         pc.close();
