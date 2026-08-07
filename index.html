@@ -388,6 +388,16 @@
             </div>
         </div>
 
+        <div id="permission-help-modal" class="modal-overlay hidden">
+            <div class="responsive-card" style="padding:24px; max-width:360px;">
+                <div style="font-size:40px; text-align:center; margin-bottom:8px;">🎤📷</div>
+                <h3 style="margin:0 0 12px; text-align:center;">カメラ・マイクを許可してください</h3>
+                <div id="permission-help-text" style="font-size:13px; color:var(--txt); line-height:1.8; background:rgba(255,255,255,0.05); border-radius:8px; padding:14px; margin-bottom:16px; text-align:left;"></div>
+                <button id="permissionRetryBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin-bottom:8px;">許可して再試行</button>
+                <button onclick="$('#permission-help-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; cursor:pointer; padding:8px;">閉じる</button>
+            </div>
+        </div>
+
         <div id="messages-container">
             <div id="guest-warning-banner" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 15px; text-align: center; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); position: relative; z-index: 50;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
