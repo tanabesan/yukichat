@@ -376,6 +376,18 @@
             </div>
         </div>
 
+        <div id="incoming-call-modal" class="modal-overlay hidden">
+            <div class="responsive-card" style="padding:28px; text-align:center; max-width:320px;">
+                <div style="font-size:48px; margin-bottom:10px; animation: badgePulse 1s infinite;">📞</div>
+                <div style="font-size:14px; color:var(--txt-m); margin-bottom:6px;">着信中...</div>
+                <div id="incoming-call-name" style="font-size:20px; font-weight:bold; margin-bottom:24px;"></div>
+                <div style="display:flex; gap:12px;">
+                    <button id="declineCallBtn" style="flex:1; padding:14px; background:var(--danger); color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer;">拒否</button>
+                    <button id="acceptCallBtn" style="flex:1; padding:14px; background:var(--success); color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer;">応答</button>
+                </div>
+            </div>
+        </div>
+
         <div id="messages-container">
             <div id="guest-warning-banner" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 15px; text-align: center; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); position: relative; z-index: 50;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
