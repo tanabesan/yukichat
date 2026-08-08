@@ -7,9 +7,17 @@ const firebaseConfig = { apiKey: "AIzaSyA8X7HsOXDERBTy4GvLE8ibg3bk8JhldZg", auth
 const app = initializeApp(firebaseConfig);
 const rtdb = getDatabase(app);
 
-const db = initializeFirestore(app, {
-    localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
-});
+// iOS Safari（特にプライベートブラウジングモード）ではIndexedDBが使えない/不安定なことがあり、
+// persistentLocalCacheの初期化自体が失敗することがある。失敗した場合はオフラインキャッシュ無しで動かす。
+let db;
+try {
+    db = initializeFirestore(app, {
+        localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+    });
+} catch (e) {
+    console.log('[firestore] persistentLocalCacheの初期化に失敗。メモリキャッシュで続行します', e);
+    db = initializeFirestore(app, {});
+}
 const auth = getAuth(app);
 
 // --- 通知音と設定用変数 ---
