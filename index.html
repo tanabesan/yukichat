@@ -345,6 +345,10 @@
             <div id="dm-list"></div>
         </div>
         <div style="padding: 15px; border-top: 1px solid #222;">
+            <div class="sidebar-item" onclick="toggleSidebar(false); $('#help-modal').removeClass('hidden');">
+                <span class="material-symbols-outlined">help</span>
+                <span>使い方</span>
+            </div>
             <div class="sidebar-item" id="logoutBtnSide" style="color: var(--danger);">
                 <span class="material-symbols-outlined">logout</span>
                 <span>ログアウト</span>
@@ -1001,6 +1005,55 @@
                 </div>
             </div>
             <button onclick="$('#poker-help-modal').addClass('hidden')" style="width:100%; margin-top:20px; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">わかった！</button>
+        </div>
+    </div>
+
+    <!-- 使い方ガイド -->
+    <div id="help-modal" class="modal-overlay hidden" style="z-index:10000;" onclick="if(event.target===this)$(this).addClass('hidden')">
+        <div class="responsive-card" style="max-width:520px; max-height:85vh; overflow-y:auto; padding:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0;">📖 ゆきちゃっとの使い方</h3>
+                <button onclick="$('#help-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:22px; cursor:pointer;">✕</button>
+            </div>
+            <div style="font-size:13px; color:var(--txt); line-height:1.9; display:flex; flex-direction:column; gap:14px;">
+
+                <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    <div style="font-weight:bold; color:#5865f2; margin-bottom:6px;">💬 メッセージ</div>
+                    テキストボックスに入力して <strong>Enter</strong> で送信（Shift+Enterで改行）。<br>
+                    <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">add_circle</span> ボタンから画像を送れます。ドラッグ＆ドロップや貼り付け（Ctrl+V）でも送信可能です。<br>
+                    <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">mood</span> ボタンからスタンプを送れます。<br>
+                    URLを送ると自動でリンク化され、対応しているサイトはプレビューカードが表示されます。
+                </div>
+
+                <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    <div style="font-weight:bold; color:#5865f2; margin-bottom:6px;">🖱️ メッセージの操作</div>
+                    PCは<strong>右クリック</strong>、スマホは<strong>長押し</strong>でメニューが出ます。<br>
+                    そこから <strong>リアクション・コピー・返信</strong> ができ、自分のメッセージなら <strong>編集・削除</strong> もできます。<br>
+                    同じ人が10分以内に連続で送ったメッセージは、アイコンを省略してまとめて表示されます（マウスを乗せると時刻が見られます）。
+                </div>
+
+                <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    <div style="font-weight:bold; color:#5865f2; margin-bottom:6px;">👥 フレンド・DM</div>
+                    左上の<strong>メニュー</strong>→「ユーザーを探す」から他のユーザーを検索・フレンド申請できます（ゲストは利用できません）。<br>
+                    フレンドが承認されると、サイドバーの「ダイレクトメッセージ」欄からDMを送れます。<br>
+                    DM画面右上の <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; color:#00c853;">call</span> ボタンから音声/ビデオ通話をかけられます。
+                </div>
+
+                <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    <div style="font-weight:bold; color:#ffd700; margin-bottom:6px;">🎁 コイン・特典</div>
+                    毎日1回、ログインボーナスでコインを受け取れます。<br>
+                    <strong>カジノ</strong>（スロット・ポーカー）でコインを増やしたり、<strong>ショップ</strong>でバッジ・テーマ・エフェクトなどの見た目アイテムを購入できます。<br>
+                    <strong>ランキング</strong>でコイン所持数の順位を確認できます。
+                </div>
+
+                <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:12px;">
+                    <div style="font-weight:bold; color:#949ba4; margin-bottom:6px;">⚙️ 設定</div>
+                    右上の<strong>設定</strong>アイコンから、通知音・プッシュ通知のON/OFF、アカウント情報の確認ができます。<br>
+                    ゲストのままだとフレンド機能が使えないので、メールアドレスを追加するのがおすすめです。
+                </div>
+
+            </div>
+            <button onclick="$('#help-modal').addClass('hidden')" style="width:100%; margin-top:20px; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">わかった！</button>
         </div>
     </div>
 
