@@ -808,31 +808,78 @@ const YOUTUBE_URL_REGEX = /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.b
 const GITHUB_REPO_REGEX = /^https?:\/\/(www\.)?github\.com\/([^\/?#]+)\/([^\/?#]+)/i;
 
 // ===== プロフィールの「好きな曲」（Spotify oEmbed。APIキー不要・OAuth不要） =====
-const spotifyEmbedCache = {}; // url -> html文字列
+const spotifyEmbedCache = {}; // url -> {html, title, thumbnail_url}
 
+async function fetchSpotifyOembed(url) {
+    if (spotifyEmbedCache[url]) return spotifyEmbedCache[url];
+    const res = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`);
+    if (!res.ok) throw new Error('spotify oembed failed: ' + res.status);
+    const data = await res.json();
+    if (!data.html) throw new Error('no embed html');
+    spotifyEmbedCache[url] = data;
+    return data;
+}
+
+// 編集画面のライブプレビュー用：その場で埋め込みプレイヤーをそのまま表示する
 async function renderSpotifyEmbed(url, $container) {
     if (!url) { $container.empty(); return; }
     if (!/^https:\/\/open\.spotify\.com\//i.test(url)) {
         $container.html('<div style="font-size:11px; color:var(--danger);">Spotifyの共有リンク（open.spotify.com/...）を入力してください</div>');
         return;
     }
-    if (spotifyEmbedCache[url]) {
-        $container.html(spotifyEmbedCache[url]);
-        return;
-    }
     $container.html('<div style="font-size:11px; color:var(--txt-m);">読み込み中...</div>');
     try {
-        const res = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`);
-        if (!res.ok) throw new Error('spotify oembed failed: ' + res.status);
-        const data = await res.json();
-        if (!data.html) throw new Error('no embed html');
-        spotifyEmbedCache[url] = data.html;
+        const data = await fetchSpotifyOembed(url);
         $container.html(data.html);
     } catch (e) {
         console.log('[spotify-embed] 取得失敗', url, e);
         $container.html('<div style="font-size:11px; color:var(--danger);">読み込みに失敗しました（リンクが正しいか確認してください）</div>');
     }
 }
+
+// プロフィール表示用：埋め込みプレイヤーをその場に直接置かず、
+// クリックすると常設のミニプレイヤー（#global-spotify-player）で再生するカードを表示する。
+// これにより、他のプロフィールを開いても再生中の曲が止まらない。
+async function renderSpotifySongCard(url, $container) {
+    if (!url) { $container.empty(); return; }
+    if (!/^https:\/\/open\.spotify\.com\//i.test(url)) {
+        $container.html('<div style="font-size:11px; color:var(--danger);">Spotifyの共有リンクが正しくありません</div>');
+        return;
+    }
+    $container.html('<div style="font-size:11px; color:var(--txt-m);">読み込み中...</div>');
+    try {
+        const data = await fetchSpotifyOembed(url);
+        const safeUrl = url.replace(/'/g, "&#39;");
+        $container.html(`
+            <div class="song-card" onclick="playInGlobalPlayer('${safeUrl}')">
+                ${data.thumbnail_url ? `<img src="${escapeHTML(data.thumbnail_url)}">` : ''}
+                <div class="song-card-info">
+                    <div class="song-card-title">${escapeHTML(data.title || 'この曲')}</div>
+                    <div class="song-card-sub">▶ タップして再生</div>
+                </div>
+            </div>
+        `);
+    } catch (e) {
+        console.log('[spotify-embed] 取得失敗', url, e);
+        $container.html('<div style="font-size:11px; color:var(--danger);">読み込みに失敗しました</div>');
+    }
+}
+
+window.playInGlobalPlayer = async (url) => {
+    try {
+        const data = await fetchSpotifyOembed(url);
+        $('#gsp-title').text(data.title || '再生中');
+        $('#gsp-embed-container').html(data.html);
+        $('#global-spotify-player').removeClass('hidden');
+    } catch (e) {
+        console.log('[spotify-embed] 再生失敗', url, e);
+    }
+};
+
+window.closeGlobalSpotifyPlayer = () => {
+    $('#gsp-embed-container').empty(); // 中のiframeを消すことで再生も止まる
+    $('#global-spotify-player').addClass('hidden');
+};
 
 async function fetchGithubRepoPreview(url) {
     const match = url.match(GITHUB_REPO_REGEX);
@@ -2493,7 +2540,7 @@ window.showProfile = async (uid) => {
     $("#viewBio").text(d.bio || "No bio.");
     if (d.favoriteSong) {
         $("#viewFavoriteSongSection").removeClass("hidden");
-        renderSpotifyEmbed(d.favoriteSong, $("#viewFavoriteSong"));
+        renderSpotifySongCard(d.favoriteSong, $("#viewFavoriteSong"));
     } else {
         $("#viewFavoriteSongSection").addClass("hidden");
     }
