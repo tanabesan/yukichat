@@ -2491,7 +2491,12 @@ window.showProfile = async (uid) => {
     $("#viewAvatar").attr("src", d.photo || DEFAULT_AVATAR); 
     $("#viewBanner").attr("src", d.banner || DEFAULT_BANNER); 
     $("#viewBio").text(d.bio || "No bio.");
-    renderSpotifyEmbed(d.favoriteSong || '', $("#viewFavoriteSong"));
+    if (d.favoriteSong) {
+        $("#viewFavoriteSongSection").removeClass("hidden");
+        renderSpotifyEmbed(d.favoriteSong, $("#viewFavoriteSong"));
+    } else {
+        $("#viewFavoriteSongSection").addClass("hidden");
+    }
     
     const statusClass = getUserOnlineStatus(uid);
     $("#viewStatusDot").removeClass('online offline').addClass(statusClass);
