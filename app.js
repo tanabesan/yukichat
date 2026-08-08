@@ -889,6 +889,83 @@ window.closeGlobalSpotifyPlayer = () => {
     $('#global-spotify-player').addClass('hidden');
 };
 
+// ===== 常設プレイヤーの位置移動・最小化 =====
+(function() {
+    const $player = $('#global-spotify-player');
+    const $handle = $('#gsp-drag-handle');
+
+    // 前回の位置を復元する
+    const savedPos = JSON.parse(localStorage.getItem('gsp_position') || 'null');
+    if (savedPos) {
+        $player.css({
+            left: savedPos.left + 'px',
+            top: savedPos.top + 'px',
+            right: 'auto',
+            bottom: 'auto',
+        });
+    }
+    if (localStorage.getItem('gsp_minimized') === 'true') {
+        $player.addClass('minimized');
+    }
+
+    // 最小化トグル
+    $('#gsp-minimize-btn').on('click', (e) => {
+        e.stopPropagation();
+        const isMin = $player.toggleClass('minimized').hasClass('minimized');
+        localStorage.setItem('gsp_minimized', isMin);
+    });
+
+    // ドラッグで移動（PC:マウス / スマホ:タッチ 両対応）
+    let dragging = false;
+    let offsetX = 0, offsetY = 0;
+
+    function onDragStart(clientX, clientY) {
+        dragging = true;
+        const rect = $player[0].getBoundingClientRect();
+        offsetX = clientX - rect.left;
+        offsetY = clientY - rect.top;
+        $player.addClass('dragging');
+    }
+
+    function onDragMove(clientX, clientY) {
+        if (!dragging) return;
+        const rect = $player[0].getBoundingClientRect();
+        let left = clientX - offsetX;
+        let top = clientY - offsetY;
+        // 画面外に出ないように制限する
+        left = Math.max(4, Math.min(window.innerWidth - rect.width - 4, left));
+        top = Math.max(4, Math.min(window.innerHeight - 40, top));
+        $player.css({ left: left + 'px', top: top + 'px', right: 'auto', bottom: 'auto' });
+    }
+
+    function onDragEnd() {
+        if (!dragging) return;
+        dragging = false;
+        $player.removeClass('dragging');
+        const rect = $player[0].getBoundingClientRect();
+        localStorage.setItem('gsp_position', JSON.stringify({ left: rect.left, top: rect.top }));
+    }
+
+    $handle.on('mousedown', (e) => {
+        if ($(e.target).closest('#gsp-minimize-btn, .op-btn').length) return;
+        onDragStart(e.clientX, e.clientY);
+    });
+    $(document).on('mousemove', (e) => onDragMove(e.clientX, e.clientY));
+    $(document).on('mouseup', onDragEnd);
+
+    $handle.on('touchstart', (e) => {
+        if ($(e.target).closest('#gsp-minimize-btn, .op-btn').length) return;
+        const t = e.touches[0];
+        onDragStart(t.clientX, t.clientY);
+    }, { passive: true });
+    $(document).on('touchmove', (e) => {
+        if (!dragging) return;
+        const t = e.touches[0];
+        onDragMove(t.clientX, t.clientY);
+    }, { passive: true });
+    $(document).on('touchend', onDragEnd);
+})();
+
 async function fetchGithubRepoPreview(url) {
     const match = url.match(GITHUB_REPO_REGEX);
     if (!match) throw new Error('not a github repo url');
