@@ -270,6 +270,11 @@
             box-shadow: 0 8px 24px rgba(0,0,0,0.5);
             z-index: 5000;
             overflow: hidden;
+            touch-action: none; /* ドラッグ中にスマホでスクロールが暴発しないようにする */
+        }
+        #global-spotify-player.dragging {
+            opacity: 0.85;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.6);
         }
         .gsp-header {
             display: flex;
@@ -278,6 +283,8 @@
             padding: 8px 10px;
             background: rgba(29,185,84,0.08);
             border-bottom: 1px solid rgba(255,255,255,0.06);
+            cursor: grab;
+            user-select: none;
         }
         .gsp-title {
             flex: 1;
@@ -287,6 +294,21 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        #gsp-embed-container {
+            max-height: 300px;
+            transition: max-height 0.25s ease, opacity 0.2s ease;
+            overflow: hidden;
+        }
+        #global-spotify-player.minimized #gsp-embed-container {
+            max-height: 0;
+            opacity: 0;
+        }
+        #gsp-minimize-btn {
+            transition: transform 0.2s ease;
+        }
+        #global-spotify-player.minimized #gsp-minimize-btn {
+            transform: rotate(180deg);
         }
         #gsp-embed-container iframe {
             display: block;
@@ -1000,9 +1022,10 @@
 
     <!-- 常設のSpotifyミニプレイヤー（プロフィールを閉じても再生が途切れない） -->
     <div id="global-spotify-player" class="hidden">
-        <div class="gsp-header">
-            <span class="material-symbols-outlined" style="font-size:16px; color:#1db954;">graphic_eq</span>
+        <div class="gsp-header" id="gsp-drag-handle">
+            <span class="material-symbols-outlined" style="font-size:16px; color:#1db954; cursor:grab;">drag_indicator</span>
             <span id="gsp-title" class="gsp-title"></span>
+            <span class="material-symbols-outlined op-btn" id="gsp-minimize-btn" style="font-size:18px;">expand_more</span>
             <span class="material-symbols-outlined op-btn" style="font-size:18px;" onclick="closeGlobalSpotifyPlayer()">close</span>
         </div>
         <div id="gsp-embed-container"></div>
