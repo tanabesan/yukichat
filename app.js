@@ -3366,6 +3366,12 @@ window.addEventListener("touchstart", () => {
             <span class="material-symbols-outlined">add_reaction</span> リアクション
         </div>`);
 
+        if (!isStamp && text) {
+            items.push(`<div class="ctx-item" data-action="copy">
+                <span class="material-symbols-outlined">content_copy</span> コピー
+            </div>`);
+        }
+
         const replyLabel = isStamp ? 'スタンプ' : (text || '画像');
         items.push(`<div class="ctx-item" data-action="reply" data-id="${id}" data-name="${name}" data-text="${replyLabel}">
             <span class="material-symbols-outlined">reply</span> 返信
@@ -3413,6 +3419,20 @@ window.addEventListener("touchstart", () => {
                     });
                     if (typeof window.openReactionPicker === 'function') {
                         window.openReactionPicker(id, fakeEvent, existingReactions);
+                    }
+                } else if (action === 'copy') {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).catch(() => {});
+                    } else {
+                        // クリップボードAPIが使えない環境向けのフォールバック
+                        const ta = document.createElement('textarea');
+                        ta.value = text;
+                        ta.style.position = 'fixed';
+                        ta.style.opacity = '0';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        try { document.execCommand('copy'); } catch (e) {}
+                        ta.remove();
                     }
                 } else if (action === 'reply') {
                     if (typeof window.setReply === 'function') window.setReply(_id, name, replyLabel);
