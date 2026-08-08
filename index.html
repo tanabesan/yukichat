@@ -276,6 +276,15 @@
             opacity: 0.85;
             box-shadow: 0 12px 32px rgba(0,0,0,0.6);
         }
+        /* スマホは入力欄の上に出るよう、初期位置を高めに（ドラッグを知らなくても最初から邪魔にならないように） */
+        @media (max-width: 600px) {
+            #global-spotify-player {
+                bottom: 90px;
+                right: 10px;
+                width: calc(100vw - 20px);
+                max-width: 320px;
+            }
+        }
         .gsp-header {
             display: flex;
             align-items: center;
