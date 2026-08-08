@@ -955,12 +955,12 @@ window.closeGlobalSpotifyPlayer = () => {
 
     $handle.on('touchstart', (e) => {
         if ($(e.target).closest('#gsp-minimize-btn, .op-btn').length) return;
-        const t = e.touches[0];
+        const t = e.originalEvent.touches[0]; // jQueryのEventはtouchesを直接持たないのでoriginalEvent経由で取る
         onDragStart(t.clientX, t.clientY);
     }, { passive: true });
     $(document).on('touchmove', (e) => {
         if (!dragging) return;
-        const t = e.touches[0];
+        const t = e.originalEvent.touches[0];
         onDragMove(t.clientX, t.clientY);
     }, { passive: true });
     $(document).on('touchend', onDragEnd);
