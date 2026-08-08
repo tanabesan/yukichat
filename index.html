@@ -256,6 +256,80 @@
                 display: none !important;
             }
         }
+
+        /* 常設Spotifyミニプレイヤー */
+        #global-spotify-player {
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            width: 300px;
+            max-width: calc(100vw - 32px);
+            background: var(--bg-2b);
+            border: 1px solid rgba(29,185,84,0.3);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            z-index: 5000;
+            overflow: hidden;
+        }
+        .gsp-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 10px;
+            background: rgba(29,185,84,0.08);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .gsp-title {
+            flex: 1;
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--txt);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #gsp-embed-container iframe {
+            display: block;
+            width: 100%;
+            border: none;
+        }
+        /* プロフィール内の曲カード（クリックすると常設プレイヤーで再生） */
+        .song-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(29,185,84,0.08);
+            border: 1px solid rgba(29,185,84,0.25);
+            border-radius: 8px;
+            padding: 8px 10px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .song-card:hover { background: rgba(29,185,84,0.16); }
+        .song-card img {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+        .song-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .song-card-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--txt);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .song-card-sub {
+            font-size: 10px;
+            color: #1db954;
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body id="body-container">
@@ -922,6 +996,16 @@
             </div>
             <button onclick="$('#shop-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
         </div>
+    </div>
+
+    <!-- 常設のSpotifyミニプレイヤー（プロフィールを閉じても再生が途切れない） -->
+    <div id="global-spotify-player" class="hidden">
+        <div class="gsp-header">
+            <span class="material-symbols-outlined" style="font-size:16px; color:#1db954;">graphic_eq</span>
+            <span id="gsp-title" class="gsp-title"></span>
+            <span class="material-symbols-outlined op-btn" style="font-size:18px;" onclick="closeGlobalSpotifyPlayer()">close</span>
+        </div>
+        <div id="gsp-embed-container"></div>
     </div>
 
     <!-- リアクションピッカー -->
