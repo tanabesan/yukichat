@@ -649,6 +649,15 @@ const syncProfilePreview = () => {
 };
 $("#editName, #editPhoto, #editBanner, #editBio, #editEquippedEffect, #editEquippedBadge").on("input change", syncProfilePreview);
 
+let favoriteSongDebounce;
+$("#editFavoriteSong").on("input", function() {
+    clearTimeout(favoriteSongDebounce);
+    const url = $(this).val().trim();
+    favoriteSongDebounce = setTimeout(() => {
+        renderSpotifyEmbed(url, $("#editFavoriteSongPreview"));
+    }, 600);
+});
+
 window.switchChat = (roomId, otherName = null, otherUid = null) => {
     currentRoomId = roomId;
     currentDMOtherUid = otherUid;
@@ -797,6 +806,33 @@ const YOUTUBE_URL_REGEX = /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.b
 
 // GitHubも一般的なスクレイパーがブロックされがちなので、公開REST APIから直接取る
 const GITHUB_REPO_REGEX = /^https?:\/\/(www\.)?github\.com\/([^\/?#]+)\/([^\/?#]+)/i;
+
+// ===== プロフィールの「好きな曲」（Spotify oEmbed。APIキー不要・OAuth不要） =====
+const spotifyEmbedCache = {}; // url -> html文字列
+
+async function renderSpotifyEmbed(url, $container) {
+    if (!url) { $container.empty(); return; }
+    if (!/^https:\/\/open\.spotify\.com\//i.test(url)) {
+        $container.html('<div style="font-size:11px; color:var(--danger);">Spotifyの共有リンク（open.spotify.com/...）を入力してください</div>');
+        return;
+    }
+    if (spotifyEmbedCache[url]) {
+        $container.html(spotifyEmbedCache[url]);
+        return;
+    }
+    $container.html('<div style="font-size:11px; color:var(--txt-m);">読み込み中...</div>');
+    try {
+        const res = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`);
+        if (!res.ok) throw new Error('spotify oembed failed: ' + res.status);
+        const data = await res.json();
+        if (!data.html) throw new Error('no embed html');
+        spotifyEmbedCache[url] = data.html;
+        $container.html(data.html);
+    } catch (e) {
+        console.log('[spotify-embed] 取得失敗', url, e);
+        $container.html('<div style="font-size:11px; color:var(--danger);">読み込みに失敗しました（リンクが正しいか確認してください）</div>');
+    }
+}
 
 async function fetchGithubRepoPreview(url) {
     const match = url.match(GITHUB_REPO_REGEX);
@@ -2455,6 +2491,7 @@ window.showProfile = async (uid) => {
     $("#viewAvatar").attr("src", d.photo || DEFAULT_AVATAR); 
     $("#viewBanner").attr("src", d.banner || DEFAULT_BANNER); 
     $("#viewBio").text(d.bio || "No bio.");
+    renderSpotifyEmbed(d.favoriteSong || '', $("#viewFavoriteSong"));
     
     const statusClass = getUserOnlineStatus(uid);
     $("#viewStatusDot").removeClass('online offline').addClass(statusClass);
@@ -2509,6 +2546,8 @@ $("#my-profile-trigger").on("click", async () => {
         $("#editPhoto").val(d.photo); 
         $("#editBanner").val(d.banner); 
         $("#editBio").val(d.bio);
+        $("#editFavoriteSong").val(d.favoriteSong || '');
+        renderSpotifyEmbed(d.favoriteSong || '', $("#editFavoriteSongPreview"));
         
         await loadEquipmentOptions(d);
     }
@@ -2552,6 +2591,7 @@ $("#saveProfile").on("click", async () => {
         photo: $("#editPhoto").val(), 
         banner: $("#editBanner").val(), 
         bio: $("#editBio").val(),
+        favoriteSong: $("#editFavoriteSong").val().trim(),
         equipped: {
             badge: $("#editEquippedBadge").val(),
             theme: $("#editEquippedTheme").val(),
