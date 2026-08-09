@@ -957,12 +957,14 @@ window.closeGlobalSpotifyPlayer = () => {
         if ($(e.target).closest('#gsp-minimize-btn, .op-btn').length) return;
         const t = e.originalEvent.touches[0]; // jQueryのEventはtouchesを直接持たないのでoriginalEvent経由で取る
         onDragStart(t.clientX, t.clientY);
-    }, { passive: true });
+        e.preventDefault(); // スマホのスクロール判定と競合してドラッグが打ち消されるのを防ぐ
+    }, { passive: false });
     $(document).on('touchmove', (e) => {
         if (!dragging) return;
         const t = e.originalEvent.touches[0];
         onDragMove(t.clientX, t.clientY);
-    }, { passive: true });
+        e.preventDefault();
+    }, { passive: false });
     $(document).on('touchend', onDragEnd);
 })();
 
