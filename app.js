@@ -863,7 +863,7 @@ async function renderSpotifySongCard(url, $container) {
                 ${data.thumbnail_url ? `<img src="${escapeHTML(data.thumbnail_url)}">` : ''}
                 <div class="song-card-info">
                     <div class="song-card-title">${escapeHTML(data.title || 'この曲')}</div>
-                    <div class="song-card-sub">▶ タップして再生</div>
+                    <div class="song-card-sub">▶ タップして再生（スマホは30秒プレビュー。フル再生はSpotifyで開いてください）</div>
                 </div>
             </div>
         `);
@@ -878,6 +878,7 @@ window.playInGlobalPlayer = async (url) => {
         const data = await fetchSpotifyOembed(url);
         $('#gsp-title').text(data.title || '再生中');
         $('#gsp-embed-container').html(data.html);
+        $('#gsp-open-link').attr('href', url);
         $('#global-spotify-player').removeClass('hidden');
     } catch (e) {
         console.log('[spotify-embed] 再生失敗', url, e);
