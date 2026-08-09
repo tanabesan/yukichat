@@ -946,26 +946,23 @@ window.closeGlobalSpotifyPlayer = () => {
         localStorage.setItem('gsp_position', JSON.stringify({ left: rect.left, top: rect.top }));
     }
 
-    $handle.on('mousedown', (e) => {
+    // PointerEvents（マウス・タッチ・ペンを同じ仕組みで扱える）に統一する。
+    // setPointerCaptureで、指が要素の外に出てもドラッグ中は確実にイベントを拾えるようにする。
+    $handle.on('pointerdown', (e) => {
         if ($(e.target).closest('#gsp-minimize-btn, .op-btn').length) return;
-        onDragStart(e.clientX, e.clientY);
-    });
-    $(document).on('mousemove', (e) => onDragMove(e.clientX, e.clientY));
-    $(document).on('mouseup', onDragEnd);
-
-    $handle.on('touchstart', (e) => {
-        if ($(e.target).closest('#gsp-minimize-btn, .op-btn').length) return;
-        const t = e.originalEvent.touches[0]; // jQueryのEventはtouchesを直接持たないのでoriginalEvent経由で取る
-        onDragStart(t.clientX, t.clientY);
-        e.preventDefault(); // スマホのスクロール判定と競合してドラッグが打ち消されるのを防ぐ
-    }, { passive: false });
-    $(document).on('touchmove', (e) => {
-        if (!dragging) return;
-        const t = e.originalEvent.touches[0];
-        onDragMove(t.clientX, t.clientY);
+        const ev = e.originalEvent || e;
+        onDragStart(ev.clientX, ev.clientY);
+        try { $handle[0].setPointerCapture(ev.pointerId); } catch (err) {}
         e.preventDefault();
-    }, { passive: false });
-    $(document).on('touchend', onDragEnd);
+    });
+    $handle.on('pointermove', (e) => {
+        if (!dragging) return;
+        const ev = e.originalEvent || e;
+        onDragMove(ev.clientX, ev.clientY);
+    });
+    $handle.on('pointerup pointercancel', () => {
+        onDragEnd();
+    });
 })();
 
 async function fetchGithubRepoPreview(url) {
