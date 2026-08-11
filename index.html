@@ -276,49 +276,6 @@
             }
         }
 
-        /* 通話画面（外部style.cssの150px帯レイアウトを上書きして全画面表示にする） */
-        #call-overlay {
-            position: fixed !important;
-            inset: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            z-index: 6000 !important;
-            background: #000 !important;
-            display: flex !important;
-            flex-direction: column !important;
-            border-bottom: none !important;
-        }
-        #call-overlay .video-container {
-            position: relative !important;
-            flex: 1 !important;
-            height: auto !important;
-            background: #000 !important;
-            gap: 0 !important;
-        }
-        #call-overlay #remoteVideo {
-            width: 100% !important;
-            height: 100% !important;
-            flex: none !important;
-            object-fit: contain !important; /* 切り取らず、相手の映像全体が画面に収まるようにする */
-            background: #000 !important;
-        }
-        #call-overlay #localVideo {
-            position: absolute !important;
-            bottom: 96px;
-            right: 16px;
-            width: 110px !important;
-            height: 150px !important;
-            border-radius: 10px;
-            object-fit: cover !important;
-            border: 2px solid rgba(255,255,255,0.35);
-            box-shadow: 0 4px 14px rgba(0,0,0,0.5);
-        }
-        #call-overlay .call-controls {
-            flex-shrink: 0;
-            padding-bottom: max(8px, env(safe-area-inset-bottom));
-            background: rgba(0,0,0,0.6);
-        }
-
         /* 常設Spotifyミニプレイヤー */
         #global-spotify-player {
             position: fixed;
