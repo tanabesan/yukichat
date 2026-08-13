@@ -2950,15 +2950,41 @@ function handleCallError(e, retryFn) {
 async function setupWebRTC() {
     pc = new RTCPeerConnection(servers);
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+    // 通話開始時はマイク・カメラともにミュートにしておく（映る前に自分で確認してもらう）
+    localStream.getAudioTracks().forEach(t => t.enabled = false);
+    localStream.getVideoTracks().forEach(t => t.enabled = false);
+
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
     $("#localVideo")[0].srcObject = localStream;
     pc.ontrack = (e) => { $("#remoteVideo")[0].srcObject = e.streams[0]; };
     $("#call-overlay").removeClass("hidden");
 
-    // ミュート/カメラボタンの見た目を通話開始時にリセット
-    $("#toggleMic").removeClass("off").find(".material-symbols-outlined").text("mic");
-    $("#toggleCam").removeClass("off").find(".material-symbols-outlined").text("videocam");
+    // サイズ表示を毎回「全画面」から開始する
+    callSizeIndex = 0;
+    $("#call-overlay").attr("data-size", "full");
+    $("#callResizeIcon").text("fullscreen_exit");
+
+    // ミュート/カメラボタンをオフ状態の見た目にする
+    $("#toggleMic").addClass("off").find(".material-symbols-outlined").text("mic_off");
+    $("#toggleCam").addClass("off").find(".material-symbols-outlined").text("videocam_off");
+
+    // カメラオフ中は自分の映像の代わりに名前とアイコンを出す
+    $("#localVideoPlaceholderAvatar").attr("src", auth.currentUser.photoURL || DEFAULT_AVATAR);
+    $("#localVideoPlaceholderName").text(auth.currentUser.displayName || "ゲスト");
+    $("#localVideoPlaceholder").removeClass("hidden");
 }
+
+// 通話画面のサイズ切り替え（全画面 / 小窓 / 最小表示）
+const CALL_SIZES = ['full', 'small', 'mini'];
+const CALL_SIZE_ICONS = { full: 'fullscreen_exit', small: 'fit_screen', mini: 'fullscreen' };
+let callSizeIndex = 0;
+$('#callResizeBtn').on('click', () => {
+    callSizeIndex = (callSizeIndex + 1) % CALL_SIZES.length;
+    const size = CALL_SIZES[callSizeIndex];
+    $('#call-overlay').attr('data-size', size);
+    $('#callResizeIcon').text(CALL_SIZE_ICONS[size]);
+});
 
 // 発信者側: ICE candidateをFirestoreに書き出しつつ相手のanswer/candidateを待つ
 async function startCallTo(targetUid, targetName) {
@@ -3133,7 +3159,10 @@ async function endCall(deleteRemote = true) {
         localStream = null;
     }
     $("#localVideo, #remoteVideo").each(function() { this.srcObject = null; });
-    $("#call-overlay").addClass("hidden");
+    $("#localVideoPlaceholder").addClass("hidden");
+    $("#call-overlay").addClass("hidden").attr("data-size", "full");
+    callSizeIndex = 0;
+    $("#callResizeIcon").text("fullscreen_exit");
 
     const callIdToClean = currentCallId;
     currentCallId = null;
@@ -3173,6 +3202,8 @@ $("#toggleCam").on("click", function() {
     videoTrack.enabled = !videoTrack.enabled;
     $(this).toggleClass("off", !videoTrack.enabled)
         .find(".material-symbols-outlined").text(videoTrack.enabled ? "videocam" : "videocam_off");
+    // カメラオフ中は映像の代わりに名前とアイコンを出す
+    $("#localVideoPlaceholder").toggleClass("hidden", videoTrack.enabled);
 });
 
 // ===== Realtime Database プレゼンス管理（RTDBのみ、Firestore書き込みなし） =====
