@@ -276,6 +276,114 @@
             }
         }
 
+        /* 通話画面（外部style.cssの150px帯レイアウトを上書きして全画面表示にする） */
+        #call-overlay {
+            position: fixed !important;
+            z-index: 6000 !important;
+            background: #000 !important;
+            display: flex; /* !important禁止: hiddenクラスのdisplay:noneより強くなって閉じられなくなるため */
+            flex-direction: column !important;
+            border-bottom: none !important;
+            overflow: hidden;
+            transition: width 0.2s ease, height 0.2s ease, top 0.2s ease, left 0.2s ease, right 0.2s ease, bottom 0.2s ease, border-radius 0.2s ease;
+        }
+        /* サイズ段階：全画面 / 小窓 / 最小表示（#call-overlayのdata-size属性で切り替える） */
+        #call-overlay[data-size="full"] {
+            top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+            width: 100vw !important; height: 100vh !important;
+            border-radius: 0 !important;
+        }
+        #call-overlay[data-size="small"] {
+            top: 70px !important; left: auto !important; right: 12px !important; bottom: auto !important;
+            width: 340px !important; height: 460px !important;
+            max-width: calc(100vw - 24px);
+            max-height: calc(100vh - 140px);
+            border-radius: 14px !important;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+        }
+        #call-overlay[data-size="mini"] {
+            top: auto !important; left: auto !important; bottom: 90px !important; right: 12px !important;
+            width: 150px !important; height: 200px !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+        }
+        #call-overlay .video-container {
+            position: relative !important;
+            flex: 1 !important;
+            height: auto !important;
+            background: #000 !important;
+            gap: 0 !important;
+        }
+        #call-overlay #remoteVideo {
+            width: 100% !important;
+            height: 100% !important;
+            flex: none !important;
+            object-fit: contain !important; /* 切り取らず、相手の映像全体が画面に収まるようにする */
+            background: #000 !important;
+        }
+        #call-overlay #localVideo, #call-overlay #localVideoPlaceholder {
+            position: absolute !important;
+            bottom: 96px;
+            right: 16px;
+            width: 110px !important;
+            height: 150px !important;
+            border-radius: 10px;
+            object-fit: cover !important;
+            border: 2px solid rgba(255,255,255,0.35);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+        }
+        #call-overlay #localVideoPlaceholder {
+            background: #2b2d31;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px;
+            overflow: hidden;
+        }
+        #call-overlay #localVideoPlaceholder.hidden {
+            display: none !important;
+        }
+        #localVideoPlaceholderAvatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        #localVideoPlaceholderName {
+            font-size: 11px;
+            color: #fff;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        /* 小窓は自分の映像も少し小さめに */
+        #call-overlay[data-size="small"] #localVideo, #call-overlay[data-size="small"] #localVideoPlaceholder {
+            width: 80px !important;
+            height: 110px !important;
+            bottom: 66px;
+            right: 10px;
+        }
+        /* 最小表示はボタンを絞り、自分の映像も隠して省スペースにする */
+        #call-overlay[data-size="mini"] #localVideo, #call-overlay[data-size="mini"] #localVideoPlaceholder {
+            display: none !important;
+        }
+        #call-overlay[data-size="mini"] .call-controls .ctrl-btn:not(.hangup):not(#callResizeBtn) {
+            display: none;
+        }
+        #call-overlay[data-size="mini"] .call-controls {
+            padding: 4px;
+            gap: 6px;
+        }
+        #call-overlay .call-controls {
+            flex-shrink: 0;
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
+            background: rgba(0,0,0,0.6);
+        }
+
         /* 常設Spotifyミニプレイヤー */
         #global-spotify-player {
             position: fixed;
@@ -496,8 +604,13 @@
             <div class="video-container">
                 <video id="remoteVideo" autoplay playsinline></video>
                 <video id="localVideo" autoplay playsinline muted></video>
+                <div id="localVideoPlaceholder" class="hidden">
+                    <img id="localVideoPlaceholderAvatar" src="" alt="">
+                    <span id="localVideoPlaceholderName"></span>
+                </div>
             </div>
             <div class="call-controls">
+                <button class="ctrl-btn" id="callResizeBtn"><span class="material-symbols-outlined" id="callResizeIcon">fullscreen_exit</span></button>
                 <button class="ctrl-btn off" id="toggleMic"><span class="material-symbols-outlined">mic_off</span></button>
                 <button class="ctrl-btn off" id="toggleCam"><span class="material-symbols-outlined">videocam_off</span></button>
                 <button class="ctrl-btn hangup" id="hangupBtn"><span class="material-symbols-outlined">call_end</span></button>
