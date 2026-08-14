@@ -2960,9 +2960,9 @@ async function setupWebRTC() {
     pc.ontrack = (e) => { $("#remoteVideo")[0].srcObject = e.streams[0]; };
     $("#call-overlay").removeClass("hidden");
 
-    // サイズ表示を毎回「全画面」から開始する
+    // サイズ表示を毎回「全画面」から開始する（前回の状態が残らないよう明示的にリセット）
     callSizeIndex = 0;
-    $("#call-overlay").attr("data-size", "full");
+    $("#call-overlay")[0].setAttribute("data-size", "full");
     $("#callResizeIcon").text("fullscreen_exit");
 
     // ミュート/カメラボタンをオフ状態の見た目にする
