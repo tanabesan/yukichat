@@ -568,20 +568,22 @@ onAuthStateChanged(auth, async (user) => {
         });
 
         const unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
-            let typingNames = [];
-            
+            // usersCacheはdocChangesの差分だけで更新する（キャッシュとしては差分更新でOK）
             snap.docChanges().forEach(change => {
-                const userDoc = change.doc;
-                const userData = userDoc.data();
-                const uid = userDoc.id;
-                
-                usersCache[uid] = userData;
-                
-                if(uid !== auth.currentUser.uid && userData.isTyping) {
+                const uid = change.doc.id;
+                usersCache[uid] = change.doc.data();
+            });
+
+            // 「入力中」の表示は、差分だけでなく毎回usersCache全体から作り直す
+            // （差分だけで判定すると、無関係な他ユーザーの変化で表示が古いまま残ったり消えたりするバグになるため）
+            let typingNames = [];
+            Object.keys(usersCache).forEach(uid => {
+                const userData = usersCache[uid];
+                if (uid !== auth.currentUser.uid && userData?.isTyping) {
                     typingNames.push(userData.name || "ゲスト");
                 }
             });
-            
+
             if(typingNames.length > 0) {
                 $("#typing-indicator").text(typingNames.map(n => escapeHTML(n)).join(", ") + " が入力中...").removeClass("hidden");
             } else {
@@ -3513,6 +3515,8 @@ $('#addEmailBtn').on('click', async () => {
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
         clearUnread();
+    } else {
+        updateTypingStatus(false); // タブを離れたら「入力中」を確実に解除する
     }
 }, true);
 
