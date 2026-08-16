@@ -323,6 +323,17 @@
             flex: 1;
             min-height: 0;
             background: #000;
+            touch-action: none; /* ドラッグ中にスマホでスクロールが暴発しないようにする */
+        }
+        #call-overlay.dragging {
+            opacity: 0.85;
+        }
+        #call-overlay[data-size="small"] .yc-video-area,
+        #call-overlay[data-size="mini"] .yc-video-area {
+            cursor: grab;
+        }
+        #call-overlay.dragging .yc-video-area {
+            cursor: grabbing;
         }
         .yc-video-area video {
             display: block;
