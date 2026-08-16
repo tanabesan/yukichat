@@ -2965,6 +2965,7 @@ async function setupWebRTC() {
     // サイズ表示を毎回「全画面」から開始する（前回の状態が残らないよう明示的にリセット）
     callSizeIndex = 0;
     $("#call-overlay")[0].setAttribute("data-size", "full");
+    $("#call-overlay").css({ left: "", top: "", right: "", bottom: "" });
     $("#callResizeIcon").text("fullscreen_exit");
 
     // ミュート/カメラボタンをオフ状態の見た目にする
@@ -2986,7 +2987,58 @@ $('#callResizeBtn').on('click', () => {
     const size = CALL_SIZES[callSizeIndex];
     $('#call-overlay').attr('data-size', size);
     $('#callResizeIcon').text(CALL_SIZE_ICONS[size]);
+    // ドラッグで動かした位置が残っていると次のサイズ表示が崩れるのでリセットする
+    $('#call-overlay').css({ left: '', top: '', right: '', bottom: '' });
 });
+
+// 小窓・最小表示の時だけ、映像部分をホールドしてドラッグで動かせるようにする（PC・スマホ両対応）
+(function() {
+    const $overlay = $('#call-overlay');
+    const $dragSurface = $('.yc-video-area');
+    let dragging = false;
+    let offsetX = 0, offsetY = 0;
+
+    function isDraggableSize() {
+        const size = $overlay.attr('data-size');
+        return size === 'small' || size === 'mini';
+    }
+
+    function onDragStart(clientX, clientY) {
+        if (!isDraggableSize()) return false;
+        dragging = true;
+        const rect = $overlay[0].getBoundingClientRect();
+        offsetX = clientX - rect.left;
+        offsetY = clientY - rect.top;
+        $overlay.addClass('dragging');
+        return true;
+    }
+    function onDragMove(clientX, clientY) {
+        if (!dragging) return;
+        const rect = $overlay[0].getBoundingClientRect();
+        let left = clientX - offsetX;
+        let top = clientY - offsetY;
+        left = Math.max(4, Math.min(window.innerWidth - rect.width - 4, left));
+        top = Math.max(4, Math.min(window.innerHeight - rect.height - 4, top));
+        $overlay.css({ left: left + 'px', top: top + 'px', right: 'auto', bottom: 'auto' });
+    }
+    function onDragEnd() {
+        dragging = false;
+        $overlay.removeClass('dragging');
+    }
+
+    $dragSurface.on('pointerdown', (e) => {
+        const ev = e.originalEvent || e;
+        if (!onDragStart(ev.clientX, ev.clientY)) return;
+        try { $dragSurface[0].setPointerCapture(ev.pointerId); } catch (err) {}
+        e.preventDefault();
+    });
+    $dragSurface.on('pointermove', (e) => {
+        if (!dragging) return;
+        const ev = e.originalEvent || e;
+        onDragMove(ev.clientX, ev.clientY);
+    });
+    $dragSurface.on('pointerup pointercancel', onDragEnd);
+})();
 
 // 発信者側: ICE candidateをFirestoreに書き出しつつ相手のanswer/candidateを待つ
 async function startCallTo(targetUid, targetName) {
