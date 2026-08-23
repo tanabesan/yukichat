@@ -98,6 +98,10 @@
                 <span class="material-symbols-outlined" style="color:#f093fb;">shopping_bag</span>
                 <span>ショップ</span>
             </div>
+            <div class="sidebar-item" onclick="toggleSidebar(false); openStampShopFromMenu();">
+                <span class="material-symbols-outlined" style="color:#a78bfa;">mood</span>
+                <span>スタンプショップ</span>
+            </div>
             <div class="sidebar-item" onclick="toggleSidebar(false); openCasinoFromMenu();">
                 <span class="material-symbols-outlined" style="color:#ff4757;">casino</span>
                 <span>カジノ</span>
@@ -226,7 +230,8 @@
         <div class="responsive-card" style="padding:20px; max-width:300px;" onclick="event.stopPropagation()">
             <h3 style="margin-top:0;">スタンプを選択</h3>
             <div id="stamp-list" class="stamp-grid"></div>
-            <button onclick="$('#stamp-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:10px; cursor:pointer; padding:10px;">キャンセル</button>
+            <button onclick="$('#stamp-modal').addClass('hidden'); openStampShopFromMenu();" style="width:100%; background:rgba(167,139,250,0.15); color:#a78bfa; border:none; margin-top:6px; cursor:pointer; padding:10px; border-radius:8px; font-weight:bold;">🎫 スタンプショップでもっと集める</button>
+            <button onclick="$('#stamp-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:6px; cursor:pointer; padding:10px;">キャンセル</button>
         </div>
     </div>
 
@@ -643,8 +648,8 @@
             <h2 style="margin:0 0 20px; font-size:26px; color:#ffd700;">ログインボーナス</h2>
             <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,215,0,0.3); padding:24px 40px; border-radius:16px; margin-bottom:20px; min-width:280px;">
                 <div style="font-size:13px; color:var(--txt-m); margin-bottom:8px;">本日のボーナス</div>
-                <div id="bonus-amount" style="font-size:56px; font-weight:bold; color:#ffd700; text-shadow:0 0 20px rgba(255,215,0,0.6);">+100</div>
-                <div style="font-size:16px; color:var(--txt-m); margin-top:4px;">コイン</div>
+                <div id="bonus-amount" style="font-size:56px; font-weight:bold; color:#ffd700; text-shadow:0 0 20px rgba(255,215,0,0.6);">+30</div>
+                <div style="font-size:16px; color:var(--txt-m); margin-top:4px;">チップ</div>
             </div>
             <div id="bonus-claim-section" style="width:100%; max-width:320px;">
                 <button id="claimBonusBtn" style="width:100%; padding:16px; background:linear-gradient(135deg, #ffd700, #ffed4e); color:#000; border:none; border-radius:10px; font-weight:bold; cursor:pointer; font-size:18px; margin-bottom:10px; box-shadow:0 4px 20px rgba(255,215,0,0.5);">受け取る</button>
@@ -654,8 +659,10 @@
                 <div style="color:var(--success); font-weight:bold; margin-bottom:4px;">✅ 受け取り済み</div>
                 <div style="font-size:12px; color:var(--txt-m);">次回: 明日のログイン時</div>
             </div>
-            <div style="margin-top:16px; font-size:13px; color:var(--txt-m);">所持コイン: <span style="color:#ffd700; font-weight:bold;" id="bonus-current-coins">0</span> 💰</div>
-            <button onclick="$('#login-bonus-modal').addClass('hidden')" class="fs-back-btn" style="margin-top:20px;">← 戻る</button>
+            <div style="margin-top:16px; font-size:13px; color:var(--txt-m);">所持チップ: <span style="color:#ffd700; font-weight:bold;" id="bonus-current-coins">0</span> 🎫</div>
+            <div style="font-size:11px; color:var(--txt-m); margin-top:6px;">チップは「スタンプショップ」で限定スタンプと交換できます</div>
+            <button onclick="$('#login-bonus-modal').addClass('hidden'); openStampShopFromMenu();" class="fs-back-btn" style="margin-top:20px; background:linear-gradient(135deg, #a78bfa, #667eea); color:#fff; border:none;">🎫 スタンプショップへ</button>
+            <button onclick="$('#login-bonus-modal').addClass('hidden')" class="fs-back-btn" style="margin-top:10px;">← 戻る</button>
         </div>
     </div>
 
@@ -695,6 +702,30 @@
                 <div id="shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:14px; padding-bottom:20px;"></div>
             </div>
             <button onclick="$('#shop-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
+        </div>
+    </div>
+
+    <!-- スタンプショップ全画面（アイテムショップとは別枠。通貨は「チップ」、デイリーボーナスで貯める） -->
+    <div id="stamp-shop-modal" class="fs-screen hidden">
+        <div class="fs-inner" style="max-width:900px;">
+            <div class="fs-header">
+                <div class="fs-title">🎫 スタンプショップ</div>
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <div style="text-align:center; background:rgba(255,255,255,0.08); border-radius:10px; padding:6px 18px;">
+                        <div style="font-size:10px; color:rgba(255,255,255,0.6); text-transform:uppercase;">所持チップ</div>
+                        <div style="font-size:20px; font-weight:bold; color:#ffd700;">🎫 <span id="user-chips">0</span></div>
+                    </div>
+                    <button onclick="$('#stamp-shop-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
+                </div>
+            </div>
+            <div style="font-size:12px; color:var(--txt-m); margin-bottom:14px; background:rgba(167,139,250,0.08); border:1px solid rgba(167,139,250,0.25); border-radius:8px; padding:10px 12px;">
+                チップは毎日のログインボーナスで受け取れます。購入したスタンプは「スタンプ送信」の一覧に追加されます。
+            </div>
+            <div style="flex:1; overflow-y:auto;">
+                <div style="font-size:12px; color:var(--txt-m); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">限定スタンプ一覧</div>
+                <div id="stamp-shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:14px; padding-bottom:20px;"></div>
+            </div>
+            <button onclick="$('#stamp-shop-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
         </div>
     </div>
 

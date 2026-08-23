@@ -290,7 +290,8 @@ function escapeHTML(str) {
     });
 }
 
-const STAMP_LIST = [
+// 無料スタンプ（誰でも使える）
+const FREE_STAMP_LIST = [
     "https://fonts.gstatic.com/s/e/notoemoji/latest/1f600/512.webp",
     "https://fonts.gstatic.com/s/e/notoemoji/latest/1f60d/512.webp",
     "https://fonts.gstatic.com/s/e/notoemoji/latest/1f62d/512.webp",
@@ -299,6 +300,22 @@ const STAMP_LIST = [
     "https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp",
     "https://fonts.gstatic.com/s/e/notoemoji/latest/1f389/512.webp",
     "https://fonts.gstatic.com/s/e/notoemoji/latest/1f4af/512.webp"
+];
+// 後方互換用エイリアス（他コード側で STAMP_LIST を参照している場合に備えて）
+const STAMP_LIST = FREE_STAMP_LIST;
+
+// プレミアムスタンプ（新設のスタンプショップで「チップ」と交換して購入する）
+const PREMIUM_STAMP_LIST = [
+    { id: 'stamp_wink',      name: 'ウインク',   price: 30,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f609/512.webp" },
+    { id: 'stamp_cool',      name: 'クール',     price: 30,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f60e/512.webp" },
+    { id: 'stamp_love',      name: 'ハート目',   price: 40,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f60d/512.webp" },
+    { id: 'stamp_party',     name: 'パーティー', price: 50,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f973/512.webp" },
+    { id: 'stamp_ghost',     name: 'おばけ',     price: 40,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f47b/512.webp" },
+    { id: 'stamp_unicorn',   name: 'ユニコーン', price: 80,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f984/512.webp" },
+    { id: 'stamp_alien',     name: 'エイリアン', price: 60,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f47d/512.webp" },
+    { id: 'stamp_crown',     name: 'クラウン',   price: 100, url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f451/512.webp" },
+    { id: 'stamp_gem',       name: 'ジェム',     price: 90,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f48e/512.webp" },
+    { id: 'stamp_rocket',    name: 'ロケット',   price: 70,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f680/512.webp" },
 ];
 
 let pendingImageUrl = null, replyTarget = null, editTargetId = null, pc, localStream, currentCallId = null;
@@ -1498,9 +1515,24 @@ window.sendStamp = async (url) => {
     scrollToBottom(true);
 };
 
-const initStampPicker = () => {
+const initStampPicker = async () => {
     const $list = $("#stamp-list").empty();
-    STAMP_LIST.forEach(url => { $list.append(`<img src="${url}" class="stamp-item" onclick="sendStamp('${url}')">`); });
+    FREE_STAMP_LIST.forEach(url => { $list.append(`<img src="${url}" class="stamp-item" onclick="sendStamp('${url}')">`); });
+
+    // 購入済みのプレミアムスタンプがあれば続けて表示する
+    try {
+        if (auth.currentUser) {
+            const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+            const ownedStamps = (userDoc.exists() ? userDoc.data().ownedStamps : []) || [];
+            if (ownedStamps.length > 0) {
+                PREMIUM_STAMP_LIST.filter(s => ownedStamps.includes(s.id)).forEach(s => {
+                    $list.append(`<img src="${s.url}" class="stamp-item" title="${s.name}" onclick="sendStamp('${s.url}')">`);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Load owned stamps error:', error);
+    }
 };
 
 // ========== アイテム効果適用 ==========
@@ -1579,6 +1611,8 @@ async function checkLoginBonus() {
     }
 }
 
+const DAILY_BONUS_CHIPS = 30;
+
 async function claimLoginBonus() {
     try {
         const canClaim = await checkLoginBonus();
@@ -1588,14 +1622,14 @@ async function claimLoginBonus() {
         
         const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
         const userData = userDoc.data();
-        const currentCoins = userData.coins || 0;
+        const currentChips = userData.chips || 0;
         
         await setDoc(doc(db, "users", auth.currentUser.uid), {
-            coins: currentCoins + 100,
+            chips: currentChips + DAILY_BONUS_CHIPS,
             lastLogin: serverTimestamp()
         }, { merge: true });
         
-        return { success: true, message: '+100コイン獲得！', coins: currentCoins + 100, bonus: 100 };
+        return { success: true, message: `+${DAILY_BONUS_CHIPS}チップ獲得！`, chips: currentChips + DAILY_BONUS_CHIPS, bonus: DAILY_BONUS_CHIPS };
         
     } catch (error) {
         console.error('Claim login bonus error:', error);
@@ -1608,8 +1642,9 @@ async function openLoginBonusModal() {
     
     const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
     const userData = userDoc.data();
-    const currentCoins = userData.coins || 0;
-    $('#bonus-current-coins').text(currentCoins.toLocaleString());
+    const currentChips = userData.chips || 0;
+    $('#bonus-amount').text('+' + DAILY_BONUS_CHIPS);
+    $('#bonus-current-coins').text(currentChips.toLocaleString());
     
     const canClaim = await checkLoginBonus();
     
@@ -2299,7 +2334,7 @@ $('#claimBonusBtn').on('click', async () => {
     
     if (result.success) {
         $('#bonus-amount').text(`+${result.bonus}`);
-        $('#bonus-current-coins').text(result.coins.toLocaleString());
+        $('#bonus-current-coins').text(result.chips.toLocaleString());
         
         $('#bonus-claim-section').addClass('hidden');
         $('#bonus-already-claimed').removeClass('hidden');
@@ -2490,6 +2525,82 @@ window.openShopFromMenu = () => {
     loadShopData();
 };
 
+
+// ========== スタンプショップ（チップ専用・アイテムショップとは独立） ==========
+
+async function loadStampShopData() {
+    const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+    const userData = userDoc.data() || {};
+    const userChips = userData.chips || 0;
+    const ownedStamps = userData.ownedStamps || [];
+
+    $('#user-chips').text(userChips.toLocaleString());
+
+    const $container = $('#stamp-shop-items').empty();
+
+    PREMIUM_STAMP_LIST.forEach(stamp => {
+        const owned = ownedStamps.includes(stamp.id);
+
+        const $item = $(`
+            <div class="shop-item ${owned ? 'owned' : ''}" data-stamp-id="${stamp.id}" onclick="${owned ? '' : `purchaseStamp('${stamp.id}')`}">
+                <div class="shop-item-icon"><img src="${stamp.url}" alt="${stamp.name}"></div>
+                <div class="shop-item-name">${stamp.name}</div>
+                ${owned ?
+                    '<div class="shop-item-owned">✅ 所持中</div>' :
+                    `<div class="shop-item-price">🎫 ${stamp.price}</div>`
+                }
+            </div>
+        `);
+
+        $container.append($item);
+    });
+}
+
+window.purchaseStamp = async (stampId) => {
+    const stamp = PREMIUM_STAMP_LIST.find(s => s.id === stampId);
+    if (!stamp) return;
+
+    if (!confirm(`${stamp.name}\n\n🎫 ${stamp.price}チップで購入しますか？`)) {
+        return;
+    }
+
+    try {
+        const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+        const userData = userDoc.data() || {};
+        const userChips = userData.chips || 0;
+        const ownedStamps = userData.ownedStamps || [];
+
+        if (userChips < stamp.price) {
+            alert('❌ チップが足りません！ログインボーナスで貯めよう');
+            return;
+        }
+
+        if (ownedStamps.includes(stampId)) {
+            alert('✅ すでに所持しています！');
+            return;
+        }
+
+        await setDoc(doc(db, "users", auth.currentUser.uid), {
+            chips: userChips - stamp.price,
+            ownedStamps: arrayUnion(stampId)
+        }, { merge: true });
+
+        alert(`🎉 「${stamp.name}」スタンプを購入しました！`);
+
+        loadStampShopData();
+        initStampPicker();
+
+    } catch (error) {
+        console.error('Purchase stamp error:', error);
+        alert('❌ 購入に失敗しました: ' + error.message);
+    }
+};
+
+window.openStampShopFromMenu = () => {
+    $('#stamp-shop-modal').removeClass('hidden');
+    loadStampShopData();
+};
+
 $('#toggleNotificationBtn').on('click', async () => {
     if (!('Notification' in window)) {
         alert('このブラウザはプッシュ通知に対応していません');
@@ -2601,7 +2712,7 @@ $("#cancel-edit").on("click", cancelEdit);
 $("#sendBtn").on("click", send);
 $("#messageInput").on("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
 $("#imgBtn").on("click", () => $("#real_file_input").click());
-$("#stampBtn").on("click", () => $("#stamp-modal").removeClass("hidden"));
+$("#stampBtn").on("click", () => { initStampPicker(); $("#stamp-modal").removeClass("hidden"); });
 
 $("#real_file_input").on("change", (e) => uploadImageFile(e.target.files[0]));
 $("#real_avatar_input").on("change", (e) => uploadAvatarFile(e.target.files[0]));

@@ -1072,6 +1072,11 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
     font-size: 40px;
     margin-bottom: 8px;
 }
+.shop-item-icon img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
 .shop-item-name {
     font-size: 14px;
     font-weight: bold;
