@@ -304,19 +304,56 @@ const FREE_STAMP_LIST = [
 // 後方互換用エイリアス（他コード側で STAMP_LIST を参照している場合に備えて）
 const STAMP_LIST = FREE_STAMP_LIST;
 
-// プレミアムスタンプ（新設のスタンプショップで「チップ」と交換して購入する）
-const PREMIUM_STAMP_LIST = [
-    { id: 'stamp_wink',      name: 'ウインク',   price: 30,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f609/512.webp" },
-    { id: 'stamp_cool',      name: 'クール',     price: 30,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f60e/512.webp" },
-    { id: 'stamp_love',      name: 'ハート目',   price: 40,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f60d/512.webp" },
-    { id: 'stamp_party',     name: 'パーティー', price: 50,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f973/512.webp" },
-    { id: 'stamp_ghost',     name: 'おばけ',     price: 40,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f47b/512.webp" },
-    { id: 'stamp_unicorn',   name: 'ユニコーン', price: 80,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f984/512.webp" },
-    { id: 'stamp_alien',     name: 'エイリアン', price: 60,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f47d/512.webp" },
-    { id: 'stamp_crown',     name: 'クラウン',   price: 100, url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f451/512.webp" },
-    { id: 'stamp_gem',       name: 'ジェム',     price: 90,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f48e/512.webp" },
-    { id: 'stamp_rocket',    name: 'ロケット',   price: 70,  url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f680/512.webp" },
+// 公式スタンプパック（LINEのスタンプショップのように、複数個まとめ売り。ownedPacksにidが入っていれば所持中）
+// stamps は {url, name} の配列。thumbnailはパック一覧に出すサムネイル（未指定ならstamps[0].urlを使う）
+const STAMP_PACKS = [
+    {
+        id: 'pack_emotion',
+        name: '表情いろいろパック',
+        description: 'ウインクやクールなど、日常づかいしやすい表情スタンプ5個入り',
+        thumbnail: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f609/512.webp",
+        price: 100,
+        stamps: [
+            { url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f609/512.webp", name: 'ウインク' },
+            { url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f60e/512.webp", name: 'クール' },
+            { url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f60d/512.webp", name: 'ハート目' },
+            { url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f47b/512.webp", name: 'おばけ' },
+            { url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f47d/512.webp", name: 'エイリアン' },
+        ]
+    },
+    {
+        id: 'pack_party',
+        name: 'お祝いパック',
+        description: 'パーティーや誕生日、記念日にぴったりの豪華スタンプ3個入り',
+        thumbnail: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f973/512.webp",
+        price: 90,
+        stamps: [
+            { url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f973/512.webp", name: 'パーティー' },
+            { url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f48e/512.webp", name: 'ジェム' },
+            { url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f451/512.webp", name: 'クラウン' },
+        ]
+    },
+    {
+        id: 'pack_space',
+        name: '宇宙たびパック',
+        description: 'ユニコーンとロケットの2個入りスペシャルパック',
+        thumbnail: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f984/512.webp",
+        price: 60,
+        stamps: [
+            { url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f984/512.webp", name: 'ユニコーン' },
+            { url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f680/512.webp", name: 'ロケット' },
+        ]
+    },
 ];
+
+// 自作スタンプパック投稿のルール
+const CUSTOM_PACK_MIN_STAMPS = 3;
+const CUSTOM_PACK_MAX_STAMPS = 8;
+const CUSTOM_PACK_MIN_PRICE = 20;
+const CUSTOM_PACK_MAX_PRICE = 300;
+// 投稿の乱用防止：クールダウンと、1人あたりの最大投稿数
+const CUSTOM_PACK_SUBMIT_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24時間に1回まで
+const CUSTOM_PACK_MAX_PER_USER = 5; // 1人が持てる自作パックは最大5個まで
 
 let pendingImageUrl = null, replyTarget = null, editTargetId = null, pc, localStream, currentCallId = null;
 let currentRoomId = null;
@@ -1519,19 +1556,30 @@ const initStampPicker = async () => {
     const $list = $("#stamp-list").empty();
     FREE_STAMP_LIST.forEach(url => { $list.append(`<img src="${url}" class="stamp-item" onclick="sendStamp('${url}')">`); });
 
-    // 購入済みのプレミアムスタンプがあれば続けて表示する
+    // 購入済みのスタンプパック（公式＋自作）があれば続けて全部展開して表示する
     try {
         if (auth.currentUser) {
             const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-            const ownedStamps = (userDoc.exists() ? userDoc.data().ownedStamps : []) || [];
-            if (ownedStamps.length > 0) {
-                PREMIUM_STAMP_LIST.filter(s => ownedStamps.includes(s.id)).forEach(s => {
-                    $list.append(`<img src="${s.url}" class="stamp-item" title="${s.name}" onclick="sendStamp('${s.url}')">`);
+            const ownedPacks = (userDoc.exists() ? userDoc.data().ownedPacks : []) || [];
+            if (ownedPacks.length > 0) {
+                const officialOwned = STAMP_PACKS.filter(p => ownedPacks.includes(p.id));
+                const customIds = ownedPacks.filter(id => !STAMP_PACKS.some(p => p.id === id));
+                const customPacks = (await Promise.all(customIds.map(async id => {
+                    try {
+                        const snap = await getDoc(doc(db, "stampPacks", id));
+                        return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+                    } catch { return null; }
+                }))).filter(Boolean);
+
+                [...officialOwned, ...customPacks].forEach(pack => {
+                    (pack.stamps || []).forEach(s => {
+                        $list.append(`<img src="${s.url}" class="stamp-item" title="${s.name || pack.name}" onclick="sendStamp('${s.url}')">`);
+                    });
                 });
             }
         }
     } catch (error) {
-        console.error('Load owned stamps error:', error);
+        console.error('Load owned stamp packs error:', error);
     }
 };
 
@@ -2526,41 +2574,96 @@ window.openShopFromMenu = () => {
 };
 
 
-// ========== スタンプショップ（チップ専用・アイテムショップとは独立） ==========
+// ========== スタンプショップ（チップ専用・アイテムショップとは独立。LINEのようにパック単位で販売） ==========
+
+let stampShopTab = 'official'; // 'official' | 'custom'
+let customPacksCache = null; // Firestoreからの自作パック一覧キャッシュ
+let currentPreviewPack = null; // 詳細モーダルで表示中のパック
+let customPackDraftStamps = []; // 自作パック投稿フォームで積み上げ中のスタンプ画像
 
 async function loadStampShopData() {
     const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
     const userData = userDoc.data() || {};
     const userChips = userData.chips || 0;
-    const ownedStamps = userData.ownedStamps || [];
+    const ownedPacks = userData.ownedPacks || [];
 
     $('#user-chips').text(userChips.toLocaleString());
 
     const $container = $('#stamp-shop-items').empty();
 
-    PREMIUM_STAMP_LIST.forEach(stamp => {
-        const owned = ownedStamps.includes(stamp.id);
-
-        const $item = $(`
-            <div class="shop-item ${owned ? 'owned' : ''}" data-stamp-id="${stamp.id}" onclick="${owned ? '' : `purchaseStamp('${stamp.id}')`}">
-                <div class="shop-item-icon"><img src="${stamp.url}" alt="${stamp.name}"></div>
-                <div class="shop-item-name">${stamp.name}</div>
-                ${owned ?
-                    '<div class="shop-item-owned">✅ 所持中</div>' :
-                    `<div class="shop-item-price">🎫 ${stamp.price}</div>`
-                }
-            </div>
-        `);
-
-        $container.append($item);
-    });
+    if (stampShopTab === 'official') {
+        STAMP_PACKS.forEach(pack => renderPackCard($container, pack, ownedPacks, false));
+    } else {
+        if (customPacksCache === null) {
+            $container.html('<div style="grid-column:1/-1; text-align:center; color:var(--txt-m); padding:20px;">読み込み中...</div>');
+            try {
+                const snap = await getDocs(query(collection(db, "stampPacks"), orderBy("createdAt", "desc"), limit(60)));
+                customPacksCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            } catch (error) {
+                console.error('Load custom packs error:', error);
+                customPacksCache = [];
+            }
+            $container.empty();
+        }
+        if (customPacksCache.length === 0) {
+            $container.html('<div style="grid-column:1/-1; text-align:center; color:var(--txt-m); padding:20px;">まだ自作スタンプがありません。一番乗りで投稿してみよう！</div>');
+        } else {
+            customPacksCache.forEach(pack => renderPackCard($container, pack, ownedPacks, true));
+        }
+    }
 }
 
-window.purchaseStamp = async (stampId) => {
-    const stamp = PREMIUM_STAMP_LIST.find(s => s.id === stampId);
-    if (!stamp) return;
+function renderPackCard($container, pack, ownedPacks, isCustom) {
+    const owned = ownedPacks.includes(pack.id) || (isCustom && pack.creatorUid === auth.currentUser.uid);
+    const thumb = pack.thumbnail || (pack.stamps && pack.stamps[0] && pack.stamps[0].url) || '';
+    const count = (pack.stamps || []).length;
 
-    if (!confirm(`${stamp.name}\n\n🎫 ${stamp.price}チップで購入しますか？`)) {
+    const $item = $(`
+        <div class="shop-item stamp-pack-card ${owned ? 'owned' : ''}" data-pack-id="${pack.id}">
+            <div class="shop-item-icon"><img src="${thumb}" alt="${pack.name}"></div>
+            <div class="shop-item-name">${pack.name}</div>
+            <div style="font-size:11px; color:var(--txt-m); margin-bottom:4px;">${count}個入り${isCustom ? ' ・ by ' + (pack.creatorName || '名無し') : ''}</div>
+            ${owned ?
+                '<div class="shop-item-owned">✅ 所持中</div>' :
+                `<div class="shop-item-price">🎫 ${pack.price}</div>`
+            }
+        </div>
+    `);
+    $item.on('click', () => openPackDetail(pack, isCustom, owned));
+    $container.append($item);
+}
+
+function openPackDetail(pack, isCustom, owned) {
+    currentPreviewPack = { ...pack, __isCustom: isCustom };
+    const thumb = pack.thumbnail || (pack.stamps && pack.stamps[0] && pack.stamps[0].url) || '';
+
+    $('#pack-detail-thumb').attr('src', thumb);
+    $('#pack-detail-title').text(pack.name);
+    $('#pack-detail-desc').text(pack.description || (isCustom ? `by ${pack.creatorName || '名無し'}` : ''));
+    $('#pack-detail-count').text(`${(pack.stamps || []).length}個入り`);
+
+    const $grid = $('#pack-detail-grid').empty();
+    (pack.stamps || []).forEach(s => {
+        $grid.append(`<img src="${s.url}" alt="${s.name || ''}" class="stamp-item" style="cursor:default;">`);
+    });
+
+    const alreadyOwned = owned;
+    if (alreadyOwned) {
+        $('#pack-detail-buy-btn').addClass('hidden');
+        $('#pack-detail-owned-label').removeClass('hidden');
+    } else {
+        $('#pack-detail-buy-btn').removeClass('hidden').text(`🎫 ${pack.price} で購入`);
+        $('#pack-detail-owned-label').addClass('hidden');
+    }
+
+    $('#stamp-pack-detail-modal').removeClass('hidden');
+}
+
+window.purchaseCurrentPack = async () => {
+    if (!currentPreviewPack) return;
+    const pack = currentPreviewPack;
+
+    if (!confirm(`${pack.name}（${(pack.stamps || []).length}個入り）\n\n🎫 ${pack.price}チップで購入しますか？`)) {
         return;
     }
 
@@ -2568,37 +2671,184 @@ window.purchaseStamp = async (stampId) => {
         const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
         const userData = userDoc.data() || {};
         const userChips = userData.chips || 0;
-        const ownedStamps = userData.ownedStamps || [];
+        const ownedPacks = userData.ownedPacks || [];
 
-        if (userChips < stamp.price) {
+        if (ownedPacks.includes(pack.id)) {
+            alert('✅ すでに所持しています！');
+            return;
+        }
+        if (userChips < pack.price) {
             alert('❌ チップが足りません！ログインボーナスで貯めよう');
             return;
         }
 
-        if (ownedStamps.includes(stampId)) {
-            alert('✅ すでに所持しています！');
-            return;
-        }
-
         await setDoc(doc(db, "users", auth.currentUser.uid), {
-            chips: userChips - stamp.price,
-            ownedStamps: arrayUnion(stampId)
+            chips: userChips - pack.price,
+            ownedPacks: arrayUnion(pack.id)
         }, { merge: true });
 
-        alert(`🎉 「${stamp.name}」スタンプを購入しました！`);
+        alert(`🎉 「${pack.name}」を購入しました！`);
 
+        $('#stamp-pack-detail-modal').addClass('hidden');
         loadStampShopData();
         initStampPicker();
 
     } catch (error) {
-        console.error('Purchase stamp error:', error);
+        console.error('Purchase pack error:', error);
         alert('❌ 購入に失敗しました: ' + error.message);
     }
+};
+
+window.switchStampShopTab = (tab) => {
+    stampShopTab = tab;
+    $('.stamp-shop-tab-btn').removeClass('active');
+    $(`.stamp-shop-tab-btn[data-tab="${tab}"]`).addClass('active');
+    loadStampShopData();
 };
 
 window.openStampShopFromMenu = () => {
     $('#stamp-shop-modal').removeClass('hidden');
     loadStampShopData();
+};
+
+
+// ========== 自作スタンプパックの投稿 ==========
+
+function renderCustomPackDraftList() {
+    const $list = $('#custom-pack-draft-list').empty();
+    customPackDraftStamps.forEach((s, i) => {
+        $list.append(`
+            <div class="custom-draft-stamp">
+                <img src="${s.url}" alt="">
+                <span class="material-symbols-outlined custom-draft-remove" onclick="removeCustomPackDraftStamp(${i})">close</span>
+            </div>
+        `);
+    });
+    if (customPackDraftStamps.length < CUSTOM_PACK_MAX_STAMPS) {
+        $list.append(`
+            <label class="custom-draft-add">
+                <span class="material-symbols-outlined">add</span>
+                <input type="file" accept="image/*" style="display:none;" onchange="addCustomPackDraftStamp(this.files[0])">
+            </label>
+        `);
+    }
+    $('#custom-pack-draft-count').text(`${customPackDraftStamps.length} / ${CUSTOM_PACK_MAX_STAMPS}（最低${CUSTOM_PACK_MIN_STAMPS}個から投稿できます）`);
+}
+
+window.addCustomPackDraftStamp = async (file) => {
+    if (!file) return;
+    if (customPackDraftStamps.length >= CUSTOM_PACK_MAX_STAMPS) return;
+    const url = await baseUpload(file, true, 'スタンプをアップロード中');
+    if (url) {
+        customPackDraftStamps.push({ url, name: '' });
+        renderCustomPackDraftList();
+    }
+};
+
+window.removeCustomPackDraftStamp = (index) => {
+    customPackDraftStamps.splice(index, 1);
+    renderCustomPackDraftList();
+};
+
+async function checkCanSubmitPack() {
+    const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+    const userData = userDoc.exists() ? userDoc.data() : {};
+
+    const lastSubmitted = userData.lastPackSubmittedAt;
+    if (lastSubmitted) {
+        const elapsed = Date.now() - lastSubmitted.toDate().getTime();
+        if (elapsed < CUSTOM_PACK_SUBMIT_COOLDOWN_MS) {
+            const remainingMs = CUSTOM_PACK_SUBMIT_COOLDOWN_MS - elapsed;
+            const remainingH = Math.ceil(remainingMs / (60 * 60 * 1000));
+            return { allowed: false, reason: `次のスタンプ投稿まであと約${remainingH}時間お待ちください（乱用防止のため24時間に1回までです）` };
+        }
+    }
+
+    const ownedSnap = await getDocs(query(collection(db, "stampPacks"), where("creatorUid", "==", auth.currentUser.uid)));
+    if (ownedSnap.size >= CUSTOM_PACK_MAX_PER_USER) {
+        return { allowed: false, reason: `1人が投稿できる自作スタンプは最大${CUSTOM_PACK_MAX_PER_USER}個までです。既存のパックを整理してから投稿してください` };
+    }
+
+    return { allowed: true };
+}
+
+window.openCustomPackCreateModal = async () => {
+    const check = await checkCanSubmitPack();
+    if (!check.allowed) {
+        alert('⏳ ' + check.reason);
+        return;
+    }
+
+    customPackDraftStamps = [];
+    $('#custom-pack-name-input').val('');
+    $('#custom-pack-price-input').val(CUSTOM_PACK_MIN_PRICE);
+    $('#custom-pack-thumb-preview').attr('src', '').addClass('hidden');
+    $('#custom-pack-thumb-input').val('');
+    renderCustomPackDraftList();
+    $('#stamp-pack-create-modal').removeClass('hidden');
+};
+
+$(document).on('change', '#custom-pack-thumb-input', async function() {
+    const file = this.files[0];
+    if (!file) return;
+    const url = await baseUpload(file, true, 'サムネイルをアップロード中');
+    if (url) {
+        $('#custom-pack-thumb-preview').attr('src', url).removeClass('hidden').data('url', url);
+    }
+});
+
+window.submitCustomStampPack = async () => {
+    const name = $('#custom-pack-name-input').val().trim();
+    const thumbUrl = $('#custom-pack-thumb-preview').data('url');
+    let price = parseInt($('#custom-pack-price-input').val(), 10);
+
+    if (!name) { alert('パック名を入力してください'); return; }
+    if (customPackDraftStamps.length < CUSTOM_PACK_MIN_STAMPS) {
+        alert(`スタンプを最低${CUSTOM_PACK_MIN_STAMPS}個は追加してください`);
+        return;
+    }
+    if (isNaN(price)) price = CUSTOM_PACK_MIN_PRICE;
+    price = Math.min(CUSTOM_PACK_MAX_PRICE, Math.max(CUSTOM_PACK_MIN_PRICE, price));
+
+    // 投稿ボタンを押すまでの間に条件が変わっている可能性があるので、送信直前にもう一度チェックする
+    const check = await checkCanSubmitPack();
+    if (!check.allowed) {
+        alert('⏳ ' + check.reason);
+        return;
+    }
+
+    try {
+        const userData = (await getDoc(doc(db, "users", auth.currentUser.uid))).data() || {};
+        const ref = await addDoc(collection(db, "stampPacks"), {
+            name,
+            thumbnail: thumbUrl || customPackDraftStamps[0].url,
+            price,
+            stamps: customPackDraftStamps,
+            creatorUid: auth.currentUser.uid,
+            creatorName: userData.name || auth.currentUser.displayName || '名無し',
+            createdAt: serverTimestamp(),
+        });
+
+        // 作った本人はすぐ使えるように所持済み扱いにし、投稿クールダウン用の時刻も記録する
+        await setDoc(doc(db, "users", auth.currentUser.uid), {
+            ownedPacks: arrayUnion(ref.id),
+            lastPackSubmittedAt: serverTimestamp()
+        }, { merge: true });
+
+        alert(`🎉 「${name}」を投稿しました！みんなが購入できるようになります`);
+
+        customPacksCache = null; // 一覧を再取得させる
+        $('#stamp-pack-create-modal').addClass('hidden');
+        stampShopTab = 'custom';
+        $('.stamp-shop-tab-btn').removeClass('active');
+        $(`.stamp-shop-tab-btn[data-tab="custom"]`).addClass('active');
+        loadStampShopData();
+        initStampPicker();
+
+    } catch (error) {
+        console.error('Submit custom pack error:', error);
+        alert('❌ 投稿に失敗しました: ' + error.message);
+    }
 };
 
 $('#toggleNotificationBtn').on('click', async () => {
