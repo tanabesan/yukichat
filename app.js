@@ -1274,7 +1274,7 @@ function generateMessageHtml(id, d, isGrouped = false) {
     for (const [emoji, uids] of sortedReactions) {
         if (uids.length > 0) rHtml += `<div class="reaction-badge ${uids.includes(auth.currentUser.uid)?'active':''}" onclick="react('${id}','${emoji}',${JSON.stringify(reactions).replace(/"/g, '&quot;')})">${emoji} ${uids.length}</div>`;
     }
-    const imgHtml = d.image ? `<img src="${d.image}" class="sent-img" onclick="window.open('${d.image}')">` : '';
+    const imgHtml = d.image ? `<div class="sent-img-wrap" onclick="window.open('${d.image}')"><img src="${d.image}" class="sent-img"><span class="sent-img-badge material-symbols-outlined">photo_camera</span></div>` : '';
     const stampHtml = d.stamp ? `<img src="${d.stamp}" class="stamp-display">` : '';
     const firstUrl = (!isStamp && d.text) ? extractFirstUrl(d.text) : null;
     const linkPreviewHtml = firstUrl ? `<div class="link-preview-slot" id="link-preview-${id}"></div>` : '';
@@ -4290,7 +4290,7 @@ window.addEventListener("touchstart", () => {
         if (!isMobile()) return;
         const msgEl = e.target.closest('.message');
         if (!msgEl) return;
-        if (e.target.closest('.icon-container, .op-btn, .reaction-badge, .reply-in-bubble, .sent-img, .stamp-display')) return;
+        if (e.target.closest('.icon-container, .op-btn, .reaction-badge, .reply-in-bubble, .sent-img, .sent-img-wrap, .stamp-display')) return;
 
         targetMsg = msgEl;
         pressTimer = setTimeout(() => {
@@ -4315,7 +4315,7 @@ window.addEventListener("touchstart", () => {
         if (isMobile()) return; // スマホは長押しメニューのみ
         const msgEl = e.target.closest('.message');
         if (!msgEl) return;
-        if (e.target.closest('.icon-container, .op-btn, .reaction-badge, .reply-in-bubble, .sent-img, .stamp-display')) return;
+        if (e.target.closest('.icon-container, .op-btn, .reaction-badge, .reply-in-bubble, .sent-img, .sent-img-wrap, .stamp-display')) return;
 
         e.preventDefault();
         targetMsg = msgEl;
