@@ -141,6 +141,8 @@ function playBoostedSound() {
 let unreadCount = 0;
 let unreadRooms = {};
 let lastSeenTimestamps = {};
+let lastFriendReqSeenAtMs = 0; // フレンド申請の既読ライン（Firestoreに保存し端末間で同期する）
+let pendingFriendReqCount = 0; // 今の未処理（pending）フレンド申請数。サイドバーの赤バッジに使う
 const NOTIF_KEYS = {
     soundChat:    'notif_sound_chat',
     soundDm:      'notif_sound_dm',
@@ -576,6 +578,8 @@ onAuthStateChanged(auth, async (user) => {
             if (myDoc.exists()) {
                 myBlockedUsers = myDoc.data().blockedUsers || [];
                 window.__isBanned = !!myDoc.data().banned;
+                const seenTs = myDoc.data().lastFriendReqSeenAt;
+                lastFriendReqSeenAtMs = seenTs ? seenTs.toDate().getTime() : 0;
                 if (window.__isBanned) {
                     alert('🚫 このアカウントは利用停止されています。運営にお問い合わせください。');
                 }
@@ -612,13 +616,16 @@ onAuthStateChanged(auth, async (user) => {
                     const senderData = usersCache[data.from];
                     const senderName = senderData ? senderData.name : "ゲスト";
                     const senderPhoto = senderData ? senderData.photo : DEFAULT_AVATAR;
-                    
-                    triggerBadge("friend_request_" + reqId);
-                    
-                    playNotifSound('soundFriendReq');
-                    sendPushNotif('pushFriendReq', '新しいフレンド申請', `${senderName}さんからフレンド申請が届きました`, senderPhoto, 'friend-request-' + reqId);
-                    
-                    console.log("New friend request from:", senderName);
+
+                    // createdAtが既読ラインより新しい申請だけ通知する。
+                    // （こうしないと、他の端末で開いた時に「もう見た申請」まで毎回鳴ってしまう）
+                    const reqTime = data.createdAt ? data.createdAt.toDate().getTime() : 0;
+                    if (reqTime > lastFriendReqSeenAtMs) {
+                        triggerBadge("friend_request_" + reqId);
+                        playNotifSound('soundFriendReq');
+                        sendPushNotif('pushFriendReq', '新しいフレンド申請', `${senderName}さんからフレンド申請が届きました`, senderPhoto, 'friend-request-' + reqId);
+                        console.log("New friend request from:", senderName);
+                    }
                 }
                 
                 if (change.type === "modified" && data.from === user.uid && data.status === "accepted") {
@@ -640,6 +647,15 @@ onAuthStateChanged(auth, async (user) => {
                     if (data.to === user.uid) friendIds.push(data.from);
                 }
             });
+
+            // 未処理（pending）のフレンド申請数を常に数え直し、サイドバーの赤バッジに反映する
+            pendingFriendReqCount = 0;
+            snap.forEach(d => {
+                const data = d.data();
+                if (data.to === user.uid && data.status === "pending") pendingFriendReqCount++;
+            });
+            updateFriendReqSidebarBadge();
+
             if ($("#sidebar").hasClass("open")) updateSidebarDMList();
         });
 
@@ -679,6 +695,16 @@ onAuthStateChanged(auth, async (user) => {
                         
                         if(updatedTime > lastSeen) {
                             triggerBadge(roomId);
+
+                            // ここが重要：今開いていないDMの新着は、今までバッジが増えるだけで
+                            // 音もプッシュ通知も一切鳴っていなかった（該当ルームを開いている時にしか
+                            // 通知ロジックが動かない作りだったため）。ここで拾って鳴らす。
+                            const senderData = usersCache[d.updatedBy];
+                            const senderName = senderData ? (senderData.name || "ゲスト") : "ゲスト";
+                            const senderPhoto = senderData ? (senderData.photo || DEFAULT_AVATAR) : DEFAULT_AVATAR;
+
+                            playNotifSound('soundDm');
+                            sendPushNotif('pushDm', `DM: ${senderName}`, d.lastMessage || "新着メッセージ", senderPhoto, 'dm-room-' + roomId);
                         }
                     }
                 }
@@ -690,6 +716,31 @@ onAuthStateChanged(auth, async (user) => {
         });
 
         globalUnsubscribers.push(unsubFriends, unsubUsers, unsubRooms);
+
+        // グローバルチャットの新着を、DM側にいる時でも拾うための常時リスナー。
+        // （今までは「グローバルチャットを開いている時」しか新着を検知できず、
+        //   DMを見ている間にグローバルへ投稿があっても完全に無反応だった）
+        let isFirstGlobalSnapshot = true;
+        const unsubGlobalWatch = onSnapshot(
+            query(collection(db, "chats"), orderBy("createdAt", "desc"), limit(1)),
+            (snap) => {
+                if (isFirstGlobalSnapshot) { isFirstGlobalSnapshot = false; return; }
+                if (snap.empty || currentRoomId === null) return; // グローバルを見ている時は専用リスナー側で処理済み
+
+                const lastDoc = snap.docs[0];
+                const d = lastDoc.data();
+                if (!d.uid || d.uid === auth.currentUser.uid) return;
+
+                const lastSeen = lastSeenTimestamps["global"] || 0;
+                const msgTime = d.createdAt ? d.createdAt.toMillis() : Date.now();
+                if (msgTime <= lastSeen) return;
+
+                triggerBadge("global");
+                playNotifSound('soundChat');
+                sendPushNotif('pushChat', `新着: ${d.name || "ゲスト"}`, d.text || (d.stamp ? "スタンプ" : "画像"), d.photo || DEFAULT_AVATAR, 'global-chat-msg');
+            }
+        );
+        globalUnsubscribers.push(unsubGlobalWatch);
         switchChat(null);
         listenForCalls();
         initStampPicker();
@@ -1325,6 +1376,15 @@ function generateMessageHtml(id, d, isGrouped = false) {
 }
 
 $("#messages").on("scroll", function() { if ($(this).scrollTop() === 0) loadMoreMessages(); });
+
+function updateFriendReqSidebarBadge() {
+    const $badge = $('#friendReqSidebarBadge');
+    if (pendingFriendReqCount > 0) {
+        $badge.text(pendingFriendReqCount > 9 ? '9+' : pendingFriendReqCount).removeClass('hidden');
+    } else {
+        $badge.addClass('hidden');
+    }
+}
 
 function triggerBadge(roomId = null) {
     if(roomId) {
@@ -3392,6 +3452,7 @@ window.switchUserTab = (tab) => {
     else if(tab === 'requests') {
         $(".tab-btn:contains('申請')").addClass("active");
         clearFriendRequestUnread();
+        markFriendRequestsSeen();
     }
     loadUserList(); 
 };
@@ -3404,6 +3465,19 @@ function clearFriendRequestUnread() {
     });
     recalculateTotalUnread();
     console.log("Cleared friend request notifications");
+}
+
+// フレンド申請の既読ラインをFirestoreに保存する。これにより、他の端末で開いた時や
+// リロードした時に「もう見た申請」まで毎回通知されるのを防げる（端末間で既読状態を同期）。
+async function markFriendRequestsSeen() {
+    lastFriendReqSeenAtMs = Date.now();
+    try {
+        await setDoc(doc(db, "users", auth.currentUser.uid), {
+            lastFriendReqSeenAt: serverTimestamp()
+        }, { merge: true });
+    } catch (error) {
+        console.error('Mark friend requests seen error:', error);
+    }
 }
 window.loadUserList = () => {
     onSnapshot(collection(db, "friendRequests"), (reqSnap) => {
@@ -3534,7 +3608,7 @@ window.sendRequest = async (uid) => {
         return;
     }
     const id = [auth.currentUser.uid, uid].sort().join("_"); 
-    await setDoc(doc(db, "friendRequests", id), { from: auth.currentUser.uid, to: uid, status: "pending" }); 
+    await setDoc(doc(db, "friendRequests", id), { from: auth.currentUser.uid, to: uid, status: "pending", createdAt: serverTimestamp() }); 
 };
 window.acceptRequest = async (id) => { await updateDoc(doc(db, "friendRequests", id), { status: "accepted" }); };
 window.removeFriend = async (id) => { if (confirm("解除しますか？")) await deleteDoc(doc(db, "friendRequests", id)); };
