@@ -925,13 +925,6 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
     z-index: 10;
     filter: drop-shadow(0 0 8px rgba(255, 215, 0, 1));
 }
-    top: -8px;
-    right: -8px;
-    font-size: 22px;
-    animation: goldPulse 2s ease-in-out infinite;
-    pointer-events: none;
-    z-index: 10;
-}
 .settings-input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #444; background:#1e1f22; color:#fff; box-sizing: border-box; font-size: 16px; }
 
 .settings-input-group { display: flex; gap: 8px; margin-bottom: 10px; }
