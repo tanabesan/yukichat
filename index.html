@@ -102,6 +102,10 @@
                 <span class="material-symbols-outlined" style="color:#a78bfa;">mood</span>
                 <span>スタンプショップ</span>
             </div>
+            <div class="sidebar-item admin-only hidden" onclick="toggleSidebar(false); openAdminPanel();">
+                <span class="material-symbols-outlined" style="color:#ff6b6b;">shield_person</span>
+                <span>モデレーション</span>
+            </div>
             <div class="sidebar-item" onclick="toggleSidebar(false); openCasinoFromMenu();">
                 <span class="material-symbols-outlined" style="color:#ff4757;">casino</span>
                 <span>カジノ</span>
@@ -744,6 +748,7 @@
             <div id="pack-detail-grid" class="stamp-grid" style="background:rgba(255,255,255,0.03); border-radius:10px;"></div>
             <button id="pack-detail-buy-btn" onclick="purchaseCurrentPack()" style="width:100%; margin-top:18px; padding:14px; background:linear-gradient(135deg,#ffd700,#ffed4e); color:#000; border:none; border-radius:10px; font-weight:bold; cursor:pointer; font-size:15px;"></button>
             <div id="pack-detail-owned-label" class="hidden" style="width:100%; margin-top:18px; padding:14px; background:rgba(59,165,92,0.15); border:1px solid var(--success); color:var(--success); border-radius:10px; font-weight:bold;">✅ 所持中</div>
+            <button id="pack-detail-report-btn" onclick="reportCurrentPack()" class="hidden" style="width:100%; margin-top:10px; padding:10px; background:none; border:1px solid rgba(255,107,107,0.4); color:#ff6b6b; border-radius:10px; cursor:pointer; font-size:12px;"></button>
         </div>
     </div>
 
@@ -772,6 +777,28 @@
             <div id="custom-pack-draft-count" style="font-size:11px; color:var(--txt-m); margin-top:6px; margin-bottom:16px;"></div>
 
             <button onclick="submitCustomStampPack()" style="width:100%; padding:14px; background:linear-gradient(135deg,#a78bfa,#667eea); color:#fff; border:none; border-radius:10px; font-weight:bold; cursor:pointer; font-size:15px;">📤 このスタンプを販売する</button>
+        </div>
+    </div>
+
+    <!-- 管理者用モデレーションパネル（isAdminのみサイドバーに表示される） -->
+    <div id="admin-panel-modal" class="fs-screen hidden">
+        <div class="fs-inner" style="max-width:640px;">
+            <div class="fs-header">
+                <div class="fs-title">🛡️ モデレーションパネル</div>
+                <button onclick="$('#admin-panel-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
+            </div>
+            <div style="font-size:12px; color:var(--txt-m); margin-bottom:14px;">通報されたスタンプパックを新しい順・通報数順に表示しています。プロフィール画面からユーザーのBANも行えます。</div>
+            <div style="flex:1; overflow-y:auto;">
+                <div style="font-size:12px; color:var(--txt-m); margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">通報されたスタンプパック</div>
+                <div id="admin-reported-packs"></div>
+
+                <div style="font-size:12px; color:var(--txt-m); margin:20px 0 8px; text-transform:uppercase; letter-spacing:1px;">BAN解除</div>
+                <div style="font-size:11px; color:var(--txt-m); margin-bottom:8px;">BAN済みユーザーのプロフィール画面を開くと解除ボタンが出ます。ユーザーIDが分かる場合はこちらから直接呼び出せます。</div>
+                <div style="display:flex; gap:8px;">
+                    <input id="admin-unban-uid-input" type="text" placeholder="ユーザーID(uid)" style="flex:1; padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.05); color:var(--txt); font-size:12px;">
+                    <button onclick="adminUnbanUser($('#admin-unban-uid-input').val().trim(), 'ユーザー')" style="padding:8px 14px; background:rgba(255,255,255,0.1); color:var(--txt); border:none; border-radius:6px; font-size:12px; cursor:pointer;">BAN解除</button>
+                </div>
+            </div>
         </div>
     </div>
 

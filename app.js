@@ -354,9 +354,15 @@ const CUSTOM_PACK_MAX_PRICE = 300;
 // 投稿の乱用防止：クールダウンと、1人あたりの最大投稿数
 const CUSTOM_PACK_SUBMIT_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24時間に1回まで
 const CUSTOM_PACK_MAX_PER_USER = 5; // 1人が持てる自作パックは最大5個まで
+const STAMP_REPORT_HIDE_THRESHOLD = 3; // この件数の通報が集まったら一覧から自動非表示
 
 let pendingImageUrl = null, replyTarget = null, editTargetId = null, pc, localStream, currentCallId = null;
 let currentRoomId = null;
+
+// 管理者メールアドレス（Firestoreルールのisadmin()と合わせる）
+const ADMIN_EMAILS = ['arinkodayo0204@gmail.com'];
+let isCurrentUserAdmin = false;
+let myBlockedUsers = [];
 let currentDMOtherUid = null;
 let currentUnsubscribe = null;
 let globalUnsubscribers = [];
@@ -561,6 +567,22 @@ onAuthStateChanged(auth, async (user) => {
         $("#app-wrapper").addClass("visible");
         $("#myName").text(user.displayName || "ゲスト");
         $("#myIconContainer").html(`<div class="icon-container"><img src="${user.photoURL || DEFAULT_AVATAR}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;"><div class="status-dot online"></div></div>`);
+
+        isCurrentUserAdmin = !!(user.email && ADMIN_EMAILS.includes(user.email));
+        if (isCurrentUserAdmin) { $(".admin-only").removeClass("hidden"); }
+
+        try {
+            const myDoc = await getDoc(doc(db, "users", user.uid));
+            if (myDoc.exists()) {
+                myBlockedUsers = myDoc.data().blockedUsers || [];
+                window.__isBanned = !!myDoc.data().banned;
+                if (window.__isBanned) {
+                    alert('🚫 このアカウントは利用停止されています。運営にお問い合わせください。');
+                }
+            }
+        } catch (error) {
+            console.error('Load blocked users error:', error);
+        }
         
         if (user.displayName === "ゲスト" || !user.displayName) {
             $("#guest-warning-banner").show();
@@ -1324,6 +1346,9 @@ function renderMessages(snap, isDesc = false) {
     
     let docs = [];
     snap.forEach(d => docs.push({id: d.id, data: d.data()}));
+    if (myBlockedUsers.length > 0) {
+        docs = docs.filter(item => !myBlockedUsers.includes(item.data.uid));
+    }
     if(isDesc) docs.reverse();
     
     if (isInitialLoad) {
@@ -1483,8 +1508,49 @@ function renderMessages(snap, isDesc = false) {
 
 let isSending = false;
 
+// ===== 連投・コピペ荒らし対策（クライアント側の簡易フラッド防止） =====
+const MSG_RATE_WINDOW_MS = 3000;   // この時間内に
+const MSG_RATE_MAX_COUNT = 5;      // これ以上送るとクールダウン
+const MSG_RATE_COOLDOWN_MS = 8000; // クールダウン時間
+const MSG_DUP_WINDOW_MS = 10000;   // 同じ内容の連投を弾く時間
+
+let recentMessageTimestamps = [];
+let msgRateCooldownUntil = 0;
+let lastSentMessageText = '';
+let lastSentMessageAt = 0;
+
+function checkMessageRateLimit() {
+    const now = Date.now();
+    const txt = $("#messageInput").val().trim();
+
+    if (now < msgRateCooldownUntil) {
+        const remain = Math.ceil((msgRateCooldownUntil - now) / 1000);
+        alert(`⏳ 連続送信が多すぎます。あと${remain}秒待ってください`);
+        return false;
+    }
+
+    if (txt && txt === lastSentMessageText && (now - lastSentMessageAt) < MSG_DUP_WINDOW_MS) {
+        alert('⚠️ 同じ内容の連続投稿はできません');
+        return false;
+    }
+
+    recentMessageTimestamps = recentMessageTimestamps.filter(t => now - t < MSG_RATE_WINDOW_MS);
+    recentMessageTimestamps.push(now);
+    if (recentMessageTimestamps.length > MSG_RATE_MAX_COUNT) {
+        msgRateCooldownUntil = now + MSG_RATE_COOLDOWN_MS;
+        alert(`⏳ 送信ペースが速すぎます。${MSG_RATE_COOLDOWN_MS / 1000}秒待ってから送信してください`);
+        return false;
+    }
+
+    lastSentMessageText = txt;
+    lastSentMessageAt = now;
+    return true;
+}
+
 const send = async () => {
     if (isSending) return;
+    if (window.__isBanned) { alert('🚫 このアカウントは利用停止中のため送信できません'); return; }
+    if (!checkMessageRateLimit()) return;
     
     const txt = $("#messageInput").val().trim(); 
     if (!txt && !pendingImageUrl) return;
@@ -2608,7 +2674,14 @@ async function loadStampShopData() {
         if (customPacksCache.length === 0) {
             $container.html('<div style="grid-column:1/-1; text-align:center; color:var(--txt-m); padding:20px;">まだ自作スタンプがありません。一番乗りで投稿してみよう！</div>');
         } else {
-            customPacksCache.forEach(pack => renderPackCard($container, pack, ownedPacks, true));
+            const visible = customPacksCache.filter(pack =>
+                (pack.reports || []).length < STAMP_REPORT_HIDE_THRESHOLD || pack.creatorUid === auth.currentUser.uid
+            );
+            if (visible.length === 0) {
+                $container.html('<div style="grid-column:1/-1; text-align:center; color:var(--txt-m); padding:20px;">表示できるスタンプがありません</div>');
+            } else {
+                visible.forEach(pack => renderPackCard($container, pack, ownedPacks, true));
+            }
         }
     }
 }
@@ -2656,8 +2729,34 @@ function openPackDetail(pack, isCustom, owned) {
         $('#pack-detail-owned-label').addClass('hidden');
     }
 
+    if (isCustom && pack.creatorUid !== auth.currentUser.uid) {
+        const alreadyReported = (pack.reports || []).includes(auth.currentUser.uid);
+        $('#pack-detail-report-btn').removeClass('hidden')
+            .prop('disabled', alreadyReported)
+            .text(alreadyReported ? '🚩 通報済み' : '🚩 このスタンプを通報');
+    } else {
+        $('#pack-detail-report-btn').addClass('hidden');
+    }
+
     $('#stamp-pack-detail-modal').removeClass('hidden');
 }
+
+window.reportCurrentPack = async () => {
+    if (!currentPreviewPack || !currentPreviewPack.__isCustom) return;
+    if (!confirm('このスタンプを不適切な内容として通報しますか？')) return;
+
+    try {
+        await updateDoc(doc(db, "stampPacks", currentPreviewPack.id), {
+            reports: arrayUnion(auth.currentUser.uid)
+        });
+        alert('🚩 通報しました。ご協力ありがとうございます');
+        $('#pack-detail-report-btn').prop('disabled', true).text('🚩 通報済み');
+        customPacksCache = null;
+    } catch (error) {
+        console.error('Report pack error:', error);
+        alert('❌ 通報に失敗しました: ' + error.message);
+    }
+};
 
 window.purchaseCurrentPack = async () => {
     if (!currentPreviewPack) return;
@@ -2709,6 +2808,111 @@ window.switchStampShopTab = (tab) => {
 window.openStampShopFromMenu = () => {
     $('#stamp-shop-modal').removeClass('hidden');
     loadStampShopData();
+};
+
+
+// ========== ユーザーブロック ==========
+
+window.blockUser = async (uid) => {
+    if (!confirm('このユーザーをブロックしますか？相手のメッセージが見えなくなります')) return;
+    try {
+        await setDoc(doc(db, "users", auth.currentUser.uid), { blockedUsers: arrayUnion(uid) }, { merge: true });
+        myBlockedUsers.push(uid);
+        alert('🚫 ブロックしました');
+        showProfile(uid);
+    } catch (error) {
+        console.error('Block user error:', error);
+        alert('❌ ブロックに失敗しました: ' + error.message);
+    }
+};
+
+window.unblockUser = async (uid) => {
+    try {
+        await setDoc(doc(db, "users", auth.currentUser.uid), { blockedUsers: arrayRemove(uid) }, { merge: true });
+        myBlockedUsers = myBlockedUsers.filter(id => id !== uid);
+        alert('🔓 ブロックを解除しました');
+        showProfile(uid);
+    } catch (error) {
+        console.error('Unblock user error:', error);
+        alert('❌ 解除に失敗しました: ' + error.message);
+    }
+};
+
+
+// ========== 管理者：BAN・モデレーションパネル ==========
+
+window.adminBanUser = async (uid, name) => {
+    if (!isCurrentUserAdmin) return;
+    if (!confirm(`${name} をBANしますか？以後このサイトを利用できなくなります`)) return;
+    try {
+        await setDoc(doc(db, "users", uid), { banned: true }, { merge: true });
+        alert(`⛔ ${name} をBANしました`);
+    } catch (error) {
+        console.error('Ban user error:', error);
+        alert('❌ BANに失敗しました: ' + error.message);
+    }
+};
+
+window.adminUnbanUser = async (uid, name) => {
+    if (!isCurrentUserAdmin) return;
+    try {
+        await setDoc(doc(db, "users", uid), { banned: false }, { merge: true });
+        alert(`✅ ${name} のBANを解除しました`);
+        openAdminPanel();
+    } catch (error) {
+        console.error('Unban user error:', error);
+        alert('❌ 解除に失敗しました: ' + error.message);
+    }
+};
+
+window.adminDeletePack = async (packId, name) => {
+    if (!isCurrentUserAdmin) return;
+    if (!confirm(`「${name}」を削除しますか？この操作は取り消せません`)) return;
+    try {
+        await deleteDoc(doc(db, "stampPacks", packId));
+        alert('🗑️ 削除しました');
+        customPacksCache = null;
+        openAdminPanel();
+    } catch (error) {
+        console.error('Delete pack error:', error);
+        alert('❌ 削除に失敗しました: ' + error.message);
+    }
+};
+
+window.openAdminPanel = async () => {
+    if (!isCurrentUserAdmin) return;
+    $('#admin-panel-modal').removeClass('hidden');
+    const $list = $('#admin-reported-packs').html('<div style="color:var(--txt-m); padding:10px;">読み込み中...</div>');
+
+    try {
+        const snap = await getDocs(query(collection(db, "stampPacks"), orderBy("createdAt", "desc"), limit(100)));
+        const reported = snap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(p => (p.reports || []).length > 0)
+            .sort((a, b) => (b.reports || []).length - (a.reports || []).length);
+
+        $list.empty();
+        if (reported.length === 0) {
+            $list.html('<div style="color:var(--txt-m); padding:10px;">現在、通報されているスタンプパックはありません</div>');
+        } else {
+            reported.forEach(pack => {
+                const thumb = pack.thumbnail || (pack.stamps && pack.stamps[0] && pack.stamps[0].url) || '';
+                $list.append(`
+                    <div style="display:flex; align-items:center; gap:12px; padding:10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+                        <img src="${thumb}" style="width:40px; height:40px; object-fit:contain;">
+                        <div style="flex:1;">
+                            <div style="font-weight:bold; font-size:13px;">${escapeHTML(pack.name)}</div>
+                            <div style="font-size:11px; color:var(--txt-m);">by ${escapeHTML(pack.creatorName || '名無し')} ・ 🚩${(pack.reports || []).length}件通報</div>
+                        </div>
+                        <button onclick="adminDeletePack('${pack.id}', '${escapeHTML(pack.name).replace(/'/g, "\\'")}')" style="padding:6px 12px; background:#7f1d1d; color:#fff; border:none; border-radius:6px; font-size:12px; cursor:pointer;">削除</button>
+                    </div>
+                `);
+            });
+        }
+    } catch (error) {
+        console.error('Load admin panel error:', error);
+        $list.html('<div style="color:#ff6b6b; padding:10px;">読み込みに失敗しました</div>');
+    }
 };
 
 
@@ -3025,6 +3229,17 @@ window.showProfile = async (uid) => {
         else if (rSnap.data().status === "accepted") {
             $actionBox.append(`<button onclick="openDM('${uid}','${escapeHTML(d.name || "ゲスト").replace(/'/g, "\\'")}')" class="btn-sm" style="background:var(--success);">DMを送る</button>`);
             $actionBox.append(`<span style="color:var(--friend-gold); font-size:12px; margin-left:10px;">★</span>`);
+        }
+
+        const isBlocked = myBlockedUsers.includes(uid);
+        if (isBlocked) {
+            $actionBox.append(`<button onclick="unblockUser('${uid}')" class="btn-sm" style="background:rgba(255,255,255,0.1); color:var(--txt-m); margin-left:6px;">🔓 ブロック解除</button>`);
+        } else {
+            $actionBox.append(`<button onclick="blockUser('${uid}')" class="btn-sm" style="background:rgba(255,77,77,0.15); color:#ff6b6b; margin-left:6px;">🚫 ブロック</button>`);
+        }
+
+        if (isCurrentUserAdmin) {
+            $actionBox.append(`<button onclick="adminBanUser('${uid}', '${escapeHTML(d.name || "ゲスト").replace(/'/g, "\\'")}')" class="btn-sm" style="background:#7f1d1d; color:#fff; margin-left:6px;">⛔ BAN</button>`);
         }
     }
     $("#prof-modal").removeClass("hidden");
