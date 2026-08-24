@@ -1618,11 +1618,18 @@ window.sendStamp = async (url) => {
     scrollToBottom(true);
 };
 
-const initStampPicker = async () => {
-    const $list = $("#stamp-list").empty();
-    FREE_STAMP_LIST.forEach(url => { $list.append(`<img src="${url}" class="stamp-item" onclick="sendStamp('${url}')">`); });
+let stampPickerGroups = []; // [{ key, label, thumb, stamps: [{url,name}] }]
+let stampPickerActiveKey = 'free';
 
-    // 購入済みのスタンプパック（公式＋自作）があれば続けて全部展開して表示する
+const initStampPicker = async () => {
+    const groups = [{
+        key: 'free',
+        label: '無料',
+        thumb: FREE_STAMP_LIST[0],
+        stamps: FREE_STAMP_LIST.map(url => ({ url, name: '' }))
+    }];
+
+    // 購入済みのスタンプパック（公式＋自作）があれば、パックごとに1タブとして追加する
     try {
         if (auth.currentUser) {
             const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
@@ -1638,8 +1645,12 @@ const initStampPicker = async () => {
                 }))).filter(Boolean);
 
                 [...officialOwned, ...customPacks].forEach(pack => {
-                    (pack.stamps || []).forEach(s => {
-                        $list.append(`<img src="${s.url}" class="stamp-item" title="${s.name || pack.name}" onclick="sendStamp('${s.url}')">`);
+                    if (!pack.stamps || pack.stamps.length === 0) return;
+                    groups.push({
+                        key: pack.id,
+                        label: pack.name,
+                        thumb: pack.thumbnail || pack.stamps[0].url,
+                        stamps: pack.stamps
                     });
                 });
             }
@@ -1647,6 +1658,38 @@ const initStampPicker = async () => {
     } catch (error) {
         console.error('Load owned stamp packs error:', error);
     }
+
+    stampPickerGroups = groups;
+    if (!groups.some(g => g.key === stampPickerActiveKey)) {
+        stampPickerActiveKey = 'free';
+    }
+
+    const $tabs = $('#stamp-pack-tabs').empty();
+    groups.forEach(g => {
+        $tabs.append(`
+            <div class="stamp-pack-tab ${g.key === stampPickerActiveKey ? 'active' : ''}" data-key="${g.key}" title="${g.label}" onclick="switchStampPickerTab('${g.key}')">
+                <img src="${g.thumb}" alt="${g.label}">
+            </div>
+        `);
+    });
+
+    renderStampPickerGrid();
+};
+
+function renderStampPickerGrid() {
+    const group = stampPickerGroups.find(g => g.key === stampPickerActiveKey) || stampPickerGroups[0];
+    const $list = $("#stamp-list").empty();
+    if (!group) return;
+    group.stamps.forEach(s => {
+        $list.append(`<img src="${s.url}" class="stamp-item" title="${s.name || ''}" onclick="sendStamp('${s.url}')">`);
+    });
+}
+
+window.switchStampPickerTab = (key) => {
+    stampPickerActiveKey = key;
+    $('#stamp-pack-tabs .stamp-pack-tab').removeClass('active');
+    $(`#stamp-pack-tabs .stamp-pack-tab[data-key="${key}"]`).addClass('active');
+    renderStampPickerGrid();
 };
 
 // ========== アイテム効果適用 ==========
@@ -2715,17 +2758,11 @@ async function loadStampShopData() {
 function renderPackCard($container, pack, ownedPacks, isCustom) {
     const owned = ownedPacks.includes(pack.id) || (isCustom && pack.creatorUid === auth.currentUser.uid);
     const thumb = pack.thumbnail || (pack.stamps && pack.stamps[0] && pack.stamps[0].url) || '';
-    const count = (pack.stamps || []).length;
 
     const $item = $(`
-        <div class="shop-item stamp-pack-card ${owned ? 'owned' : ''}" data-pack-id="${pack.id}">
-            <div class="shop-item-icon"><img src="${thumb}" alt="${pack.name}"></div>
-            <div class="shop-item-name">${pack.name}</div>
-            <div style="font-size:11px; color:var(--txt-m); margin-bottom:4px;">${count}個入り${isCustom ? ' ・ by ' + (pack.creatorName || '名無し') : ''}</div>
-            ${owned ?
-                '<div class="shop-item-owned">✅ 所持中</div>' :
-                `<div class="shop-item-price">🎫 ${pack.price}</div>`
-            }
+        <div class="stamp-pack-tile ${owned ? 'owned' : ''}" data-pack-id="${pack.id}">
+            <div class="stamp-pack-tile-thumb"><img src="${thumb}" alt="${pack.name}">${owned ? '<span class="stamp-pack-tile-owned">✓</span>' : ''}</div>
+            <div class="stamp-pack-tile-name">${pack.name}</div>
         </div>
     `);
     $item.on('click', () => openPackDetail(pack, isCustom, owned));

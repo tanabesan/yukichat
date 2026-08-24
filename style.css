@@ -2268,6 +2268,42 @@ select.settings-input option {
             margin-top: 2px;
         }
 
+/* ===== スタンプ送信モーダル：パックタブ切り替え ===== */
+.stamp-pack-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.stamp-pack-tab {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+}
+.stamp-pack-tab img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.stamp-pack-tab:hover { background: rgba(255,255,255,0.1); }
+.stamp-pack-tab.active {
+    background: var(--accent);
+    transform: scale(1.05);
+}
+
+.stamp-grid { max-height: 240px; overflow-y: auto; }
+
 /* ===== 統合ショップ：カテゴリタブ（バッジ/テーマ/エフェクト/スタンプ） ===== */
 .shop-cat-tab-btn {
     padding: 9px 18px;
@@ -2307,6 +2343,61 @@ select.settings-input option {
     width: 56px;
     height: 56px;
     object-fit: contain;
+}
+
+/* LINEストア風：サムネ+タイトルだけのシンプルなパックタイル */
+.stamp-pack-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    text-align: center;
+}
+.stamp-pack-tile-thumb {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1/1;
+    background: rgba(255,255,255,0.05);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    box-sizing: border-box;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+.stamp-pack-tile:hover .stamp-pack-tile-thumb {
+    transform: scale(1.05);
+    background: rgba(255,255,255,0.09);
+}
+.stamp-pack-tile-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.stamp-pack-tile-owned {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--success);
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.stamp-pack-tile-name {
+    font-size: 11px;
+    color: var(--txt-m);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 /* 自作スタンプ投稿フォームのサムネ一覧 */

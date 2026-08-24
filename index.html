@@ -227,8 +227,9 @@
     </div>
 
     <div id="stamp-modal" class="modal-overlay hidden" onclick="$(this).addClass('hidden')">
-        <div class="responsive-card" style="padding:20px; max-width:300px;" onclick="event.stopPropagation()">
+        <div class="responsive-card" style="padding:20px; max-width:340px;" onclick="event.stopPropagation()">
             <h3 style="margin-top:0;">スタンプを選択</h3>
+            <div id="stamp-pack-tabs" class="stamp-pack-tabs"></div>
             <div id="stamp-list" class="stamp-grid"></div>
             <button onclick="$('#stamp-modal').addClass('hidden'); openStampShopFromMenu();" style="width:100%; background:rgba(167,139,250,0.15); color:#a78bfa; border:none; margin-top:6px; cursor:pointer; padding:10px; border-radius:8px; font-weight:bold;">🎫 スタンプショップでもっと集める</button>
             <button onclick="$('#stamp-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:6px; cursor:pointer; padding:10px;">キャンセル</button>
@@ -727,7 +728,7 @@
                     <button onclick="openCustomPackCreateModal()" style="margin-left:auto; padding:8px 16px; border:none; border-radius:8px; background:linear-gradient(135deg,#a78bfa,#667eea); color:#fff; font-weight:bold; cursor:pointer; font-size:12px;">✏️ 自作スタンプを投稿</button>
                 </div>
                 <div style="flex:1; overflow-y:auto;">
-                    <div id="stamp-shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:14px; padding-bottom:20px;"></div>
+                    <div id="stamp-shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:16px; padding-bottom:20px;"></div>
                 </div>
             </div>
 
