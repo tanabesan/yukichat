@@ -1674,20 +1674,28 @@ async function applyUserTheme() {
 // ========== ショップシステム ==========
 
 const shopItems = [
-    { id: 'vip_badge', name: 'VIPバッジ', icon: '👑', price: 300, description: '名前の横にVIPバッジが表示されます' },
-    { id: 'rainbow_theme', name: 'レインボーテーマ', icon: '🌈', price: 250, description: 'チャット背景が虹色に' },
-    { id: 'fire_effect', name: '炎エフェクト', icon: '🔥', price: 200, description: 'メッセージに炎エフェクト' },
-    { id: 'star_badge', name: 'スターバッジ', icon: '⭐', price: 150, description: '名前の横にスターが表示' },
-    { id: 'heart_theme', name: 'ハートテーマ', icon: '💕', price: 180, description: 'ピンク色のテーマ' },
-    { id: 'sparkle_effect', name: 'キラキラエフェクト', icon: '✨', price: 220, description: 'メッセージがキラキラ' },
-    { id: 'crown_badge', name: 'クラウンバッジ', icon: '👸', price: 350, description: 'プレミアムクラウン' },
-    { id: 'lightning_effect', name: '稲妻エフェクト', icon: '⚡', price: 280, description: 'メッセージに稲妻' },
-    { id: 'rainbow_effect', name: '虹色エフェクト', icon: '🌟', price: 300, description: '虹色に輝くオーラ' },
-    { id: 'shadow_effect', name: 'シャドウエフェクト', icon: '🌑', price: 250, description: '暗黒のオーラ' },
-    { id: 'ice_effect', name: '氷エフェクト', icon: '❄️', price: 260, description: '氷の結晶エフェクト' },
-    { id: 'toxic_effect', name: '毒エフェクト', icon: '☠️', price: 270, description: '紫色の毒々しいオーラ' },
-    { id: 'gold_effect', name: 'ゴールドエフェクト', icon: '💛', price: 400, description: '金色に輝く豪華なオーラ' }
+    { id: 'vip_badge', name: 'VIPバッジ', icon: '👑', price: 300, description: '名前の横にVIPバッジが表示されます', category: 'badge' },
+    { id: 'rainbow_theme', name: 'レインボーテーマ', icon: '🌈', price: 250, description: 'チャット背景が虹色に', category: 'theme' },
+    { id: 'fire_effect', name: '炎エフェクト', icon: '🔥', price: 200, description: 'メッセージに炎エフェクト', category: 'effect' },
+    { id: 'star_badge', name: 'スターバッジ', icon: '⭐', price: 150, description: '名前の横にスターが表示', category: 'badge' },
+    { id: 'heart_theme', name: 'ハートテーマ', icon: '💕', price: 180, description: 'ピンク色のテーマ', category: 'theme' },
+    { id: 'sparkle_effect', name: 'キラキラエフェクト', icon: '✨', price: 220, description: 'メッセージがキラキラ', category: 'effect' },
+    { id: 'crown_badge', name: 'クラウンバッジ', icon: '👸', price: 350, description: 'プレミアムクラウン', category: 'badge' },
+    { id: 'lightning_effect', name: '稲妻エフェクト', icon: '⚡', price: 280, description: 'メッセージに稲妻', category: 'effect' },
+    { id: 'rainbow_effect', name: '虹色エフェクト', icon: '🌟', price: 300, description: '虹色に輝くオーラ', category: 'effect' },
+    { id: 'shadow_effect', name: 'シャドウエフェクト', icon: '🌑', price: 250, description: '暗黒のオーラ', category: 'effect' },
+    { id: 'ice_effect', name: '氷エフェクト', icon: '❄️', price: 260, description: '氷の結晶エフェクト', category: 'effect' },
+    { id: 'toxic_effect', name: '毒エフェクト', icon: '☠️', price: 270, description: '紫色の毒々しいオーラ', category: 'effect' },
+    { id: 'gold_effect', name: 'ゴールドエフェクト', icon: '💛', price: 400, description: '金色に輝く豪華なオーラ', category: 'effect' }
 ];
+
+const SHOP_CATEGORIES = [
+    { id: 'badge', label: '🏅 バッジ' },
+    { id: 'theme', label: '🎨 テーマ' },
+    { id: 'effect', label: '✨ エフェクト' },
+    { id: 'stamp', label: '🎫 スタンプ' },
+];
+let shopActiveCategory = 'badge';
 
 async function checkLoginBonus() {
     try {
@@ -2463,20 +2471,22 @@ $('#claimBonusBtn').on('click', async () => {
 });
 
 
-async function loadShopData() {
+async function loadShopData(category) {
     const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
     const userData = userDoc.data();
     const userCoins = userData.coins || 0;
+    const userChips = userData.chips || 0;
     const ownedItems = userData.ownedItems || [];
     
     const currentUserName = userData.name || 'あなた';
     const currentUserPhoto = userData.photo || DEFAULT_AVATAR;
     
     $('#user-coins').text(userCoins);
+    $('#user-chips').text(userChips.toLocaleString());
     
     const $container = $('#shop-items').empty();
     
-    shopItems.forEach(item => {
+    shopItems.filter(item => item.category === category).forEach(item => {
         const owned = ownedItems.includes(item.id);
         
         const $item = $(`
@@ -2634,9 +2644,25 @@ window.purchaseItem = async (itemId) => {
 };
 
 
-window.openShopFromMenu = () => {
+window.openShopFromMenu = (category) => {
     $('#shop-modal').removeClass('hidden');
-    loadShopData();
+    switchShopCategory(category || shopActiveCategory || 'badge');
+};
+
+window.switchShopCategory = (cat) => {
+    shopActiveCategory = cat;
+    $('.shop-cat-tab-btn').removeClass('active');
+    $(`.shop-cat-tab-btn[data-cat="${cat}"]`).addClass('active');
+
+    if (cat === 'stamp') {
+        $('#shop-panel-items').addClass('hidden');
+        $('#shop-panel-stamp').removeClass('hidden');
+        loadStampShopData();
+    } else {
+        $('#shop-panel-stamp').addClass('hidden');
+        $('#shop-panel-items').removeClass('hidden');
+        loadShopData(cat);
+    }
 };
 
 
@@ -2805,9 +2831,9 @@ window.switchStampShopTab = (tab) => {
     loadStampShopData();
 };
 
+// 後方互換用エイリアス：以前は別モーダルだったが、今は統合ショップの「スタンプ」タブを開く
 window.openStampShopFromMenu = () => {
-    $('#stamp-shop-modal').removeClass('hidden');
-    loadStampShopData();
+    openShopFromMenu('stamp');
 };
 
 

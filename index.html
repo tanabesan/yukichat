@@ -98,10 +98,6 @@
                 <span class="material-symbols-outlined" style="color:#f093fb;">shopping_bag</span>
                 <span>ショップ</span>
             </div>
-            <div class="sidebar-item" onclick="toggleSidebar(false); openStampShopFromMenu();">
-                <span class="material-symbols-outlined" style="color:#a78bfa;">mood</span>
-                <span>スタンプショップ</span>
-            </div>
             <div class="sidebar-item admin-only hidden" onclick="toggleSidebar(false); openAdminPanel();">
                 <span class="material-symbols-outlined" style="color:#ff6b6b;">shield_person</span>
                 <span>モデレーション</span>
@@ -675,65 +671,67 @@
         <div class="fs-inner" style="max-width:900px;">
             <div class="fs-header">
                 <div class="fs-title">🎁 ショップ</div>
-                <div style="display:flex; align-items:center; gap:16px;">
-                    <div style="text-align:center; background:rgba(255,255,255,0.08); border-radius:10px; padding:6px 18px;">
-                        <div style="font-size:10px; color:rgba(255,255,255,0.6); text-transform:uppercase;">所持コイン</div>
-                        <div style="font-size:20px; font-weight:bold; color:#ffd700;">💰 <span id="user-coins">0</span></div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="text-align:center; background:rgba(255,255,255,0.08); border-radius:10px; padding:6px 14px;">
+                        <div style="font-size:10px; color:rgba(255,255,255,0.6); text-transform:uppercase;">コイン</div>
+                        <div style="font-size:18px; font-weight:bold; color:#ffd700;">💰 <span id="user-coins">0</span></div>
+                    </div>
+                    <div style="text-align:center; background:rgba(255,255,255,0.08); border-radius:10px; padding:6px 14px;">
+                        <div style="font-size:10px; color:rgba(255,255,255,0.6); text-transform:uppercase;">チップ</div>
+                        <div style="font-size:18px; font-weight:bold; color:#ffd700;">🎫 <span id="user-chips">0</span></div>
                     </div>
                     <button onclick="$('#shop-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
                 </div>
             </div>
-            <div id="item-preview" style="position:relative; background:rgba(255,255,255,0.05); padding:14px 16px; border-radius:10px; margin-bottom:14px; border:2px solid #667eea; overflow:hidden; height:104px; box-sizing:border-box;">
-                <div style="font-size:11px; color:var(--txt-m); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">👁️ Preview</div>
-                <div style="display:flex; align-items:flex-start; gap:14px;">
-                    <div id="preview-message" class="message" style="margin:0; flex-shrink:0;">
-                        <div class="icon-container" id="preview-icon-container">
-                            <img class="icon" id="preview-icon" src="" alt="">
-                        </div>
-                        <div class="bubble">
-                            <div class="msg-head"><span class="sender" id="preview-name"></span><span id="preview-badge"></span></div>
-                            <div class="msg-body">プレビュー表示</div>
-                        </div>
-                    </div>
-                    <div style="flex:1; min-width:0; padding-top:4px;">
-                        <div id="preview-item-name" style="font-size:16px; font-weight:bold; margin-bottom:6px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">アイテムにマウスを乗せてね</div>
-                        <div id="preview-item-desc" style="font-size:12px; color:var(--txt-m); line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">気になるアイテムをホバー（スマホはタップ）すると、ここに詳細が表示されます</div>
-                    </div>
-                </div>
-            </div>
-            <div style="flex:1; overflow-y:auto;">
-                <div style="font-size:12px; color:var(--txt-m); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">アイテム一覧</div>
-                <div id="shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:14px; padding-bottom:20px;"></div>
-            </div>
-            <button onclick="$('#shop-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
-        </div>
-    </div>
 
-    <!-- スタンプショップ全画面（アイテムショップとは別枠。通貨は「チップ」、デイリーボーナスで貯める。LINEストアのようにパック単位で販売） -->
-    <div id="stamp-shop-modal" class="fs-screen hidden">
-        <div class="fs-inner" style="max-width:900px;">
-            <div class="fs-header">
-                <div class="fs-title">🎫 スタンプショップ</div>
-                <div style="display:flex; align-items:center; gap:16px;">
-                    <div style="text-align:center; background:rgba(255,255,255,0.08); border-radius:10px; padding:6px 18px;">
-                        <div style="font-size:10px; color:rgba(255,255,255,0.6); text-transform:uppercase;">所持チップ</div>
-                        <div style="font-size:20px; font-weight:bold; color:#ffd700;">🎫 <span id="user-chips">0</span></div>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
+                <button class="shop-cat-tab-btn active" data-cat="badge" onclick="switchShopCategory('badge')">🏅 バッジ</button>
+                <button class="shop-cat-tab-btn" data-cat="theme" onclick="switchShopCategory('theme')">🎨 テーマ</button>
+                <button class="shop-cat-tab-btn" data-cat="effect" onclick="switchShopCategory('effect')">✨ エフェクト</button>
+                <button class="shop-cat-tab-btn" data-cat="stamp" onclick="switchShopCategory('stamp')">🎫 スタンプ</button>
+            </div>
+
+            <!-- パネル：バッジ／テーマ／エフェクト（コイン） -->
+            <div id="shop-panel-items">
+                <div id="item-preview" style="position:relative; background:rgba(255,255,255,0.05); padding:14px 16px; border-radius:10px; margin-bottom:14px; border:2px solid #667eea; overflow:hidden; height:104px; box-sizing:border-box;">
+                    <div style="font-size:11px; color:var(--txt-m); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">👁️ Preview</div>
+                    <div style="display:flex; align-items:flex-start; gap:14px;">
+                        <div id="preview-message" class="message" style="margin:0; flex-shrink:0;">
+                            <div class="icon-container" id="preview-icon-container">
+                                <img class="icon" id="preview-icon" src="" alt="">
+                            </div>
+                            <div class="bubble">
+                                <div class="msg-head"><span class="sender" id="preview-name"></span><span id="preview-badge"></span></div>
+                                <div class="msg-body">プレビュー表示</div>
+                            </div>
+                        </div>
+                        <div style="flex:1; min-width:0; padding-top:4px;">
+                            <div id="preview-item-name" style="font-size:16px; font-weight:bold; margin-bottom:6px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">アイテムにマウスを乗せてね</div>
+                            <div id="preview-item-desc" style="font-size:12px; color:var(--txt-m); line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">気になるアイテムをホバー（スマホはタップ）すると、ここに詳細が表示されます</div>
+                        </div>
                     </div>
-                    <button onclick="$('#stamp-shop-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
+                </div>
+                <div style="flex:1; overflow-y:auto;">
+                    <div id="shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:14px; padding-bottom:20px;"></div>
                 </div>
             </div>
-            <div style="font-size:12px; color:var(--txt-m); margin-bottom:14px; background:rgba(167,139,250,0.08); border:1px solid rgba(167,139,250,0.25); border-radius:8px; padding:10px 12px;">
-                チップは毎日のログインボーナスで受け取れます。購入したパックの中身は「スタンプ送信」の一覧にまとめて追加されます。
+
+            <!-- パネル：スタンプ（チップ・LINEストア風パック販売） -->
+            <div id="shop-panel-stamp" class="hidden" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+                <div style="font-size:12px; color:var(--txt-m); margin-bottom:14px; background:rgba(167,139,250,0.08); border:1px solid rgba(167,139,250,0.25); border-radius:8px; padding:10px 12px;">
+                    チップは毎日のログインボーナスで受け取れます。購入したパックの中身は「スタンプ送信」の一覧にまとめて追加されます。
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+                    <button class="stamp-shop-tab-btn active" data-tab="official" onclick="switchStampShopTab('official')">🏅 公式パック</button>
+                    <button class="stamp-shop-tab-btn" data-tab="custom" onclick="switchStampShopTab('custom')">👥 みんなのスタンプ</button>
+                    <button onclick="openCustomPackCreateModal()" style="margin-left:auto; padding:8px 16px; border:none; border-radius:8px; background:linear-gradient(135deg,#a78bfa,#667eea); color:#fff; font-weight:bold; cursor:pointer; font-size:12px;">✏️ 自作スタンプを投稿</button>
+                </div>
+                <div style="flex:1; overflow-y:auto;">
+                    <div id="stamp-shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:14px; padding-bottom:20px;"></div>
+                </div>
             </div>
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
-                <button class="stamp-shop-tab-btn active" data-tab="official" onclick="switchStampShopTab('official')">🏅 公式パック</button>
-                <button class="stamp-shop-tab-btn" data-tab="custom" onclick="switchStampShopTab('custom')">👥 みんなのスタンプ</button>
-                <button onclick="openCustomPackCreateModal()" style="margin-left:auto; padding:8px 16px; border:none; border-radius:8px; background:linear-gradient(135deg,#a78bfa,#667eea); color:#fff; font-weight:bold; cursor:pointer; font-size:12px;">✏️ 自作スタンプを投稿</button>
-            </div>
-            <div style="flex:1; overflow-y:auto;">
-                <div id="stamp-shop-items" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:14px; padding-bottom:20px;"></div>
-            </div>
-            <button onclick="$('#stamp-shop-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
+
+            <button onclick="$('#shop-modal').addClass('hidden')" class="fs-back-btn">← 戻る</button>
         </div>
     </div>
 

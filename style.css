@@ -2268,6 +2268,24 @@ select.settings-input option {
             margin-top: 2px;
         }
 
+/* ===== 統合ショップ：カテゴリタブ（バッジ/テーマ/エフェクト/スタンプ） ===== */
+.shop-cat-tab-btn {
+    padding: 9px 18px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    color: var(--txt-m);
+    font-weight: bold;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.shop-cat-tab-btn:hover { background: rgba(255,255,255,0.1); }
+.shop-cat-tab-btn.active {
+    background: linear-gradient(135deg, #f093fb, #667eea);
+    color: #fff;
+}
+
 /* ===== スタンプショップ（パック販売） ===== */
 .stamp-shop-tab-btn {
     padding: 8px 16px;
