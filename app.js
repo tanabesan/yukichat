@@ -1138,6 +1138,148 @@ window.closeGlobalSpotifyPlayer = () => {
     });
 })();
 
+// ===== YouTubeリンクのクリック挙動（タブ内プレイヤー / 新しいタブ で開く、をユーザーが選べる） =====
+const YT_PREF_KEY = 'yt_open_pref'; // 'ask' | 'player' | 'external'
+
+function getYtPref() {
+    return localStorage.getItem(YT_PREF_KEY) || 'ask';
+}
+function setYtPref(val) {
+    localStorage.setItem(YT_PREF_KEY, val);
+    $('#ytDefaultPref').val(val);
+}
+
+function extractYoutubeVideoId(url) {
+    const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{6,})/);
+    return m ? m[1] : null;
+}
+
+let pendingYoutubeUrl = null;
+
+// リンクカードのクリック本体。falseを返すとaタグのデフォルト遷移(新規タブ等)をキャンセルできる。
+window.handleYoutubeLinkClick = (event, url) => {
+    const pref = getYtPref();
+
+    if (pref === 'external') {
+        window.open(url, '_blank', 'noopener,noreferrer');
+        event.preventDefault();
+        return false;
+    }
+    if (pref === 'player') {
+        playYoutubeInGlobalPlayer(url);
+        event.preventDefault();
+        return false;
+    }
+
+    // 初回・未設定時は毎回聞く
+    pendingYoutubeUrl = url;
+    $('#yt-ask-modal').removeClass('hidden');
+    event.preventDefault();
+    return false;
+};
+
+window.resolveYoutubeAsk = (choice) => {
+    const url = pendingYoutubeUrl;
+    pendingYoutubeUrl = null;
+    $('#yt-ask-modal').addClass('hidden');
+    if (!url) return;
+
+    if ($('#yt-ask-remember').prop('checked')) {
+        setYtPref(choice);
+    }
+
+    if (choice === 'player') {
+        playYoutubeInGlobalPlayer(url);
+    } else {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+};
+
+function playYoutubeInGlobalPlayer(url) {
+    const videoId = extractYoutubeVideoId(url);
+    if (!videoId) { window.open(url, '_blank', 'noopener,noreferrer'); return; }
+
+    $('#gyp-embed-container').html(
+        `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${videoId}?autoplay=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`
+    );
+    $('#gyp-open-link').attr('href', url);
+    $('#global-youtube-player').removeClass('hidden');
+
+    // 読み込めたらタイトルをoEmbedから取ってくる（失敗しても再生自体には影響しない）
+    $('#gyp-title').text('読み込み中...');
+    fetchYoutubeOembed(url).then(data => {
+        $('#gyp-title').text((data && data.title) || 'YouTube');
+    }).catch(() => {
+        $('#gyp-title').text('YouTube');
+    });
+}
+
+window.closeGlobalYoutubePlayer = () => {
+    $('#gyp-embed-container').empty(); // iframeごと消すことで再生も止まる
+    $('#global-youtube-player').addClass('hidden');
+};
+
+// ===== 常設YouTubeプレイヤーの位置移動・最小化（Spotifyプレイヤーと同じ仕組み） =====
+(function() {
+    const $player = $('#global-youtube-player');
+    const $handle = $('#gyp-drag-handle');
+
+    const savedPos = JSON.parse(localStorage.getItem('gyp_position') || 'null');
+    if (savedPos) {
+        $player.css({ left: savedPos.left + 'px', top: savedPos.top + 'px', right: 'auto', bottom: 'auto' });
+    }
+    if (localStorage.getItem('gyp_minimized') === 'true') {
+        $player.addClass('minimized');
+    }
+
+    $('#gyp-minimize-btn').on('click', (e) => {
+        e.stopPropagation();
+        const isMin = $player.toggleClass('minimized').hasClass('minimized');
+        localStorage.setItem('gyp_minimized', isMin);
+    });
+
+    let dragging = false;
+    let offsetX = 0, offsetY = 0;
+
+    function onDragStart(clientX, clientY) {
+        dragging = true;
+        const rect = $player[0].getBoundingClientRect();
+        offsetX = clientX - rect.left;
+        offsetY = clientY - rect.top;
+        $player.addClass('dragging');
+    }
+    function onDragMove(clientX, clientY) {
+        if (!dragging) return;
+        const rect = $player[0].getBoundingClientRect();
+        let left = clientX - offsetX;
+        let top = clientY - offsetY;
+        left = Math.max(4, Math.min(window.innerWidth - rect.width - 4, left));
+        top = Math.max(4, Math.min(window.innerHeight - 40, top));
+        $player.css({ left: left + 'px', top: top + 'px', right: 'auto', bottom: 'auto' });
+    }
+    function onDragEnd() {
+        if (!dragging) return;
+        dragging = false;
+        $player.removeClass('dragging');
+        const rect = $player[0].getBoundingClientRect();
+        localStorage.setItem('gyp_position', JSON.stringify({ left: rect.left, top: rect.top }));
+    }
+
+    $handle.on('pointerdown', (e) => {
+        if ($(e.target).closest('#gyp-minimize-btn, .op-btn').length) return;
+        const ev = e.originalEvent || e;
+        onDragStart(ev.clientX, ev.clientY);
+        try { $handle[0].setPointerCapture(ev.pointerId); } catch (err) {}
+        e.preventDefault();
+    });
+    $handle.on('pointermove', (e) => {
+        if (!dragging) return;
+        const ev = e.originalEvent || e;
+        onDragMove(ev.clientX, ev.clientY);
+    });
+    $handle.on('pointerup pointercancel', () => { onDragEnd(); });
+})();
+
 async function fetchGithubRepoPreview(url) {
     const match = url.match(GITHUB_REPO_REGEX);
     if (!match) throw new Error('not a github repo url');
@@ -1277,8 +1419,14 @@ async function loadLinkPreview(msgId, url, isRetry = false, isDomRetry = false) 
         let hostname = '';
         try { hostname = new URL(url).hostname; } catch (e) {}
 
+        const isYoutube = YOUTUBE_URL_REGEX.test(url);
+        const safeUrlAttr = url.replace(/'/g, "&#39;");
+        const cardOpenTag = isYoutube
+            ? `<a href="${url}" class="link-preview-card" onclick="return handleYoutubeLinkClick(event, '${safeUrlAttr}')">`
+            : `<a href="${url}" target="_blank" rel="noopener noreferrer" class="link-preview-card">`;
+
         el.innerHTML = `
-            <a href="${url}" target="_blank" rel="noopener noreferrer" class="link-preview-card">
+            ${cardOpenTag}
                 ${data.image ? `<img src="${escapeHTML(data.image)}" class="link-preview-img" loading="lazy" onerror="this.remove()">` : ''}
                 <div class="link-preview-body">
                     ${hostname ? `<div class="link-preview-site">${escapeHTML(hostname)}</div>` : ''}
@@ -4245,12 +4393,14 @@ window.toggleSettingsDrawer = (show) => {
         $("#settings-drawer-overlay").fadeIn(200);
         initNotifUI();
         updateAccountStatusUI();
+        $('#ytDefaultPref').val(getYtPref());
     } else {
         $("#other-settings-modal").removeClass("open");
         $("#settings-drawer-overlay").fadeOut(200);
     }
 };
 $("#settings-drawer-overlay").on("click", () => toggleSettingsDrawer(false));
+$('#ytDefaultPref').on('change', function() { setYtPref($(this).val()); });
 
 // ===== アカウント状態表示 =====
 function updateAccountStatusUI() {

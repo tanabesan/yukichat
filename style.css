@@ -2293,6 +2293,58 @@ select.settings-input option {
             width: 100%;
             border: none;
         }
+
+        /* 常設YouTubeミニプレイヤー（Spotifyと同時に開いても重ならないよう少し上にずらす） */
+        #global-youtube-player {
+            position: fixed;
+            bottom: 16px;
+            right: 330px;
+            width: 320px;
+            max-width: calc(100vw - 32px);
+            background: var(--bg-2b);
+            border: 1px solid rgba(255,0,0,0.3);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            z-index: 5000;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #global-youtube-player.dragging {
+            opacity: 0.85;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+        }
+        @media (max-width: 600px) {
+            #global-youtube-player {
+                bottom: 90px;
+                right: 10px;
+                left: 10px;
+                width: auto;
+                max-width: none;
+            }
+        }
+        #gyp-embed-container {
+            max-height: 200px;
+            aspect-ratio: 16 / 9;
+            transition: max-height 0.25s ease, opacity 0.2s ease;
+            overflow: hidden;
+        }
+        #global-youtube-player.minimized #gyp-embed-container {
+            max-height: 0;
+            aspect-ratio: unset;
+            opacity: 0;
+        }
+        #gyp-minimize-btn {
+            transition: transform 0.2s ease;
+        }
+        #global-youtube-player.minimized #gyp-minimize-btn {
+            transform: rotate(180deg);
+        }
+        #gyp-embed-container iframe {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
         /* プロフィール内の曲カード（クリックすると常設プレイヤーで再生） */
         .song-card {
             display: flex;

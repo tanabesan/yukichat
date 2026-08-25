@@ -418,6 +418,16 @@
                 </button>
             </div>
 
+            <!-- YouTubeリンクの開き方 -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:11px; font-weight:bold; color:var(--txt-m); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">▶ YouTubeリンクの開き方</div>
+                <select id="ytDefaultPref" style="width:100%; padding:10px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.05); color:var(--txt); font-size:13px; box-sizing:border-box;">
+                    <option value="ask">毎回確認する</option>
+                    <option value="player">常にこのタブ内で再生する</option>
+                    <option value="external">常に新しいタブで開く</option>
+                </select>
+            </div>
+
             <!-- メールアドレス・認証 -->
             <div style="margin-bottom:20px;">
                 <div style="font-size:11px; font-weight:bold; color:var(--txt-m); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">📧 アカウント</div>
@@ -820,6 +830,32 @@
             <span class="material-symbols-outlined op-btn" style="font-size:18px;" onclick="closeGlobalSpotifyPlayer()">close</span>
         </div>
         <div id="gsp-embed-container"></div>
+    </div>
+
+    <!-- 常設のYouTubeミニプレイヤー -->
+    <div id="global-youtube-player" class="hidden">
+        <div class="gsp-header" id="gyp-drag-handle">
+            <span class="material-symbols-outlined" style="font-size:16px; color:#ff0000; cursor:grab;">drag_indicator</span>
+            <span id="gyp-title" class="gsp-title"></span>
+            <a id="gyp-open-link" href="#" target="_blank" rel="noopener noreferrer" class="material-symbols-outlined op-btn" style="font-size:18px; text-decoration:none;" title="YouTubeで開く">open_in_new</a>
+            <span class="material-symbols-outlined op-btn" id="gyp-minimize-btn" style="font-size:18px;">expand_more</span>
+            <span class="material-symbols-outlined op-btn" style="font-size:18px;" onclick="closeGlobalYoutubePlayer()">close</span>
+        </div>
+        <div id="gyp-embed-container"></div>
+    </div>
+
+    <!-- YouTubeリンクを踏んだ時、タブ内再生か外部で開くかを確認するモーダル -->
+    <div id="yt-ask-modal" class="modal-overlay hidden">
+        <div class="responsive-card" style="max-width:320px; padding:22px; text-align:center;" onclick="event.stopPropagation()">
+            <div class="sidebar-icon-tile" style="--tile-color:#ff0000; width:44px; height:44px; border-radius:12px; margin:0 auto 12px;"><span class="material-symbols-outlined" style="font-size:24px;">smart_display</span></div>
+            <div style="font-weight:bold; font-size:15px; margin-bottom:6px;">YouTubeの動画リンクです</div>
+            <div style="font-size:12px; color:var(--txt-m); margin-bottom:16px;">どちらの方法で開きますか？</div>
+            <button onclick="resolveYoutubeAsk('player')" style="width:100%; padding:12px; margin-bottom:8px; background:linear-gradient(135deg,#ff4757,#ff6b81); color:#fff; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">▶ このタブ内で再生</button>
+            <button onclick="resolveYoutubeAsk('external')" style="width:100%; padding:12px; background:rgba(255,255,255,0.08); color:var(--txt); border:none; border-radius:10px; font-weight:bold; cursor:pointer;">🔗 普通に開く（新しいタブ）</button>
+            <label style="display:flex; align-items:center; gap:6px; margin-top:14px; font-size:12px; color:var(--txt-m); cursor:pointer;">
+                <input type="checkbox" id="yt-ask-remember"> 次回から聞かずにこれをデフォルトにする
+            </label>
+        </div>
     </div>
 
     <!-- リアクションピッカー -->
