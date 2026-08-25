@@ -240,6 +240,21 @@ header {
 .message.me { 
     flex-direction: row-reverse; 
     align-self: flex-end; 
+    position: relative;
+}
+/* 自分のメッセージは右寄せなので、右クリック/長押しの当たり判定は左側に広げる。
+   他の人のメッセージは#messagesのstretchで自然と右側まで判定が広がっているのに対し、
+   自分のメッセージはalign-self:flex-endで箱自体が吹き出しぴったりに縮んでしまい、
+   少し左にずれただけで判定から外れて使いにくかったための対応。
+   見た目に影響を出さないよう、絶対配置の透明な疑似要素だけで判定領域を広げている
+   （吹き出し自体の位置やグループ化メッセージのホバー時刻表示位置には影響しない）。 */
+.message.me::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -60px;
+    right: 0;
 }
 .message .icon { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; cursor: pointer; background: #4e5058; }
 
