@@ -24,6 +24,7 @@
     <meta name="twitter:description" content="みんなでリアルタイムに話せるチャット">
     <meta name="twitter:image" content="https://tanabesan.github.io/yukichat/file/og-image.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" />
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <link rel="stylesheet" href="https://tanabesan.github.io/yukichat/style.css">
 </head>
@@ -89,9 +90,10 @@
                 <span class="material-symbols-outlined">public</span>
                 <span>パブリックチャット</span>
             </div>
-            <div class="sidebar-item" onclick="$('#user-list-modal').removeClass('hidden'); toggleSidebar(false); switchUserTab('all');">
+            <div class="sidebar-item" style="position:relative;" onclick="$('#user-list-modal').removeClass('hidden'); toggleSidebar(false); switchUserTab('all');">
                 <span class="material-symbols-outlined">person_search</span>
                 <span>ユーザーを探す</span>
+                <span id="friendReqSidebarBadge" class="sidebar-item-badge hidden"></span>
             </div>
             <div class="sidebar-label">ゲーム＆特典</div>
             <div class="sidebar-item" onclick="toggleSidebar(false); openShopFromMenu();">
