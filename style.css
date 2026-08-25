@@ -176,18 +176,6 @@ header {
 .btn-toggle-off { background: #4e5058 !important; }
 
 .icon-container { position: relative; display: inline-block; flex-shrink: 0; }
-.status-dot {
-    position: absolute; 
-    bottom: 0px; 
-    right: 0px;
-    width: 16px; 
-    height: 16px; 
-    border-radius: 50%;
-    border: 3px solid var(--bg-31);
-    z-index: 10;
-}
-.online { background-color: #00ff00; }
-.offline { background-color: #666; }
 
 /* DM未読バッジ */
 .dm-unread-badge {
@@ -777,8 +765,7 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
 #myName { font-size: 13px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #messageInput { flex: 1; background: var(--bg-38); border: none; padding: 10px 12px; border-radius: 20px; color: var(--txt); outline: none; resize: none; font-size: 16px; max-height: 120px; box-sizing: border-box; min-width: 0; }
 
-/* オンラインバッジサイズ調整 */
-/* オンラインバッジサイズ（統一） */
+/* オンラインバッジ（アイコン右下の丸） */
 .status-dot {
     width: 16px !important;
     height: 16px !important;
@@ -1018,8 +1005,6 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
     z-index: 10;
     filter: drop-shadow(0 0 8px rgba(255, 215, 0, 1));
 }
-.settings-input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #444; background:#1e1f22; color:#fff; box-sizing: border-box; font-size: 16px; }
-
 .settings-input-group { display: flex; gap: 8px; margin-bottom: 10px; }
 .settings-input-group .settings-input { margin-bottom: 0; flex: 1; }
 .btn-upload-small { background: var(--accent); color: #fff; border: none; border-radius: 5px; padding: 0 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
@@ -2498,12 +2483,6 @@ select.settings-input option {
     background: var(--accent);
     color: #fff;
 }
-.stamp-pack-card .shop-item-icon img {
-    width: 56px;
-    height: 56px;
-    object-fit: contain;
-}
-
 /* LINEストア風：サムネ+タイトルだけのシンプルなパックタイル */
 .stamp-pack-tile {
     display: flex;

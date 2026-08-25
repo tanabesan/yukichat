@@ -13,8 +13,8 @@ const rtdb = getDatabase(app);
 let swRegistration = null;
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
-        .then(reg => { swRegistration = reg; console.log('[sw] 登録成功'); })
-        .catch(err => console.log('[sw] 登録失敗（new Notification()にフォールバックします）', err));
+        .then(reg => { swRegistration = reg; })
+        .catch(err => console.error('[sw] 登録失敗（new Notification()にフォールバックします）', err));
 }
 
 // iOS Safari（特にプライベートブラウジングモード）ではIndexedDBが使えない/不安定なことがあり、
@@ -25,7 +25,7 @@ try {
         localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
     });
 } catch (e) {
-    console.log('[firestore] persistentLocalCacheの初期化に失敗。メモリキャッシュで続行します', e);
+    console.error('[firestore] persistentLocalCacheの初期化に失敗。メモリキャッシュで続行します', e);
     db = initializeFirestore(app, {});
 }
 const auth = getAuth(app);
@@ -179,7 +179,7 @@ _notifyAudioEl.volume = 0.6;
 const notifyAudio = {
     play: () => { 
         _notifyAudioEl.currentTime = 0;
-        return _notifyAudioEl.play().catch(e => console.log('Audio play blocked', e));
+        return _notifyAudioEl.play().catch(() => {}); // 自動再生ポリシーでブロックされることがあるが、想定内なので無視する
     },
     currentTime: 0,
     volume: 0.6
@@ -236,9 +236,9 @@ function playNotifSound(type) {
 }
 
 function sendPushNotif(type, title, body, icon, tag) {
-    if (!getNotif(type)) { console.log('[push] 設定でOFFのためスキップ:', type); return; }
-    if (!('Notification' in window)) { console.log('[push] このブラウザはNotification API非対応'); return; }
-    if (Notification.permission !== 'granted') { console.log('[push] 通知の許可が下りていません(permission=' + Notification.permission + ')。設定画面から許可してください'); return; }
+    if (!getNotif(type)) return;
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
 
     // renotify:true が無いと、Edge/Chrome系は同じtagの通知を「アクションセンターで黙って上書き」
     // するだけになり、2回目以降トースト（ポップアップ）が出なくなる。これを防ぐ。
@@ -247,7 +247,6 @@ function sendPushNotif(type, title, body, icon, tag) {
     // Service Worker経由を優先（Android Chrome等では new Notification() が使えないため）
     if (swRegistration && swRegistration.showNotification) {
         swRegistration.showNotification(title, opts)
-            .then(() => console.log('[push] 送信OK(SW経由):', title))
             .catch(err => {
                 console.error('[push] SW経由での送信に失敗、new Notification()にフォールバック', err);
                 try { new Notification(title, opts); } catch (e2) { console.error('[push] フォールバックも失敗', e2); }
@@ -258,7 +257,6 @@ function sendPushNotif(type, title, body, icon, tag) {
     try {
         const n = new Notification(title, opts);
         n.onclick = () => window.focus();
-        console.log('[push] 送信OK(直接):', title);
         return n;
     } catch (error) {
         console.error('[push] new Notification()が失敗しました（Android Chromeではこの方式自体が非対応です）', error);
@@ -277,7 +275,6 @@ function clearUnread() {
     
     recalculateTotalUnread();
     
-    console.log("Cleared unread for:", readKey, "Total unread:", unreadCount);
 }
 
 function recalculateTotalUnread() {
@@ -335,8 +332,6 @@ const FREE_STAMP_LIST = [
     "https://fonts.gstatic.com/s/e/notoemoji/latest/1f389/512.webp",
     "https://fonts.gstatic.com/s/e/notoemoji/latest/1f4af/512.webp"
 ];
-// 後方互換用エイリアス（他コード側で STAMP_LIST を参照している場合に備えて）
-const STAMP_LIST = FREE_STAMP_LIST;
 
 // 公式スタンプパック（LINEのスタンプショップのように、複数個まとめ売り。ownedPacksにidが入っていれば所持中）
 // stamps は {url, name} の配列。thumbnailはパック一覧に出すサムネイル（未指定ならstamps[0].urlを使う）
@@ -595,7 +590,6 @@ onAuthStateChanged(auth, async (user) => {
                 }
             }
         });
-        console.log("Restored last seen timestamps:", lastSeenTimestamps);
         
         if (user.isAnonymous) {
             const exp = new Date(); 
@@ -670,7 +664,6 @@ onAuthStateChanged(auth, async (user) => {
                         triggerBadge("friend_request_" + reqId);
                         playNotifSound('soundFriendReq');
                         sendPushNotif('pushFriendReq', '新しいフレンド申請', `${senderName}さんからフレンド申請が届きました`, senderPhoto, 'friend-request-' + reqId);
-                        console.log("New friend request from:", senderName);
                     }
                 }
                 
@@ -682,7 +675,6 @@ onAuthStateChanged(auth, async (user) => {
                     playNotifSound('soundFriendAcc');
                     sendPushNotif('pushFriendAcc', 'フレンド申請が承認されました', `${accepterName}さんがフレンド申請を承認しました`, accepterPhoto, 'friend-accepted-' + reqId);
                     
-                    console.log("Friend request accepted by:", accepterName);
                 }
             });
             
@@ -915,7 +907,6 @@ async function loadMoreMessages() {
     const firstVisibleMessage = $box.children().first()[0];
     const firstMessageId = firstVisibleMessage ? firstVisibleMessage.id : null;
     
-    console.log("Before load - first message:", firstMessageId, "scrollTop:", $box.scrollTop());
     
     $("#messages").prepend('<div id="load-more-indicator">過去のメッセージを読み込み中...</div>');
     const colRef = currentRoomId ? collection(db, "rooms", currentRoomId, "messages") : collection(db, "chats");
@@ -957,11 +948,9 @@ async function loadMoreMessages() {
             const firstMessageElement = document.getElementById(firstMessageId);
             if (firstMessageElement) {
                 firstMessageElement.scrollIntoView({ block: 'start', behavior: 'instant' });
-                console.log("Scrolled to preserve message:", firstMessageId);
             }
         }
         
-        console.log("Loaded more messages, final scrollTop:", $box.scrollTop());
         
     } catch (err) { console.error("Load more error:", err); } 
     finally { 
@@ -969,7 +958,6 @@ async function loadMoreMessages() {
         setTimeout(() => {
             isLoadingMoreMessages = false;
             pauseSnapshot = false;
-            console.log("Resumed normal mode");
         }, 1500);
     }
 }
@@ -1024,7 +1012,7 @@ async function renderSpotifyEmbed(url, $container) {
         const data = await fetchSpotifyOembed(url);
         $container.html(data.html);
     } catch (e) {
-        console.log('[spotify-embed] 取得失敗', url, e);
+        console.error('[spotify-embed] 取得失敗', url, e);
         $container.html('<div style="font-size:11px; color:var(--danger);">読み込みに失敗しました（リンクが正しいか確認してください）</div>');
     }
 }
@@ -1052,7 +1040,7 @@ async function renderSpotifySongCard(url, $container) {
             </div>
         `);
     } catch (e) {
-        console.log('[spotify-embed] 取得失敗', url, e);
+        console.error('[spotify-embed] 取得失敗', url, e);
         $container.html('<div style="font-size:11px; color:var(--danger);">読み込みに失敗しました</div>');
     }
 }
@@ -1065,7 +1053,7 @@ window.playInGlobalPlayer = async (url) => {
         $('#gsp-open-link').attr('href', url);
         $('#global-spotify-player').removeClass('hidden');
     } catch (e) {
-        console.log('[spotify-embed] 再生失敗', url, e);
+        console.error('[spotify-embed] 再生失敗', url, e);
     }
 };
 
@@ -1326,12 +1314,10 @@ async function fetchMicrolinkPreview(url) {
     if (!res.ok) {
         let bodyText = '';
         try { bodyText = await res.text(); } catch (e) {}
-        console.log('[link-preview] HTTPエラー', res.status, url, bodyText);
         throw new Error('failed to fetch preview');
     }
     const json = await res.json();
     if (json.status !== 'success') {
-        console.log('[link-preview] status不正', url, JSON.stringify(json));
         throw new Error('preview fetch not successful');
     }
     // status:successでもdataがnull/空のことがある（処理中など）。
@@ -1350,14 +1336,12 @@ async function fetchPreviewData(url) {
         try {
             return await fetchYoutubeOembed(url);
         } catch (e) {
-            console.log('[link-preview] YouTube oEmbed失敗、通常取得にフォールバック', url, e);
         }
     }
     if (GITHUB_REPO_REGEX.test(url)) {
         try {
             return await fetchGithubRepoPreview(url);
         } catch (e) {
-            console.log('[link-preview] GitHub API失敗、通常取得にフォールバック', url, e);
         }
     }
     return await fetchMicrolinkPreview(url);
@@ -1390,32 +1374,25 @@ function linkifyText(escapedText) {
 }
 
 async function loadLinkPreview(msgId, url, isRetry = false, isDomRetry = false) {
-    console.log('[link-preview] loadLinkPreview開始', msgId, url, 'isRetry=' + isRetry, 'isDomRetry=' + isDomRetry);
     try {
         let data = linkPreviewCache[url];
         if (!data) {
-            console.log('[link-preview] キャッシュ無し、取得開始', url);
             data = await fetchPreviewData(url);
-            console.log('[link-preview] 取得結果', url, JSON.stringify(data));
             const hasUsefulContent = !!(data.image || data.description);
             if (hasUsefulContent) {
                 linkPreviewCache[url] = data; // 十分な情報が取れた時だけキャッシュする
             } else if (!isRetry) {
-                console.log('[link-preview] 情報が薄いので1.5秒後に再取得', url, data);
                 // 初回だけ情報が薄いことがある（unfurl先が裏で処理中で、少し後にリッチな情報が揃うケース）
                 // ので、少し待って1回だけ再取得を試みる
                 setTimeout(() => loadLinkPreview(msgId, url, true), 1500);
                 return;
             } else {
-                console.log('[link-preview] 再取得しても情報薄いまま。カードなしで諦める', url, data);
             }
         } else {
-            console.log('[link-preview] キャッシュ使用', url, JSON.stringify(data));
         }
         // 画像や説明文など、URL自体以上の情報が取れなかった場合はカードを出さない
         // （タイトルだけだと「リンクをそのまま繰り返しているだけ」に見えてしまうため）
         if (!data || (!data.description && !data.image)) {
-            console.log('[link-preview] 画像も説明文も無いのでカード出さずに終了', url);
             return;
         }
 
@@ -1424,15 +1401,12 @@ async function loadLinkPreview(msgId, url, isRetry = false, isDomRetry = false) 
             // generateMessageHtmlの呼び出し時点ではまだDOMに挿入されていないことがある
             // （特にキャッシュ利用時は取得が速すぎてDOM挿入より先に実行されてしまう）ので、少し待って1回だけ再試行する
             if (!isDomRetry) {
-                console.log('[link-preview] DOM要素がまだ無いので少し待って再試行', `link-preview-${msgId}`);
                 setTimeout(() => loadLinkPreview(msgId, url, isRetry, true), 150);
             } else {
-                console.log('[link-preview] 再試行してもDOM要素が見つからない', `link-preview-${msgId}`);
             }
             return;
         }
 
-        console.log('[link-preview] カードを描画します', msgId, url);
         // 高さが増える前に「一番下を見ていたか」を判定しておく（挿入後だと必ずfalseになってしまうため）
         const $box = $("#messages");
         const wasAtBottom = $box.length > 0 && ($box[0].scrollHeight - $box.scrollTop() <= $box[0].clientHeight + 200);
@@ -1459,7 +1433,7 @@ async function loadLinkPreview(msgId, url, isRetry = false, isDomRetry = false) 
         scrollToBottom(wasAtBottom);
     } catch (e) {
         // 取得失敗時は何も表示しない（サイレントに諦める）
-        console.log('[link-preview] 取得失敗', url, e);
+        console.error('[link-preview] 取得失敗', url, e);
     }
 }
 
@@ -1609,7 +1583,6 @@ function triggerBadge(roomId = null) {
 
 function renderMessages(snap, isDesc = false) {
     if (pauseSnapshot) {
-        console.log("renderMessages blocked - pauseSnapshot is true");
         return;
     }
     
@@ -1693,14 +1666,11 @@ function renderMessages(snap, isDesc = false) {
             if (existing.length) {
                 const newFp = computeMsgFingerprint(item.data);
                 if (existing.attr('data-fp') === newFp) {
-                    console.log('[link-preview] 変化なしでスキップ', item.id);
                     return; // 内容に変化が無いメッセージは作り直さない（プレビュー再取得や表示のガタつきを防ぐ）
                 }
-                console.log('[link-preview] 更新として再生成', item.id);
                 updates.push({element: existing, html: generateMessageHtml(item.id, item.data, groupedFlags[idx])});
                 touchedItems.push(item);
             } else {
-                console.log('[link-preview] 新規追加として生成', item.id, item.data.text);
                 additions.push(generateMessageHtml(item.id, item.data, groupedFlags[idx]));
                 touchedItems.push(item);
             }
@@ -1975,10 +1945,8 @@ async function applyUserTheme() {
         
         if (equipped.theme === 'rainbow_theme') {
             $('body').addClass('rainbow-theme');
-            console.log('🌈 Rainbow theme applied');
         } else if (equipped.theme === 'heart_theme') {
             $('body').addClass('heart-theme');
-            console.log('💕 Heart theme applied');
         }
     } catch (error) {
         console.error('Theme application error:', error);
@@ -2032,12 +2000,6 @@ async function checkLoginBonus() {
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         
         const canClaim = lastLoginDay.getTime() < today.getTime();
-        
-        console.log('Login bonus check:', {
-            lastLoginDate: lastLoginDay.toISOString(),
-            today: today.toISOString(),
-            canClaim
-        });
         
         return canClaim;
         
@@ -3677,7 +3639,6 @@ function clearFriendRequestUnread() {
         }
     });
     recalculateTotalUnread();
-    console.log("Cleared friend request notifications");
 }
 
 // フレンド申請の既読ラインをFirestoreに保存する。これにより、他の端末で開いた時や
@@ -3863,7 +3824,7 @@ function showPermissionHelp(onRetry) {
 
 // getUserMediaの失敗理由に応じて出し分ける
 function handleCallError(e, retryFn) {
-    console.log('[call] エラー', e.name, e.message);
+    console.error('[call] エラー', e.name, e.message);
     if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError' || e.name === 'SecurityError') {
         showPermissionHelp(retryFn);
     } else if (e.name === 'NotFoundError' || e.name === 'DevicesNotFoundError') {
@@ -3999,10 +3960,10 @@ async function startCallTo(targetUid, targetName) {
                 pc.setRemoteDescription(new RTCSessionDescription(data.answer)).then(() => {
                     // 保留していたcandidateをまとめて追加する
                     pendingIceCandidates.forEach(c => {
-                        pc.addIceCandidate(c).catch(err => console.log('[call] addIceCandidate失敗(保留分)', err));
+                        pc.addIceCandidate(c).catch(err => console.error('[call] addIceCandidate失敗(保留分)', err));
                     });
                     pendingIceCandidates = [];
-                }).catch(err => console.log('[call] setRemoteDescription失敗', err));
+                }).catch(err => console.error('[call] setRemoteDescription失敗', err));
             }
             if (!s.exists()) {
                 // 相手が切った、または自分で削除した
@@ -4014,7 +3975,7 @@ async function startCallTo(targetUid, targetName) {
                 if (change.type === "added") {
                     const candidate = new RTCIceCandidate(change.doc.data());
                     if (pc.remoteDescription) {
-                        pc.addIceCandidate(candidate).catch(err => console.log('[call] addIceCandidate失敗', err));
+                        pc.addIceCandidate(candidate).catch(err => console.error('[call] addIceCandidate失敗', err));
                     } else {
                         pendingIceCandidates.push(candidate);
                     }
@@ -4090,10 +4051,10 @@ async function acceptIncomingCall(callId, offer) {
                 if (c.type === "added") {
                     const candidate = new RTCIceCandidate(c.doc.data());
                     if (pc.remoteDescription) {
-                        pc.addIceCandidate(candidate).catch(err => console.log('[call] addIceCandidate失敗', err));
+                        pc.addIceCandidate(candidate).catch(err => console.error('[call] addIceCandidate失敗', err));
                     } else {
                         // この時点ではsetRemoteDescription済みのはずだが、念のため保険として保留する
-                        setTimeout(() => pc.addIceCandidate(candidate).catch(err => console.log('[call] addIceCandidate失敗(遅延)', err)), 500);
+                        setTimeout(() => pc.addIceCandidate(candidate).catch(err => console.error('[call] addIceCandidate失敗(遅延)', err)), 500);
                     }
                 }
             });
@@ -4159,7 +4120,7 @@ async function endCall(deleteRemote = true) {
             ]);
             await deleteDoc(doc(db, "calls", callIdToClean));
         } catch (e) {
-            console.log('[call] 通話ドキュメントの削除に失敗', e);
+            console.error('[call] 通話ドキュメントの削除に失敗', e);
         }
     }
 }
