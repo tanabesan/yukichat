@@ -240,7 +240,9 @@ function sendPushNotif(type, title, body, icon, tag) {
     if (!('Notification' in window)) { console.log('[push] このブラウザはNotification API非対応'); return; }
     if (Notification.permission !== 'granted') { console.log('[push] 通知の許可が下りていません(permission=' + Notification.permission + ')。設定画面から許可してください'); return; }
 
-    const opts = { body, icon: icon || '/favicon.ico', tag };
+    // renotify:true が無いと、Edge/Chrome系は同じtagの通知を「アクションセンターで黙って上書き」
+    // するだけになり、2回目以降トースト（ポップアップ）が出なくなる。これを防ぐ。
+    const opts = { body, icon: icon || '/favicon.ico', tag, renotify: true };
 
     // Service Worker経由を優先（Android Chrome等では new Notification() が使えないため）
     if (swRegistration && swRegistration.showNotification) {
