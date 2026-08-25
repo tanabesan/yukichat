@@ -947,8 +947,7 @@ async function loadMoreMessages() {
             const boundaryUid = firstVisibleMessage.dataset.uid;
             const boundaryTimeMs = parseInt(firstVisibleMessage.dataset.timeMs || '0', 10);
             const lastOlderTimeMs = lastOlder.createdAt?.toMillis ? lastOlder.createdAt.toMillis() : Date.now();
-            const notStamp = !lastOlder.stamp && firstVisibleMessage.dataset.isStamp !== 'true';
-            const shouldGroup = notStamp && lastOlder.uid === boundaryUid && Math.abs(boundaryTimeMs - lastOlderTimeMs) <= GROUP_WINDOW_MS;
+            const shouldGroup = lastOlder.uid === boundaryUid && Math.abs(boundaryTimeMs - lastOlderTimeMs) <= GROUP_WINDOW_MS;
             if (shouldGroup) {
                 $(firstVisibleMessage).addClass('grouped');
             }
@@ -983,7 +982,6 @@ function computeGroupedFlags(docsAsc) {
         const prev = docsAsc[idx - 1].data;
         const curr = item.data;
         if (prev.uid !== curr.uid) return false;
-        if (curr.stamp || prev.stamp) return false; // スタンプは常に区切って表示
         const prevTime = prev.createdAt?.toMillis ? prev.createdAt.toMillis() : Date.now();
         const currTime = curr.createdAt?.toMillis ? curr.createdAt.toMillis() : Date.now();
         return Math.abs(currTime - prevTime) <= GROUP_WINDOW_MS;
@@ -1379,6 +1377,14 @@ function linkifyText(escapedText) {
     return escapedText.replace(URL_REGEX, (url) => {
         const cleanUrl = url.replace(/[),.;!?]+$/, '');
         const trail = url.slice(cleanUrl.length);
+
+        // 下に出るリンクプレビューカードだけでなく、本文中のリンク文字列自体からも
+        // YouTubeなら確認モーダル/インタブ再生を挟めるようにする（挙動を一致させる）
+        if (YOUTUBE_URL_REGEX.test(cleanUrl)) {
+            const safeUrlAttr = cleanUrl.replace(/'/g, "&#39;");
+            return `<a href="${cleanUrl}" class="msg-link" onclick="return handleYoutubeLinkClick(event, '${safeUrlAttr}')">${cleanUrl}</a>${trail}`;
+        }
+
         return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="msg-link">${cleanUrl}</a>${trail}`;
     });
 }
