@@ -7,6 +7,16 @@ const firebaseConfig = { apiKey: "AIzaSyA8X7HsOXDERBTy4GvLE8ibg3bk8JhldZg", auth
 const app = initializeApp(firebaseConfig);
 const rtdb = getDatabase(app);
 
+// プッシュ通知表示用のService Workerを登録しておく。
+// （new Notification() はAndroid Chromeでは"Illegal constructor"エラーになり動かないため、
+//   Service Worker経由の showNotification() を優先的に使えるようにする）
+let swRegistration = null;
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+        .then(reg => { swRegistration = reg; console.log('[sw] 登録成功'); })
+        .catch(err => console.log('[sw] 登録失敗（new Notification()にフォールバックします）', err));
+}
+
 // iOS Safari（特にプライベートブラウジングモード）ではIndexedDBが使えない/不安定なことがあり、
 // persistentLocalCacheの初期化自体が失敗することがある。失敗した場合はオフラインキャッシュ無しで動かす。
 let db;
@@ -226,11 +236,31 @@ function playNotifSound(type) {
 }
 
 function sendPushNotif(type, title, body, icon, tag) {
-    if (!getNotif(type)) return;
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    const n = new Notification(title, { body, icon: icon || '/favicon.ico', tag });
-    n.onclick = () => window.focus();
-    return n;
+    if (!getNotif(type)) { console.log('[push] 設定でOFFのためスキップ:', type); return; }
+    if (!('Notification' in window)) { console.log('[push] このブラウザはNotification API非対応'); return; }
+    if (Notification.permission !== 'granted') { console.log('[push] 通知の許可が下りていません(permission=' + Notification.permission + ')。設定画面から許可してください'); return; }
+
+    const opts = { body, icon: icon || '/favicon.ico', tag };
+
+    // Service Worker経由を優先（Android Chrome等では new Notification() が使えないため）
+    if (swRegistration && swRegistration.showNotification) {
+        swRegistration.showNotification(title, opts)
+            .then(() => console.log('[push] 送信OK(SW経由):', title))
+            .catch(err => {
+                console.error('[push] SW経由での送信に失敗、new Notification()にフォールバック', err);
+                try { new Notification(title, opts); } catch (e2) { console.error('[push] フォールバックも失敗', e2); }
+            });
+        return;
+    }
+
+    try {
+        const n = new Notification(title, opts);
+        n.onclick = () => window.focus();
+        console.log('[push] 送信OK(直接):', title);
+        return n;
+    } catch (error) {
+        console.error('[push] new Notification()が失敗しました（Android Chromeではこの方式自体が非対応です）', error);
+    }
 }
 
 function clearUnread() {
