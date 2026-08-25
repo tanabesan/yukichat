@@ -76,6 +76,7 @@
                 <div style="font-weight:bold; margin-bottom:8px;">確認メールを送信しました</div>
                 <div style="font-size:13px; color:var(--txt-m); margin-bottom:16px;" id="verifyEmailAddr"></div>
                 <div style="font-size:12px; color:var(--txt-m); margin-bottom:16px;">メール内のリンクをクリックして認証後、下のボタンを押してください。</div>
+                <div style="font-size:11px; color:#ffc107; background:rgba(255,193,7,0.1); border:1px solid rgba(255,193,7,0.3); border-radius:6px; padding:8px 10px; margin-bottom:16px; text-align:left;">⚠️ メールが届かない場合は、<b>迷惑メールフォルダ</b>もご確認ください。自動送信メールのため、まれに振り分けられてしまうことがあります。</div>
                 <button id="verifyCheckBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin-bottom:8px;">認証済み → ログイン</button>
                 <button id="resendVerifyBtn" style="width:100%; padding:10px; background:none; color:var(--txt-m); border:1px solid rgba(255,255,255,0.2); border-radius:6px; cursor:pointer; font-size:13px;">確認メールを再送</button>
                 <button onclick="switchAuthTab('login')" style="width:100%; background:none; color:var(--txt-m); border:none; margin-top:8px; cursor:pointer; padding:8px; font-size:12px;">← ログインに戻る</button>
@@ -443,6 +444,7 @@
                 <!-- メール未認証ユーザー向け -->
                 <div id="verify-email-section" style="display:none;">
                     <button id="sendVerifyEmailBtn" style="width:100%; padding:10px; background:rgba(102,126,234,0.2); color:#667eea; border:1px solid #667eea; border-radius:6px; font-weight:bold; cursor:pointer; font-size:13px; margin-bottom:6px;">📧 認証メールを送信</button>
+                    <div style="font-size:10px; color:var(--txt-m); margin-top:4px;">届かない場合は迷惑メールフォルダもご確認ください</div>
                 </div>
                 <!-- ゲスト・匿名ユーザー向け：メールアドレス追加 -->
                 <div id="add-email-section" style="display:none;">
