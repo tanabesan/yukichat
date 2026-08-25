@@ -88,6 +88,45 @@ body {
     text-align: center;
     box-sizing: border-box;
 }
+
+/* 角丸タイルアイコン：色付きの縁取り＋薄い塗りの正方形バッジの中にアイコンを表示する */
+.sidebar-icon-tile {
+    --tile-color: var(--accent);
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid var(--tile-color);
+    background: color-mix(in srgb, var(--tile-color) 16%, transparent);
+    transition: transform 0.15s ease;
+}
+.sidebar-item:hover .sidebar-icon-tile { transform: scale(1.06); }
+.sidebar-icon-tile .material-symbols-outlined {
+    color: var(--tile-color);
+    font-size: 18px;
+}
+.sidebar-icon-tile.tile-sm {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    vertical-align: middle;
+}
+.sidebar-icon-tile.tile-sm .material-symbols-outlined {
+    font-size: 13px;
+}
+.sidebar-icon-tile.tile-xs {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border-width: 1px;
+    vertical-align: middle;
+}
+.sidebar-icon-tile.tile-xs .material-symbols-outlined {
+    font-size: 10px;
+}
 .sidebar-label { font-size: 11px; color: var(--txt-m); margin: 15px 10px 5px; text-transform: uppercase; }
 
 /* --- メインレイアウト --- */
@@ -1105,6 +1144,16 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
 .shop-item-icon {
     font-size: 40px;
     margin-bottom: 8px;
+    display: flex;
+    justify-content: center;
+}
+.shop-item-icon .sidebar-icon-tile {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+}
+.shop-item-icon .sidebar-icon-tile .material-symbols-outlined {
+    font-size: 24px;
 }
 .shop-item-icon img {
     width: 40px;

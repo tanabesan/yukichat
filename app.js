@@ -1328,13 +1328,13 @@ function generateMessageHtml(id, d, isGrouped = false) {
     
     let badgeHtml = '';
     const badgeMap = {
-        'vip_badge': { icon: '👑', title: 'VIP' },
-        'star_badge': { icon: '⭐', title: 'スター' },
-        'crown_badge': { icon: '👸', title: 'プレミアム' }
+        'vip_badge': { msIcon: 'workspace_premium', tileColor: '#ffd700', title: 'VIP' },
+        'star_badge': { msIcon: 'star', tileColor: '#ffd700', title: 'スター' },
+        'crown_badge': { msIcon: 'crown', tileColor: '#ffca28', title: 'プレミアム' }
     };
     if (equipped.badge && badgeMap[equipped.badge]) {
         const badge = badgeMap[equipped.badge];
-        badgeHtml = `<span class="user-badge" title="${badge.title}">${badge.icon}</span>`;
+        badgeHtml = `<span class="user-badge" title="${badge.title}"><span class="sidebar-icon-tile tile-xs" style="--tile-color:${badge.tileColor};"><span class="material-symbols-outlined">${badge.msIcon}</span></span></span>`;
     }
     
     let effectClass = '';
@@ -1809,19 +1809,19 @@ async function applyUserTheme() {
 // ========== ショップシステム ==========
 
 const shopItems = [
-    { id: 'vip_badge', name: 'VIPバッジ', icon: '👑', price: 300, description: '名前の横にVIPバッジが表示されます', category: 'badge' },
-    { id: 'rainbow_theme', name: 'レインボーテーマ', icon: '🌈', price: 250, description: 'チャット背景が虹色に', category: 'theme' },
-    { id: 'fire_effect', name: '炎エフェクト', icon: '🔥', price: 200, description: 'メッセージに炎エフェクト', category: 'effect' },
-    { id: 'star_badge', name: 'スターバッジ', icon: '⭐', price: 150, description: '名前の横にスターが表示', category: 'badge' },
-    { id: 'heart_theme', name: 'ハートテーマ', icon: '💕', price: 180, description: 'ピンク色のテーマ', category: 'theme' },
-    { id: 'sparkle_effect', name: 'キラキラエフェクト', icon: '✨', price: 220, description: 'メッセージがキラキラ', category: 'effect' },
-    { id: 'crown_badge', name: 'クラウンバッジ', icon: '👸', price: 350, description: 'プレミアムクラウン', category: 'badge' },
-    { id: 'lightning_effect', name: '稲妻エフェクト', icon: '⚡', price: 280, description: 'メッセージに稲妻', category: 'effect' },
-    { id: 'rainbow_effect', name: '虹色エフェクト', icon: '🌟', price: 300, description: '虹色に輝くオーラ', category: 'effect' },
-    { id: 'shadow_effect', name: 'シャドウエフェクト', icon: '🌑', price: 250, description: '暗黒のオーラ', category: 'effect' },
-    { id: 'ice_effect', name: '氷エフェクト', icon: '❄️', price: 260, description: '氷の結晶エフェクト', category: 'effect' },
-    { id: 'toxic_effect', name: '毒エフェクト', icon: '☠️', price: 270, description: '紫色の毒々しいオーラ', category: 'effect' },
-    { id: 'gold_effect', name: 'ゴールドエフェクト', icon: '💛', price: 400, description: '金色に輝く豪華なオーラ', category: 'effect' }
+    { id: 'vip_badge', name: 'VIPバッジ', icon: '👑', msIcon: 'workspace_premium', tileColor: '#ffd700', price: 300, description: '名前の横にVIPバッジが表示されます', category: 'badge' },
+    { id: 'rainbow_theme', name: 'レインボーテーマ', icon: '🌈', msIcon: 'palette', tileColor: '#ff8fd8', price: 250, description: 'チャット背景が虹色に', category: 'theme' },
+    { id: 'fire_effect', name: '炎エフェクト', icon: '🔥', msIcon: 'local_fire_department', tileColor: '#ff6b35', price: 200, description: 'メッセージに炎エフェクト', category: 'effect' },
+    { id: 'star_badge', name: 'スターバッジ', icon: '⭐', msIcon: 'star', tileColor: '#ffd700', price: 150, description: '名前の横にスターが表示', category: 'badge' },
+    { id: 'heart_theme', name: 'ハートテーマ', icon: '💕', msIcon: 'favorite', tileColor: '#ff6b9d', price: 180, description: 'ピンク色のテーマ', category: 'theme' },
+    { id: 'sparkle_effect', name: 'キラキラエフェクト', icon: '✨', msIcon: 'auto_awesome', tileColor: '#f093fb', price: 220, description: 'メッセージがキラキラ', category: 'effect' },
+    { id: 'crown_badge', name: 'クラウンバッジ', icon: '👸', msIcon: 'crown', tileColor: '#ffca28', price: 350, description: 'プレミアムクラウン', category: 'badge' },
+    { id: 'lightning_effect', name: '稲妻エフェクト', icon: '⚡', msIcon: 'bolt', tileColor: '#ffeb3b', price: 280, description: 'メッセージに稲妻', category: 'effect' },
+    { id: 'rainbow_effect', name: '虹色エフェクト', icon: '🌟', msIcon: 'auto_awesome', tileColor: '#a78bfa', price: 300, description: '虹色に輝くオーラ', category: 'effect' },
+    { id: 'shadow_effect', name: 'シャドウエフェクト', icon: '🌑', msIcon: 'dark_mode', tileColor: '#7c7c8a', price: 250, description: '暗黒のオーラ', category: 'effect' },
+    { id: 'ice_effect', name: '氷エフェクト', icon: '❄️', msIcon: 'ac_unit', tileColor: '#4fc3f7', price: 260, description: '氷の結晶エフェクト', category: 'effect' },
+    { id: 'toxic_effect', name: '毒エフェクト', icon: '☠️', msIcon: 'science', tileColor: '#a78bfa', price: 270, description: '紫色の毒々しいオーラ', category: 'effect' },
+    { id: 'gold_effect', name: 'ゴールドエフェクト', icon: '💛', msIcon: 'diamond', tileColor: '#ffd700', price: 400, description: '金色に輝く豪華なオーラ', category: 'effect' }
 ];
 
 const SHOP_CATEGORIES = [
@@ -2626,7 +2626,7 @@ async function loadShopData(category) {
         
         const $item = $(`
             <div class="shop-item ${owned ? 'owned' : ''}" data-item-id="${item.id}" onclick="${owned ? '' : `purchaseItem('${item.id}')`}">
-                <div class="shop-item-icon">${item.icon}</div>
+                <div class="shop-item-icon"><span class="sidebar-icon-tile" style="--tile-color:${item.tileColor};"><span class="material-symbols-outlined">${item.msIcon}</span></span></div>
                 <div class="shop-item-name">${item.name}</div>
                 ${owned ? 
                     '<div class="shop-item-owned">✅ 所持中</div>' :
@@ -2694,12 +2694,12 @@ function showItemPreview(item, userName, userPhoto) {
     
     if (item.id === 'vip_badge' || item.id === 'star_badge' || item.id === 'crown_badge') {
         const badgeMap = {
-            'vip_badge': { icon: '👑', title: 'VIP' },
-            'star_badge': { icon: '⭐', title: 'スター' },
-            'crown_badge': { icon: '👸', title: 'プレミアム' }
+            'vip_badge': { msIcon: 'workspace_premium', tileColor: '#ffd700', title: 'VIP' },
+            'star_badge': { msIcon: 'star', tileColor: '#ffd700', title: 'スター' },
+            'crown_badge': { msIcon: 'crown', tileColor: '#ffca28', title: 'プレミアム' }
         };
         const badge = badgeMap[item.id];
-        $('#preview-badge').html(`<span class="user-badge" title="${badge.title}">${badge.icon}</span>`);
+        $('#preview-badge').html(`<span class="user-badge" title="${badge.title}"><span class="sidebar-icon-tile tile-xs" style="--tile-color:${badge.tileColor};"><span class="material-symbols-outlined">${badge.msIcon}</span></span></span>`);
         
     } else if (item.id === 'fire_effect') {
         $('#preview-message').addClass('effect-fire');

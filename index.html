@@ -87,33 +87,33 @@
         </div>
         <div class="sidebar-content">
             <div class="sidebar-item active" onclick="switchChat(null); toggleSidebar(false);">
-                <span class="material-symbols-outlined">public</span>
+                <span class="sidebar-icon-tile" style="--tile-color:#5865f2;"><span class="material-symbols-outlined">public</span></span>
                 <span>パブリックチャット</span>
             </div>
             <div class="sidebar-item" style="position:relative;" onclick="$('#user-list-modal').removeClass('hidden'); toggleSidebar(false); switchUserTab('all');">
-                <span class="material-symbols-outlined">person_search</span>
+                <span class="sidebar-icon-tile" style="--tile-color:#4fc3f7;"><span class="material-symbols-outlined">person_search</span></span>
                 <span>ユーザーを探す</span>
                 <span id="friendReqSidebarBadge" class="sidebar-item-badge hidden"></span>
             </div>
             <div class="sidebar-label">ゲーム＆特典</div>
             <div class="sidebar-item" onclick="toggleSidebar(false); openShopFromMenu();">
-                <span class="material-symbols-outlined" style="color:#f093fb;">shopping_bag</span>
+                <span class="sidebar-icon-tile" style="--tile-color:#a78bfa;"><span class="material-symbols-outlined">shopping_bag</span></span>
                 <span>ショップ</span>
             </div>
             <div class="sidebar-item admin-only hidden" onclick="toggleSidebar(false); openAdminPanel();">
-                <span class="material-symbols-outlined" style="color:#ff6b6b;">shield_person</span>
+                <span class="sidebar-icon-tile" style="--tile-color:#ff6b6b;"><span class="material-symbols-outlined">shield_person</span></span>
                 <span>モデレーション</span>
             </div>
             <div class="sidebar-item" onclick="toggleSidebar(false); openCasinoFromMenu();">
-                <span class="material-symbols-outlined" style="color:#ff4757;">casino</span>
+                <span class="sidebar-icon-tile" style="--tile-color:#ff4757;"><span class="material-symbols-outlined">casino</span></span>
                 <span>カジノ</span>
             </div>
             <div class="sidebar-item" onclick="toggleSidebar(false); openRankingFromMenu();">
-                <span class="material-symbols-outlined" style="color:#ffd700;">leaderboard</span>
+                <span class="sidebar-icon-tile" style="--tile-color:#ffd700;"><span class="material-symbols-outlined">leaderboard</span></span>
                 <span>ランキング</span>
             </div>
             <div class="sidebar-item" onclick="toggleSidebar(false); openLoginBonusFromMenu();">
-                <span class="material-symbols-outlined" style="color:#ffd700;">redeem</span>
+                <span class="sidebar-icon-tile" style="--tile-color:#ffca28;"><span class="material-symbols-outlined">redeem</span></span>
                 <span>ログインボーナス</span>
             </div>
             <div class="sidebar-label">ダイレクトメッセージ</div>
@@ -121,11 +121,11 @@
         </div>
         <div style="padding: 15px; border-top: 1px solid #222;">
             <div class="sidebar-item" onclick="toggleSidebar(false); $('#help-modal').removeClass('hidden');">
-                <span class="material-symbols-outlined">help</span>
+                <span class="sidebar-icon-tile" style="--tile-color:#9aa0a6;"><span class="material-symbols-outlined">help</span></span>
                 <span>使い方</span>
             </div>
             <div class="sidebar-item" id="logoutBtnSide" style="color: var(--danger);">
-                <span class="material-symbols-outlined">logout</span>
+                <span class="sidebar-icon-tile" style="--tile-color:var(--danger);"><span class="material-symbols-outlined">logout</span></span>
                 <span>ログアウト</span>
             </div>
         </div>
@@ -673,7 +673,7 @@
     <div id="shop-modal" class="fs-screen hidden">
         <div class="fs-inner" style="max-width:900px;">
             <div class="fs-header">
-                <div class="fs-title">🎁 ショップ</div>
+                <div class="fs-title"><span class="sidebar-icon-tile" style="--tile-color:#a78bfa;"><span class="material-symbols-outlined">shopping_bag</span></span> ショップ</div>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <div style="text-align:center; background:rgba(255,255,255,0.08); border-radius:10px; padding:6px 14px;">
                         <div style="font-size:10px; color:rgba(255,255,255,0.6); text-transform:uppercase;">コイン</div>
@@ -688,10 +688,10 @@
             </div>
 
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
-                <button class="shop-cat-tab-btn active" data-cat="badge" onclick="switchShopCategory('badge')">🏅 バッジ</button>
-                <button class="shop-cat-tab-btn" data-cat="theme" onclick="switchShopCategory('theme')">🎨 テーマ</button>
-                <button class="shop-cat-tab-btn" data-cat="effect" onclick="switchShopCategory('effect')">✨ エフェクト</button>
-                <button class="shop-cat-tab-btn" data-cat="stamp" onclick="switchShopCategory('stamp')">🎫 スタンプ</button>
+                <button class="shop-cat-tab-btn active" data-cat="badge" onclick="switchShopCategory('badge')"><span class="sidebar-icon-tile tile-sm" style="--tile-color:#ffd700;"><span class="material-symbols-outlined">military_tech</span></span> バッジ</button>
+                <button class="shop-cat-tab-btn" data-cat="theme" onclick="switchShopCategory('theme')"><span class="sidebar-icon-tile tile-sm" style="--tile-color:#4fc3f7;"><span class="material-symbols-outlined">palette</span></span> テーマ</button>
+                <button class="shop-cat-tab-btn" data-cat="effect" onclick="switchShopCategory('effect')"><span class="sidebar-icon-tile tile-sm" style="--tile-color:#f093fb;"><span class="material-symbols-outlined">auto_awesome</span></span> エフェクト</button>
+                <button class="shop-cat-tab-btn" data-cat="stamp" onclick="switchShopCategory('stamp')"><span class="sidebar-icon-tile tile-sm" style="--tile-color:#a78bfa;"><span class="material-symbols-outlined">mood</span></span> スタンプ</button>
             </div>
 
             <!-- パネル：バッジ／テーマ／エフェクト（コイン） -->
@@ -725,8 +725,8 @@
                     チップは毎日のログインボーナスで受け取れます。購入したパックの中身は「スタンプ送信」の一覧にまとめて追加されます。
                 </div>
                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
-                    <button class="stamp-shop-tab-btn active" data-tab="official" onclick="switchStampShopTab('official')">🏅 公式パック</button>
-                    <button class="stamp-shop-tab-btn" data-tab="custom" onclick="switchStampShopTab('custom')">👥 みんなのスタンプ</button>
+                    <button class="stamp-shop-tab-btn active" data-tab="official" onclick="switchStampShopTab('official')"><span class="sidebar-icon-tile tile-sm" style="--tile-color:#ffd700;"><span class="material-symbols-outlined">military_tech</span></span> 公式パック</button>
+                    <button class="stamp-shop-tab-btn" data-tab="custom" onclick="switchStampShopTab('custom')"><span class="sidebar-icon-tile tile-sm" style="--tile-color:#4fc3f7;"><span class="material-symbols-outlined">group</span></span> みんなのスタンプ</button>
                     <button onclick="openCustomPackCreateModal()" style="margin-left:auto; padding:8px 16px; border:none; border-radius:8px; background:linear-gradient(135deg,#a78bfa,#667eea); color:#fff; font-weight:bold; cursor:pointer; font-size:12px;">✏️ 自作スタンプを投稿</button>
                 </div>
                 <div style="flex:1; overflow-y:auto;">
@@ -757,7 +757,7 @@
     <div id="stamp-pack-create-modal" class="modal-overlay hidden" style="z-index:10100;" onclick="if(event.target===this)$(this).addClass('hidden')">
         <div class="responsive-card" style="max-width:460px; max-height:85vh; overflow-y:auto; padding:24px;" onclick="event.stopPropagation()">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                <h3 style="margin:0;">✏️ 自作スタンプを投稿</h3>
+                <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><span class="sidebar-icon-tile" style="--tile-color:#a78bfa;"><span class="material-symbols-outlined">edit</span></span> 自作スタンプを投稿</h3>
                 <button onclick="$('#stamp-pack-create-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:22px; cursor:pointer;">✕</button>
             </div>
 
@@ -785,7 +785,7 @@
     <div id="admin-panel-modal" class="fs-screen hidden">
         <div class="fs-inner" style="max-width:640px;">
             <div class="fs-header">
-                <div class="fs-title">🛡️ モデレーションパネル</div>
+                <div class="fs-title"><span class="sidebar-icon-tile" style="--tile-color:#ff6b6b;"><span class="material-symbols-outlined">shield_person</span></span> モデレーションパネル</div>
                 <button onclick="$('#admin-panel-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
             </div>
             <div style="font-size:12px; color:var(--txt-m); margin-bottom:14px;">通報されたスタンプパックを新しい順・通報数順に表示しています。プロフィール画面からユーザーのBANも行えます。</div>
@@ -822,7 +822,7 @@
     <div id="ranking-modal" class="fs-screen hidden">
         <div class="fs-inner" style="max-width:540px;">
             <div class="fs-header">
-                <div class="fs-title">🏆 ランキング</div>
+                <div class="fs-title"><span class="sidebar-icon-tile" style="--tile-color:#ffd700;"><span class="material-symbols-outlined">emoji_events</span></span> ランキング</div>
                 <button onclick="$('#ranking-modal').addClass('hidden')" class="fs-close-btn-inline">✕</button>
             </div>
             <div id="ranking-list" style="flex:1; overflow-y:auto;"></div>
@@ -834,7 +834,7 @@
     <div id="slot-help-modal" class="modal-overlay hidden" style="z-index:10000;" onclick="if(event.target===this)$(this).addClass('hidden')">
         <div class="responsive-card" style="max-width:480px; max-height:85vh; overflow-y:auto; padding:24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h3 style="margin:0;">🎰 スロットの遊び方</h3>
+                <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><span class="sidebar-icon-tile" style="--tile-color:#ff4757;"><span class="material-symbols-outlined">casino</span></span> スロットの遊び方</h3>
                 <button onclick="$('#slot-help-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:22px; cursor:pointer;">✕</button>
             </div>
             <div style="font-size:13px; color:var(--txt); line-height:1.9; display:flex; flex-direction:column; gap:14px;">
@@ -872,7 +872,7 @@
     <div id="poker-help-modal" class="modal-overlay hidden" style="z-index:10000;" onclick="if(event.target===this)$(this).addClass('hidden')">
         <div class="responsive-card" style="max-width:480px; max-height:85vh; overflow-y:auto; padding:24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h3 style="margin:0;">🃏 ポーカーの遊び方</h3>
+                <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><span class="sidebar-icon-tile" style="--tile-color:#ff4757;"><span class="material-symbols-outlined">style</span></span> ポーカーの遊び方</h3>
                 <button onclick="$('#poker-help-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:22px; cursor:pointer;">✕</button>
             </div>
             <div style="font-size:13px; color:var(--txt); line-height:1.9; display:flex; flex-direction:column; gap:14px;">
@@ -915,7 +915,7 @@
     <div id="help-modal" class="modal-overlay hidden" style="z-index:10000;" onclick="if(event.target===this)$(this).addClass('hidden')">
         <div class="responsive-card" style="max-width:520px; max-height:85vh; overflow-y:auto; padding:24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h3 style="margin:0;">📖 ゆきちゃっとの使い方</h3>
+                <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><span class="sidebar-icon-tile" style="--tile-color:#9aa0a6;"><span class="material-symbols-outlined">menu_book</span></span> ゆきちゃっとの使い方</h3>
                 <button onclick="$('#help-modal').addClass('hidden')" style="background:none; border:none; color:var(--txt-m); font-size:22px; cursor:pointer;">✕</button>
             </div>
             <div style="font-size:13px; color:var(--txt); line-height:1.9; display:flex; flex-direction:column; gap:14px;">
