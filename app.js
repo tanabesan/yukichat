@@ -807,13 +807,23 @@ const syncProfilePreview = () => {
     
     const selectedBadge = $("#editEquippedBadge").val();
     const $badgePreview = $("#editPreviewBadge").empty();
-    
-    if (selectedBadge === 'vip_badge') {
-        $badgePreview.html('<span class="user-badge" title="VIP">👑</span>');
-    } else if (selectedBadge === 'star_badge') {
-        $badgePreview.html('<span class="user-badge" title="スター">⭐</span>');
-    } else if (selectedBadge === 'crown_badge') {
-        $badgePreview.html('<span class="user-badge" title="プレミアム">👸</span>');
+    const previewBadgeMap = {
+        'vip_badge': { msIcon: 'workspace_premium', tileColor: '#ffd700', title: 'VIP' },
+        'star_badge': { msIcon: 'star', tileColor: '#ffd700', title: 'スター' },
+        'crown_badge': { msIcon: 'crown', tileColor: '#ffca28', title: 'プレミアム' }
+    };
+    if (previewBadgeMap[selectedBadge]) {
+        const badge = previewBadgeMap[selectedBadge];
+        $badgePreview.html(`<span class="user-badge" title="${badge.title}"><span class="sidebar-icon-tile tile-xs" style="--tile-color:${badge.tileColor};"><span class="material-symbols-outlined">${badge.msIcon}</span></span></span>`);
+    }
+
+    // 実際のプロフィール画面と同じ「好きな曲」カードをプレビューにも出す（区切り線ごと）
+    const favoriteSongUrl = $("#editFavoriteSong").val().trim();
+    if (favoriteSongUrl) {
+        $("#editPreviewFavoriteSongSection").removeClass("hidden");
+        renderSpotifySongCard(favoriteSongUrl, $("#editPreviewFavoriteSong"));
+    } else {
+        $("#editPreviewFavoriteSongSection").addClass("hidden");
     }
 };
 $("#editName, #editPhoto, #editBanner, #editBio, #editEquippedEffect, #editEquippedBadge").on("input change", syncProfilePreview);
@@ -824,6 +834,7 @@ $("#editFavoriteSong").on("input", function() {
     const url = $(this).val().trim();
     favoriteSongDebounce = setTimeout(() => {
         renderSpotifyEmbed(url, $("#editFavoriteSongPreview"));
+        syncProfilePreview();
     }, 600);
 });
 
@@ -3368,12 +3379,14 @@ window.showProfile = async (uid) => {
     else if (equipped.effect === 'gold_effect') $("#viewAvatarContainer").addClass('effect-gold');
     
     const $badges = $("#viewBadges").empty();
-    if (equipped.badge === 'vip_badge') {
-        $badges.append('<span class="user-badge" title="VIP">👑</span>');
-    } else if (equipped.badge === 'star_badge') {
-        $badges.append('<span class="user-badge" title="スター">⭐</span>');
-    } else if (equipped.badge === 'crown_badge') {
-        $badges.append('<span class="user-badge" title="プレミアム">👸</span>');
+    const viewBadgeMap = {
+        'vip_badge': { msIcon: 'workspace_premium', tileColor: '#ffd700', title: 'VIP' },
+        'star_badge': { msIcon: 'star', tileColor: '#ffd700', title: 'スター' },
+        'crown_badge': { msIcon: 'crown', tileColor: '#ffca28', title: 'プレミアム' }
+    };
+    if (viewBadgeMap[equipped.badge]) {
+        const badge = viewBadgeMap[equipped.badge];
+        $badges.append(`<span class="user-badge" title="${badge.title}"><span class="sidebar-icon-tile tile-xs" style="--tile-color:${badge.tileColor};"><span class="material-symbols-outlined">${badge.msIcon}</span></span></span>`);
     }
     
     const $actionBox = $("#prof-action-box").empty();
