@@ -812,6 +812,46 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
     z-index: 2000; padding: 20px; box-sizing: border-box;
 }
 
+/* ログイン画面の背景装飾：ふんわり動く光のグラデーション */
+#auth-container {
+    overflow: hidden;
+    background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(88,101,242,0.35), transparent 60%),
+        var(--bg-31);
+}
+.auth-bg-decor {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+.auth-bg-decor::before,
+.auth-bg-decor::after {
+    content: '';
+    position: absolute;
+    width: 420px;
+    height: 420px;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.28;
+    animation: authBlobFloat 12s ease-in-out infinite;
+}
+.auth-bg-decor::before {
+    background: #667eea;
+    top: -120px;
+    left: -100px;
+}
+.auth-bg-decor::after {
+    background: #a78bfa;
+    bottom: -140px;
+    right: -100px;
+    animation-delay: -6s;
+}
+@keyframes authBlobFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(30px, -20px) scale(1.08); }
+}
+
 .responsive-card {
     background: var(--bg-31);
     border-radius: 12px;
@@ -991,6 +1031,10 @@ body.heart-theme .bubble { background: rgba(245, 87, 108, 0.2) !important; borde
 .btn-sm { padding: 6px 12px; border-radius: 4px; border: none; color: #fff; cursor: pointer; font-size: 12px; font-weight: bold; margin-left: 5px; }
 
 #init-loader { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; background: var(--bg-31); z-index: 9999; }
+@keyframes loaderPulse {
+    0%, 100% { transform: scale(1); opacity: 0.85; }
+    50% { transform: scale(1.1); opacity: 1; }
+}
 .preview-box { border: 1px solid #444; border-radius: 8px; overflow: hidden; margin-bottom: 15px; background: #111; padding-bottom: 10px; min-height: 200px; }
 .preview-label { font-size: 10px; color: var(--txt-m); padding: 5px 10px; text-transform: uppercase; letter-spacing: 1px; }
 

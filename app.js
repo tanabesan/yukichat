@@ -569,7 +569,21 @@ window.scrollToBottom = scrollToBottom;
 onAuthStateChanged(auth, async (user) => {
     $("#init-loader").fadeOut();
     $("#app-wrapper").addClass("visible");
-    
+
+    // メール未認証のアカウントは、ここで即座に弾く。
+    // これより後（initPresence等）を一切実行させないのがポイント。
+    // 以前は「ログインボタン側でemailVerifiedをチェックしてsignOutする」実装だったため、
+    // signOutが完了するまでの一瞬だけonAuthStateChanged(user)が先に走ってオンライン状態が
+    // RTDBに書き込まれてしまい、タイミング次第でオフラインに戻す処理と競合して
+    // オンラインのまま残り続けてしまう「無限オンラインバグ」が起きていた。
+    if (user && !user.isAnonymous && !user.emailVerified) {
+        await signOut(auth);
+        $("#app-wrapper").removeClass("visible");
+        $("#auth-container").removeClass("hidden");
+        switchAuthTab('login');
+        return;
+    }
+
     if (user) {
         const keys = Object.keys(localStorage);
         keys.forEach(key => {
