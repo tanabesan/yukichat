@@ -129,6 +129,39 @@ body {
 }
 .sidebar-label { font-size: 11px; color: var(--txt-m); margin: 15px 10px 5px; text-transform: uppercase; }
 
+/* サイドバーのカテゴリ開閉（アコーディオン） */
+.sidebar-label-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 4px 10px 4px 0;
+    border-radius: 5px;
+    user-select: none;
+    transition: background 0.15s;
+}
+.sidebar-label-toggle:hover { background: rgba(255,255,255,0.05); }
+.sidebar-label-arrow {
+    font-size: 18px !important;
+    color: var(--txt-m);
+    transition: transform 0.2s ease;
+}
+.sidebar-group-body {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.22s ease;
+}
+.sidebar-group-body-inner {
+    overflow: hidden;
+    min-height: 0;
+}
+.sidebar-group.collapsed .sidebar-group-body {
+    grid-template-rows: 0fr;
+}
+.sidebar-group.collapsed .sidebar-label-arrow {
+    transform: rotate(-90deg);
+}
+
 /* --- メインレイアウト --- */
 #app-wrapper { 
     display: flex; 

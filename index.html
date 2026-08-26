@@ -104,29 +104,45 @@
                 <span>ユーザーを探す</span>
                 <span id="friendReqSidebarBadge" class="sidebar-item-badge hidden"></span>
             </div>
-            <div class="sidebar-label">ゲーム＆特典</div>
-            <div class="sidebar-item" onclick="toggleSidebar(false); openShopFromMenu();">
-                <span class="sidebar-icon-tile" style="--tile-color:#a78bfa;"><span class="material-symbols-outlined">shopping_bag</span></span>
-                <span>ショップ</span>
+
+            <div class="sidebar-group" data-group="game">
+                <div class="sidebar-label sidebar-label-toggle" onclick="toggleSidebarGroup('game')">
+                    <span>ゲーム＆特典</span>
+                    <span class="material-symbols-outlined sidebar-label-arrow">expand_more</span>
+                </div>
+                <div class="sidebar-group-body"><div class="sidebar-group-body-inner">
+                    <div class="sidebar-item" onclick="toggleSidebar(false); openShopFromMenu();">
+                        <span class="sidebar-icon-tile" style="--tile-color:#a78bfa;"><span class="material-symbols-outlined">shopping_bag</span></span>
+                        <span>ショップ</span>
+                    </div>
+                    <div class="sidebar-item admin-only hidden" onclick="toggleSidebar(false); openAdminPanel();">
+                        <span class="sidebar-icon-tile" style="--tile-color:#ff6b6b;"><span class="material-symbols-outlined">shield_person</span></span>
+                        <span>モデレーション</span>
+                    </div>
+                    <div class="sidebar-item" onclick="toggleSidebar(false); openCasinoFromMenu();">
+                        <span class="sidebar-icon-tile" style="--tile-color:#ff4757;"><span class="material-symbols-outlined">casino</span></span>
+                        <span>カジノ</span>
+                    </div>
+                    <div class="sidebar-item" onclick="toggleSidebar(false); openRankingFromMenu();">
+                        <span class="sidebar-icon-tile" style="--tile-color:#ffd700;"><span class="material-symbols-outlined">leaderboard</span></span>
+                        <span>ランキング</span>
+                    </div>
+                    <div class="sidebar-item" onclick="toggleSidebar(false); openLoginBonusFromMenu();">
+                        <span class="sidebar-icon-tile" style="--tile-color:#ffca28;"><span class="material-symbols-outlined">redeem</span></span>
+                        <span>ログインボーナス</span>
+                    </div>
+                </div></div>
             </div>
-            <div class="sidebar-item admin-only hidden" onclick="toggleSidebar(false); openAdminPanel();">
-                <span class="sidebar-icon-tile" style="--tile-color:#ff6b6b;"><span class="material-symbols-outlined">shield_person</span></span>
-                <span>モデレーション</span>
+
+            <div class="sidebar-group" data-group="dm">
+                <div class="sidebar-label sidebar-label-toggle" onclick="toggleSidebarGroup('dm')">
+                    <span>ダイレクトメッセージ</span>
+                    <span class="material-symbols-outlined sidebar-label-arrow">expand_more</span>
+                </div>
+                <div class="sidebar-group-body"><div class="sidebar-group-body-inner">
+                    <div id="dm-list"></div>
+                </div></div>
             </div>
-            <div class="sidebar-item" onclick="toggleSidebar(false); openCasinoFromMenu();">
-                <span class="sidebar-icon-tile" style="--tile-color:#ff4757;"><span class="material-symbols-outlined">casino</span></span>
-                <span>カジノ</span>
-            </div>
-            <div class="sidebar-item" onclick="toggleSidebar(false); openRankingFromMenu();">
-                <span class="sidebar-icon-tile" style="--tile-color:#ffd700;"><span class="material-symbols-outlined">leaderboard</span></span>
-                <span>ランキング</span>
-            </div>
-            <div class="sidebar-item" onclick="toggleSidebar(false); openLoginBonusFromMenu();">
-                <span class="sidebar-icon-tile" style="--tile-color:#ffca28;"><span class="material-symbols-outlined">redeem</span></span>
-                <span>ログインボーナス</span>
-            </div>
-            <div class="sidebar-label">ダイレクトメッセージ</div>
-            <div id="dm-list"></div>
         </div>
         <div style="padding: 15px; border-top: 1px solid #222;">
             <div class="sidebar-item" onclick="toggleSidebar(false); $('#help-modal').removeClass('hidden');">

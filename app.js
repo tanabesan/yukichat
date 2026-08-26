@@ -510,12 +510,38 @@ window.toggleSidebar = (show) => {
         $("#sidebar").addClass("open");
         $("#sidebar-overlay").fadeIn(200);
         updateSidebarDMList();
+        restoreSidebarGroupState();
     } else {
         $("#sidebar").removeClass("open");
         $("#sidebar-overlay").fadeOut(200);
     }
 };
 $("#menuToggle, #sidebar-overlay").on("click", () => toggleSidebar(!$("#sidebar").hasClass("open")));
+
+// サイドバーのカテゴリ（ゲーム＆特典・ダイレクトメッセージ）の開閉。状態はlocalStorageに保存し、
+// リロード後や次回開いた時も前回の開閉状態を覚えておく。
+const SIDEBAR_COLLAPSED_KEY = 'sidebar_collapsed_groups';
+
+window.toggleSidebarGroup = (groupName) => {
+    const $group = $(`.sidebar-group[data-group="${groupName}"]`);
+    const isCollapsed = $group.toggleClass('collapsed').hasClass('collapsed');
+
+    let collapsed = JSON.parse(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) || '[]');
+    if (isCollapsed) {
+        if (!collapsed.includes(groupName)) collapsed.push(groupName);
+    } else {
+        collapsed = collapsed.filter(g => g !== groupName);
+    }
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, JSON.stringify(collapsed));
+};
+
+function restoreSidebarGroupState() {
+    const collapsed = JSON.parse(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) || '[]');
+    collapsed.forEach(groupName => {
+        $(`.sidebar-group[data-group="${groupName}"]`).addClass('collapsed');
+    });
+}
+restoreSidebarGroupState();
 
 async function updateSidebarDMList() {
     const $dmList = $("#dm-list").empty();
@@ -571,6 +597,18 @@ onAuthStateChanged(auth, async (user) => {
     // signOutが完了するまでの一瞬だけonAuthStateChanged(user)が先に走ってオンライン状態が
     // RTDBに書き込まれてしまい、タイミング次第でオフラインに戻す処理と競合して
     // オンラインのまま残り続けてしまう「無限オンラインバグ」が起きていた。
+    //
+    // ただし user.emailVerified はブラウザ側にキャッシュされた古い情報のことがあり、
+    // 別デバイス/別タブで認証を済ませていても、このセッションのキャッシュが古いままだと
+    // 実際は認証済みなのに「未認証」と誤判定してサインアウトさせてしまうことがあった
+    // （＝急に認証エラーになる不具合）。なので判定前に必ずreload()して最新状態を取得する。
+    if (user && !user.isAnonymous && !user.emailVerified) {
+        try {
+            await reload(user);
+        } catch (e) {
+            console.error('[auth] emailVerified再確認のためのreloadに失敗', e);
+        }
+    }
     if (user && !user.isAnonymous && !user.emailVerified) {
         await signOut(auth);
         $("#app-wrapper").removeClass("visible");
@@ -755,8 +793,8 @@ onAuthStateChanged(auth, async (user) => {
 
         globalUnsubscribers.push(unsubFriends, unsubUsers, unsubRooms);
 
-        // グローバルチャットの新着を、DM側にいる時でも拾うための常時リスナー。
-        // （今までは「グローバルチャットを開いている時」しか新着を検知できず、
+        // パブリックチャットの新着を、DM側にいる時でも拾うための常時リスナー。
+        // （今までは「パブリックチャットを開いている時」しか新着を検知できず、
         //   DMを見ている間にグローバルへ投稿があっても完全に無反応だった）
         let isFirstGlobalSnapshot = true;
         const unsubGlobalWatch = onSnapshot(
@@ -861,7 +899,7 @@ window.switchChat = (roomId, otherName = null, otherUid = null) => {
         $("#headerTitle").text(otherName + " とのDM");
         $("#callDMBtn").removeClass("hidden");
     } else {
-        $("#headerTitle").text("グローバルチャット");
+        $("#headerTitle").text("パブリックチャット");
         $("#callDMBtn").addClass("hidden");
     }
 
