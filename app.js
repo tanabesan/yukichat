@@ -164,6 +164,16 @@ const NOTIF_KEYS = {
     pushFriendAcc:'notif_push_friend_acc',
 };
 
+// アプリを見ている間（タブが表示されていて、かつフォーカスがある状態）は
+// 通知音・プッシュ通知を一切出さないようにする設定。デフォルトはOFF（今まで通り常に鳴る）。
+const NOTIF_MUTE_WHILE_OPEN_KEY = 'notif_mute_while_open';
+function getMuteWhileOpen() {
+    return localStorage.getItem(NOTIF_MUTE_WHILE_OPEN_KEY) === 'true';
+}
+function isAppActivelyOpen() {
+    return document.visibilityState === 'visible' && document.hasFocus();
+}
+
 function getNotif(key) {
     const v = localStorage.getItem(NOTIF_KEYS[key]);
     return v === null ? true : v === 'true';
@@ -203,6 +213,11 @@ function initNotifUI() {
         if ($el.length) $el.prop('checked', getNotif(key));
     });
 
+    $('#muteWhileOpen').prop('checked', getMuteWhileOpen());
+    $('#muteWhileOpen').on('change', function() {
+        localStorage.setItem(NOTIF_MUTE_WHILE_OPEN_KEY, this.checked);
+    });
+
     updatePushPermissionMsg();
 
     $('#soundChatMsg').on('change', function() { setNotif('soundChat', this.checked); isSoundEnabled = this.checked; });
@@ -232,11 +247,13 @@ function updatePushPermissionMsg() {
 
 function playNotifSound(type) {
     if (!getNotif(type)) return;
+    if (getMuteWhileOpen() && isAppActivelyOpen()) return;
     notifyAudio.play();
 }
 
 function sendPushNotif(type, title, body, icon, tag) {
     if (!getNotif(type)) return;
+    if (getMuteWhileOpen() && isAppActivelyOpen()) return;
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
 
@@ -4294,6 +4311,11 @@ $("#loginBtn").on("click", async () => {
     if (!e || !p) { $('#loginError').text('メールとパスワードを入力してください').show(); return; }
     try {
         const cred = await signInWithEmailAndPassword(auth, e, p);
+
+        // サインイン直後のcred.user.emailVerifiedも、状況によっては古い情報のままなことがあるため、
+        // 判定前に必ずreload()でサーバーの最新状態を取得し直す（onAuthStateChanged側と同じ対応）。
+        try { await reload(cred.user); } catch (reloadErr) { console.error('[auth] ログイン時reload失敗', reloadErr); }
+
         if (!cred.user.emailVerified) {
             await sendEmailVerification(cred.user);
             await signOut(auth);

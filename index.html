@@ -392,6 +392,17 @@
         </div>
         <div class="right-drawer-content">
 
+            <!-- 全体設定：開いている間はミュート -->
+            <div style="margin-bottom:20px;">
+                <label class="notif-toggle-row" style="background:rgba(255,255,255,0.04); padding:10px 12px; border-radius:8px;">
+                    <span>
+                        <span style="display:block; font-weight:bold;">👀 アプリを見ている間は通知しない</span>
+                        <span style="display:block; font-size:11px; color:var(--txt-m); margin-top:2px;">タブを開いてアクティブに使っている間は、音・プッシュ通知を両方止めます</span>
+                    </span>
+                    <input type="checkbox" id="muteWhileOpen" class="notif-check">
+                </label>
+            </div>
+
             <!-- 通知音セクション -->
             <div style="margin-bottom:20px;">
                 <div style="font-size:11px; font-weight:bold; color:var(--txt-m); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">🔔 通知音</div>
