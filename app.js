@@ -619,14 +619,21 @@ onAuthStateChanged(auth, async (user) => {
     // 別デバイス/別タブで認証を済ませていても、このセッションのキャッシュが古いままだと
     // 実際は認証済みなのに「未認証」と誤判定してサインアウトさせてしまうことがあった
     // （＝急に認証エラーになる不具合）。なので判定前に必ずreload()して最新状態を取得する。
+    let reloadErrorForDiag = null;
+    const beforeReloadForDiag = user ? user.emailVerified : null;
     if (user && !user.isAnonymous && !user.emailVerified) {
         try {
             await reload(user);
         } catch (e) {
+            reloadErrorForDiag = e;
             console.error('[auth] emailVerified再確認のためのreloadに失敗', e);
         }
     }
     if (user && !user.isAnonymous && !user.emailVerified) {
+        // デバッグ用：ページ読み込み時（セッション復元時）にここで弾かれた場合の生の状態を表示する
+        const debugInfo = `[デバッグ情報 - 読み込み時]\nメール: ${user.email}\nreload前のemailVerified: ${beforeReloadForDiag}\nreload後のemailVerified: ${user.emailVerified}\nreloadエラー: ${reloadErrorForDiag ? reloadErrorForDiag.message : 'なし'}`;
+        console.error(debugInfo);
+        alert('メールアドレスが認証されていません。\n\n' + debugInfo);
         await signOut(auth);
         $("#app-wrapper").removeClass("visible");
         $("#auth-container").removeClass("hidden");
@@ -4311,15 +4318,21 @@ $("#loginBtn").on("click", async () => {
     if (!e || !p) { $('#loginError').text('メールとパスワードを入力してください').show(); return; }
     try {
         const cred = await signInWithEmailAndPassword(auth, e, p);
+        const beforeReload = cred.user.emailVerified;
 
         // サインイン直後のcred.user.emailVerifiedも、状況によっては古い情報のままなことがあるため、
         // 判定前に必ずreload()でサーバーの最新状態を取得し直す（onAuthStateChanged側と同じ対応）。
-        try { await reload(cred.user); } catch (reloadErr) { console.error('[auth] ログイン時reload失敗', reloadErr); }
+        let reloadError = null;
+        try { await reload(cred.user); } catch (reloadErr) { reloadError = reloadErr; console.error('[auth] ログイン時reload失敗', reloadErr); }
 
         if (!cred.user.emailVerified) {
             await sendEmailVerification(cred.user);
             await signOut(auth);
-            $('#loginError').html('メールアドレスが認証されていません。<br>認証メールを送信しました。届いたメールのリンクをクリックしてからログインしてください。').show();
+            // デバッグ用：実際にFirebaseが返してきた生の状態をそのまま表示する
+            // （Firebaseコンソールを追いかけるより、これが一番確実な一次情報のため）
+            const debugInfo = `[デバッグ情報]\nメール: ${cred.user.email}\nreload前のemailVerified: ${beforeReload}\nreload後のemailVerified: ${cred.user.emailVerified}\nreloadエラー: ${reloadError ? reloadError.message : 'なし'}`;
+            console.error(debugInfo);
+            $('#loginError').html('メールアドレスが認証されていません。<br>認証メールを送信しました。届いたメールのリンクをクリックしてからログインしてください。<br><br><span style="font-size:10px; color:var(--txt-m); white-space:pre-wrap; user-select:text;">' + debugInfo.replace(/\n/g, '<br>') + '</span>').show();
             return;
         }
         location.reload();
