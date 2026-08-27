@@ -407,6 +407,20 @@ let currentRoomId = null;
 
 // 管理者メールアドレス（Firestoreルールのisadmin()と合わせる）
 const ADMIN_EMAILS = ['arinkodayo0204@gmail.com'];
+
+// ===== ユーザーID＋パスワードでのログイン（実際のメールを使わない仕組み） =====
+// Firebase Authはメール/パスワード形式しか無いため、内部的には
+// 「ユーザーID@GUEST_ID_DOMAIN」という実在しないメールアドレスとして扱うことで、
+// 見た目はユーザーID＋パスワードのログインを実現している。
+// メールを一切送らない（送れない）ので、認証メール待ち・迷惑メール問題が発生しない。
+// デメリット：パスワードを忘れた場合の復旧手段が無い（メールでのリセットが使えないため）。
+const GUEST_ID_DOMAIN = 'guestid.yukichat.local';
+function usernameToFakeEmail(username) {
+    return username.trim().toLowerCase() + '@' + GUEST_ID_DOMAIN;
+}
+function isGuestIdAccount(user) {
+    return !!(user && user.email && user.email.endsWith('@' + GUEST_ID_DOMAIN));
+}
 let isCurrentUserAdmin = false;
 let myBlockedUsers = [];
 let currentDMOtherUid = null;
@@ -621,7 +635,7 @@ onAuthStateChanged(auth, async (user) => {
     // （＝急に認証エラーになる不具合）。なので判定前に必ずreload()して最新状態を取得する。
     let reloadErrorForDiag = null;
     const beforeReloadForDiag = user ? user.emailVerified : null;
-    if (user && !user.isAnonymous && !user.emailVerified) {
+    if (user && !user.isAnonymous && !user.emailVerified && !isGuestIdAccount(user)) {
         try {
             await reload(user);
         } catch (e) {
@@ -629,7 +643,7 @@ onAuthStateChanged(auth, async (user) => {
             console.error('[auth] emailVerified再確認のためのreloadに失敗', e);
         }
     }
-    if (user && !user.isAnonymous && !user.emailVerified) {
+    if (user && !user.isAnonymous && !user.emailVerified && !isGuestIdAccount(user)) {
         // デバッグ用：ページ読み込み時（セッション復元時）にここで弾かれた場合の生の状態を表示する
         const debugInfo = `[デバッグ情報 - 読み込み時]\nメール: ${user.email}\nreload前のemailVerified: ${beforeReloadForDiag}\nreload後のemailVerified: ${user.emailVerified}\nreloadエラー: ${reloadErrorForDiag ? reloadErrorForDiag.message : 'なし'}`;
         console.error(debugInfo);
@@ -674,6 +688,8 @@ onAuthStateChanged(auth, async (user) => {
 
         isCurrentUserAdmin = !!(user.email && ADMIN_EMAILS.includes(user.email));
         if (isCurrentUserAdmin) { $(".admin-only").removeClass("hidden"); }
+
+        if (user.isAnonymous) { $("#guestWarningBanner").removeClass("hidden"); }
 
         try {
             const myDoc = await getDoc(doc(db, "users", user.uid));
@@ -4312,13 +4328,23 @@ window.switchAuthTab = (tab) => {
 
 // ===== ログイン =====
 $("#loginBtn").on("click", async () => {
-    const e = $("#loginEmail").val().trim();
+    const rawInput = $("#loginEmail").val().trim();
     const p = $("#loginPassword").val();
     $('#loginError').hide();
-    if (!e || !p) { $('#loginError').text('メールとパスワードを入力してください').show(); return; }
+    if (!rawInput || !p) { $('#loginError').text('メール（またはユーザーID）とパスワードを入力してください').show(); return; }
+
+    // "@"が含まれていなければユーザーIDとみなし、内部専用の偽メールアドレスに変換する
+    const e = rawInput.includes('@') ? rawInput : usernameToFakeEmail(rawInput);
+
     try {
         const cred = await signInWithEmailAndPassword(auth, e, p);
         const beforeReload = cred.user.emailVerified;
+
+        // ユーザーID方式のアカウントは実際のメールを持たないため、認証チェック自体をスキップする
+        if (isGuestIdAccount(cred.user)) {
+            location.reload();
+            return;
+        }
 
         // サインイン直後のcred.user.emailVerifiedも、状況によっては古い情報のままなことがあるため、
         // 判定前に必ずreload()でサーバーの最新状態を取得し直す（onAuthStateChanged側と同じ対応）。
@@ -4338,7 +4364,7 @@ $("#loginBtn").on("click", async () => {
         location.reload();
     } catch (err) {
         const msg = err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential'
-            ? 'メールアドレスまたはパスワードが正しくありません'
+            ? 'メールアドレス（またはユーザーID）かパスワードが正しくありません'
             : 'ログインエラー: ' + err.message;
         $('#loginError').text(msg).show();
     }
@@ -4426,7 +4452,21 @@ $("#guestBtn").on("click", async () => {
     catch (e) { alert("ゲストログインエラー: " + e.message); }
 });
 
-const doLogout = async () => { 
+const doLogout = async () => {
+    // ゲスト（匿名）アカウントは、signOut()すると二度と同じアカウントに戻れない
+    // （匿名ログインにはパスワード/メールが無いため、認証情報自体が失われる）。
+    // 逆に言えば、signOut()さえしなければブラウザに自動でセッションが保存され続け、
+    // 次回開いた時も自動で同じゲストアカウントに入れる（Firebase Authのデフォルト挙動）。
+    // なのでゲストの場合は「本当に削除するか／一旦閉じるだけか」を選ばせる。
+    if (auth.currentUser && auth.currentUser.isAnonymous) {
+        $('#guest-logout-modal').removeClass('hidden');
+        return;
+    }
+
+    await performSignOut();
+};
+
+async function performSignOut() {
     if (auth.currentUser) {
         try {
             await rtdbSet(rtdbRef(rtdb, `status/${auth.currentUser.uid}`), {
@@ -4436,6 +4476,23 @@ const doLogout = async () => {
         } catch (e) {}
     }
     signOut(auth).then(() => location.reload()); 
+}
+
+// ゲスト用ログアウト選択モーダルの各ボタン
+window.guestLogoutCloseOnly = () => {
+    // signOut()を呼ばずにただ画面を閉じるだけ。セッションはブラウザに残るので、
+    // 次回開いた時に自動でこのゲストアカウントに入れる。
+    $('#guest-logout-modal').addClass('hidden');
+    alert('👋 このまま閉じて大丈夫です。次にこのブラウザで開いた時、自動で同じゲストアカウントに入れます。');
+};
+window.guestLogoutSetupEmail = () => {
+    $('#guest-logout-modal').addClass('hidden');
+    toggleSettingsDrawer(true);
+};
+window.guestLogoutForever = async () => {
+    if (!confirm('本当に完全に削除しますか？メッセージ・コイン・アイテムなど全てのデータに二度とアクセスできなくなります。')) return;
+    $('#guest-logout-modal').addClass('hidden');
+    await performSignOut();
 };
 
 $("#logoutBtn, #logoutBtnSide").on("click", doLogout);
@@ -4457,21 +4514,36 @@ $("#settings-drawer-overlay").on("click", () => toggleSettingsDrawer(false));
 $('#ytDefaultPref').on('change', function() { setYtPref($(this).val()); });
 
 // ===== アカウント状態表示 =====
-function updateAccountStatusUI() {
+async function updateAccountStatusUI() {
     const user = auth.currentUser;
     if (!user) return;
 
     const isAnon = user.isAnonymous;
     const hasEmail = !!user.email;
     const isVerified = user.emailVerified;
+    const isGuestId = isGuestIdAccount(user);
 
-    if (isAnon) {
+    if (isGuestId) {
+        let username = '';
+        try {
+            const snap = await getDoc(doc(db, "users", user.uid));
+            username = snap.exists() ? (snap.data().username || '') : '';
+        } catch (e) {}
+        $('#account-status-area').html(`
+            <div style="color:#00c853; margin-bottom:4px;">✅ ユーザーIDでログイン中</div>
+            <div style="font-size:12px;">🆔 ${escapeHTML(username)}</div>
+        `);
+        $('#add-email-section').hide();
+        $('#verify-email-section').hide();
+        $('#guest-id-section').hide();
+    } else if (isAnon) {
         $('#account-status-area').html(`
             <div style="color:#ffd700; margin-bottom:4px;">👤 ゲスト（匿名）</div>
-            <div style="font-size:12px;">メールアドレスを追加するとアカウントが保護されます。</div>
+            <div style="font-size:12px;">ユーザーIDかメールアドレスを設定すると、他の端末からもログインできるようになります。</div>
         `);
         $('#add-email-section').show();
         $('#verify-email-section').hide();
+        $('#guest-id-section').show();
     } else if (hasEmail && !isVerified) {
         $('#account-status-area').html(`
             <div style="color:#ff4757; margin-bottom:4px;">⚠️ メール未認証</div>
@@ -4479,6 +4551,7 @@ function updateAccountStatusUI() {
         `);
         $('#verify-email-section').show();
         $('#add-email-section').hide();
+        $('#guest-id-section').hide();
     } else if (hasEmail && isVerified) {
         $('#account-status-area').html(`
             <div style="color:#00c853; margin-bottom:4px;">✅ 認証済み</div>
@@ -4486,6 +4559,7 @@ function updateAccountStatusUI() {
         `);
         $('#verify-email-section').hide();
         $('#add-email-section').hide();
+        $('#guest-id-section').hide();
     }
 }
 
@@ -4522,6 +4596,35 @@ $('#addEmailBtn').on('click', async () => {
         $('#addEmailError').text(msg).show();
     }
 });
+
+// ===== ゲストにユーザーID＋パスワードを設定（メール不要） =====
+window.registerGuestId = async () => {
+    const username = $('#guestIdInput').val().trim();
+    const password = $('#guestIdPassword').val();
+    const password2 = $('#guestIdPasswordConfirm').val();
+    $('#guestIdError').hide();
+
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+        $('#guestIdError').text('ユーザーIDは半角英数字とアンダースコアのみ、3〜20文字で入力してください').show();
+        return;
+    }
+    if (password.length < 6) { $('#guestIdError').text('パスワードは6文字以上にしてください').show(); return; }
+    if (password !== password2) { $('#guestIdError').text('パスワードが一致しません').show(); return; }
+
+    try {
+        const fakeEmail = usernameToFakeEmail(username);
+        const credential = EmailAuthProvider.credential(fakeEmail, password);
+        await linkWithCredential(auth.currentUser, credential);
+        await updateDoc(doc(db, "users", auth.currentUser.uid), { isAnonymous: false, username });
+        alert(`✅ ユーザーID「${username}」を設定しました！\n\nこのユーザーIDとパスワードで、どの端末からでもこのアカウントにログインできます。`);
+        location.reload();
+    } catch (err) {
+        const msg = err.code === 'auth/email-already-in-use'
+            ? 'このユーザーIDは既に使われています。別のIDを試してください'
+            : 'エラー: ' + err.message;
+        $('#guestIdError').text(msg).show();
+    }
+};
 
 // --- イベント監視 ---
 

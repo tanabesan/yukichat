@@ -52,7 +52,7 @@
 
             <!-- ログインフォーム -->
             <div id="authFormLogin">
-                <input type="email" id="loginEmail" class="settings-input" placeholder="メールアドレス">
+                <input type="text" id="loginEmail" class="settings-input" placeholder="メールアドレス または ユーザーID">
                 <input type="password" id="loginPassword" class="settings-input" placeholder="パスワード">
                 <div id="loginError" style="font-size:12px; color:var(--danger); margin-bottom:8px; display:none;"></div>
                 <button id="loginBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:15px;">ログイン</button>
@@ -95,6 +95,9 @@
             <span class="material-symbols-outlined op-btn" onclick="toggleSidebar(false)">close</span>
         </div>
         <div class="sidebar-content">
+            <div id="guestWarningBanner" class="hidden" onclick="toggleSidebar(false); toggleSettingsDrawer(true);" style="margin-bottom:12px; padding:10px 12px; background:rgba(255,193,7,0.1); border:1px solid rgba(255,193,7,0.3); border-radius:8px; cursor:pointer; font-size:11px; color:#ffc107; line-height:1.5;">
+                ⚠️ ゲスト利用中です。<b>ログアウトすると二度と戻れません。</b><br>タップしてメールアドレスを設定
+            </div>
             <div class="sidebar-item active" onclick="switchChat(null); toggleSidebar(false);">
                 <span class="sidebar-icon-tile" style="--tile-color:#5865f2;"><span class="material-symbols-outlined">public</span></span>
                 <span>パブリックチャット</span>
@@ -479,6 +482,16 @@
                     <input type="password" id="addPassword" class="settings-input" placeholder="パスワード（6文字以上）">
                     <div id="addEmailError" style="font-size:12px; color:var(--danger); margin-bottom:6px; display:none;"></div>
                     <button id="addEmailBtn" style="width:100%; padding:10px; background:rgba(102,126,234,0.2); color:#667eea; border:1px solid #667eea; border-radius:6px; font-weight:bold; cursor:pointer; font-size:13px;">メールアドレスを追加</button>
+                </div>
+
+                <!-- ゲスト・匿名ユーザー向け：ユーザーID方式（メール不要・おすすめ） -->
+                <div id="guest-id-section" style="display:none; margin-top:14px; padding-top:14px; border-top:1px dashed rgba(255,255,255,0.1);">
+                    <div style="font-size:12px; color:var(--txt-m); margin-bottom:8px;">🆔 <b>おすすめ：</b>メール不要でユーザーIDだけで保存する方法。認証メールを待つ必要がなく、どの端末からもすぐログインできます。</div>
+                    <input type="text" id="guestIdInput" class="settings-input" placeholder="ユーザーID（半角英数字とアンダースコア、3〜20文字）">
+                    <input type="password" id="guestIdPassword" class="settings-input" placeholder="パスワード（6文字以上）">
+                    <input type="password" id="guestIdPasswordConfirm" class="settings-input" placeholder="パスワード（確認）">
+                    <div id="guestIdError" style="font-size:12px; color:var(--danger); margin-bottom:6px; display:none;"></div>
+                    <button onclick="registerGuestId()" style="width:100%; padding:10px; background:linear-gradient(135deg,#4fc3f7,#5865f2); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:13px;">🆔 ユーザーIDで保存する</button>
                 </div>
             </div>
 
@@ -892,6 +905,22 @@
             <label style="display:flex; align-items:center; gap:6px; margin-top:14px; font-size:12px; color:var(--txt-m); cursor:pointer;">
                 <input type="checkbox" id="yt-ask-remember"> 次回から聞かずにこれをデフォルトにする
             </label>
+        </div>
+    </div>
+
+    <!-- ゲスト（匿名）アカウントのログアウト選択 -->
+    <div id="guest-logout-modal" class="modal-overlay hidden">
+        <div class="responsive-card" style="max-width:340px; padding:22px; text-align:center;" onclick="event.stopPropagation()">
+            <div class="sidebar-icon-tile" style="--tile-color:#ffc107; width:44px; height:44px; border-radius:12px; margin:0 auto 12px;"><span class="material-symbols-outlined" style="font-size:24px;">person_off</span></div>
+            <div style="font-weight:bold; font-size:15px; margin-bottom:6px;">ゲストアカウントです</div>
+            <div style="font-size:12px; color:var(--txt-m); margin-bottom:18px; line-height:1.6;">
+                完全にログアウトすると、パスワードが無いため<b>二度とこのアカウントに戻れません</b>。<br>
+                どうしますか？
+            </div>
+            <button onclick="guestLogoutCloseOnly()" style="width:100%; padding:12px; margin-bottom:8px; background:linear-gradient(135deg,#4fc3f7,#5865f2); color:#fff; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">👋 このまま閉じる（次回も自動で戻れます）</button>
+            <button onclick="guestLogoutSetupEmail()" style="width:100%; padding:12px; margin-bottom:8px; background:rgba(102,126,234,0.15); color:#667eea; border:1px solid #667eea; border-radius:10px; font-weight:bold; cursor:pointer;">🆔 ユーザーID/メールを設定する（他の端末からも入れる）</button>
+            <button onclick="guestLogoutForever()" style="width:100%; padding:12px; margin-bottom:8px; background:none; color:var(--danger); border:1px solid rgba(255,71,87,0.4); border-radius:10px; font-weight:bold; cursor:pointer;">🗑️ 完全にログアウト（二度と戻れません）</button>
+            <button onclick="$('#guest-logout-modal').addClass('hidden')" style="width:100%; background:none; color:var(--txt-m); border:none; cursor:pointer; padding:8px; font-size:12px;">キャンセル</button>
         </div>
     </div>
 
