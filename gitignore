@@ -1,0 +1,12 @@
+# Firebase CLI関連のキャッシュ・ログ
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+ui-debug.log
+
+# Cloud Functionsの依存パッケージ（npm installで再生成できるのでコミット不要）
+functions/node_modules/
+
+# よくあるOS/エディタの不要ファイル
+.DS_Store
+Thumbs.db
