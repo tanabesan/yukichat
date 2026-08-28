@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, startAfter, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, signInAnonymously, sendEmailVerification, linkWithCredential, EmailAuthProvider, reload, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, updateEmail, signOut, signInAnonymously, sendEmailVerification, linkWithCredential, EmailAuthProvider, reload, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref as rtdbRef, set as rtdbSet, onValue, onDisconnect, serverTimestamp as rtdbServerTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 const firebaseConfig = { apiKey: "AIzaSyA8X7HsOXDERBTy4GvLE8ibg3bk8JhldZg", authDomain: "chat-16746.firebaseapp.com", projectId: "chat-16746", storageBucket: "chat-16746.firebasestorage.app", messagingSenderId: "1009009975164", appId: "1:1009009975164:web:64192371271cb589614ef9" };
@@ -4536,6 +4536,7 @@ async function updateAccountStatusUI() {
         $('#add-email-section').hide();
         $('#verify-email-section').hide();
         $('#guest-id-section').hide();
+        $('#upgrade-to-email-section').show();
     } else if (isAnon) {
         $('#account-status-area').html(`
             <div style="color:#ffd700; margin-bottom:4px;">👤 ゲスト（匿名）</div>
@@ -4544,6 +4545,7 @@ async function updateAccountStatusUI() {
         $('#add-email-section').show();
         $('#verify-email-section').hide();
         $('#guest-id-section').show();
+        $('#upgrade-to-email-section').hide();
     } else if (hasEmail && !isVerified) {
         $('#account-status-area').html(`
             <div style="color:#ff4757; margin-bottom:4px;">⚠️ メール未認証</div>
@@ -4552,6 +4554,7 @@ async function updateAccountStatusUI() {
         $('#verify-email-section').show();
         $('#add-email-section').hide();
         $('#guest-id-section').hide();
+        $('#upgrade-to-email-section').hide();
     } else if (hasEmail && isVerified) {
         $('#account-status-area').html(`
             <div style="color:#00c853; margin-bottom:4px;">✅ 認証済み</div>
@@ -4560,6 +4563,7 @@ async function updateAccountStatusUI() {
         $('#verify-email-section').hide();
         $('#add-email-section').hide();
         $('#guest-id-section').hide();
+        $('#upgrade-to-email-section').hide();
     }
 }
 
@@ -4623,6 +4627,34 @@ window.registerGuestId = async () => {
             ? 'このユーザーIDは既に使われています。別のIDを試してください'
             : 'エラー: ' + err.message;
         $('#guestIdError').text(msg).show();
+    }
+};
+
+// ===== ユーザーID方式アカウントを、後から本物のメールアドレスに変更する =====
+window.upgradeGuestIdToRealEmail = async () => {
+    const newEmail = $('#upgradeToEmailInput').val().trim();
+    $('#upgradeToEmailError').hide();
+    if (!newEmail) { $('#upgradeToEmailError').text('メールアドレスを入力してください').show(); return; }
+
+    try {
+        await updateEmail(auth.currentUser, newEmail);
+        await sendEmailVerification(auth.currentUser);
+        alert('✅ メールアドレスを設定しました！確認メールが届きますので、認証してください。');
+        location.reload();
+    } catch (err) {
+        let msg;
+        if (err.code === 'auth/email-already-in-use') {
+            msg = 'このメールアドレスは既に別のアカウントで使われています';
+        } else if (err.code === 'auth/invalid-email') {
+            msg = 'メールアドレスの形式が正しくありません';
+        } else if (err.code === 'auth/requires-recent-login') {
+            // メールアドレスの変更はセキュリティ上「最近ログインしたばかり」であることが求められる。
+            // 時間が経っている場合はここに来るので、一度ログインし直してもらう。
+            msg = 'セキュリティのため、もう一度ログインし直してから試してください（一度ログアウトして、ユーザーID＋パスワードで再ログインしてください）';
+        } else {
+            msg = 'エラー: ' + err.message;
+        }
+        $('#upgradeToEmailError').text(msg).show();
     }
 };
 

@@ -493,6 +493,14 @@
                     <div id="guestIdError" style="font-size:12px; color:var(--danger); margin-bottom:6px; display:none;"></div>
                     <button onclick="registerGuestId()" style="width:100%; padding:10px; background:linear-gradient(135deg,#4fc3f7,#5865f2); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:13px;">🆔 ユーザーIDで保存する</button>
                 </div>
+
+                <!-- ユーザーID方式アカウント向け：後から本物のメールアドレスに変更する -->
+                <div id="upgrade-to-email-section" style="display:none; margin-top:14px; padding-top:14px; border-top:1px dashed rgba(255,255,255,0.1);">
+                    <div style="font-size:12px; color:var(--txt-m); margin-bottom:8px;">📧 パスワードを忘れた時のためにメールアドレスも設定しておけます（任意）。設定すると、パスワードリセットがメールでできるようになります。</div>
+                    <input type="email" id="upgradeToEmailInput" class="settings-input" placeholder="メールアドレス">
+                    <div id="upgradeToEmailError" style="font-size:12px; color:var(--danger); margin-bottom:6px; display:none;"></div>
+                    <button onclick="upgradeGuestIdToRealEmail()" style="width:100%; padding:10px; background:rgba(102,126,234,0.2); color:#667eea; border:1px solid #667eea; border-radius:6px; font-weight:bold; cursor:pointer; font-size:13px;">📧 メールアドレスを設定する</button>
+                </div>
             </div>
 
             <!-- ログアウト -->
