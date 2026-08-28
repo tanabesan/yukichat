@@ -874,6 +874,14 @@
                     <input id="admin-unban-uid-input" type="text" placeholder="ユーザーID(uid)" style="flex:1; padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.05); color:var(--txt); font-size:12px;">
                     <button onclick="adminUnbanUser($('#admin-unban-uid-input').val().trim(), 'ユーザー')" style="padding:8px 14px; background:rgba(255,255,255,0.1); color:var(--txt); border:none; border-radius:6px; font-size:12px; cursor:pointer;">BAN解除</button>
                 </div>
+
+                <div style="font-size:12px; color:var(--txt-m); margin:20px 0 8px; text-transform:uppercase; letter-spacing:1px;">メール未認証ユーザーの手動救済</div>
+                <div style="font-size:11px; color:var(--txt-m); margin-bottom:8px;">認証メールが迷惑メール判定などで届かず、ログインできなくなったユーザーを手動で認証済みにします。UIDはFirebaseコンソールの Authentication → Users の一覧から確認できます。</div>
+                <div style="display:flex; gap:8px;">
+                    <input id="admin-verify-uid-input" type="text" placeholder="ユーザーID(uid)" style="flex:1; padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.05); color:var(--txt); font-size:12px;">
+                    <button onclick="adminForceVerifyUser()" style="padding:8px 14px; background:rgba(255,255,255,0.1); color:var(--txt); border:none; border-radius:6px; font-size:12px; cursor:pointer;">手動で認証済みにする</button>
+                </div>
+                <div id="admin-verify-result" style="font-size:11px; margin-top:6px;"></div>
             </div>
         </div>
     </div>

@@ -2,10 +2,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, startAfter, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, updateEmail, signOut, signInAnonymously, sendEmailVerification, linkWithCredential, EmailAuthProvider, reload, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref as rtdbRef, set as rtdbSet, onValue, onDisconnect, serverTimestamp as rtdbServerTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
 const firebaseConfig = { apiKey: "AIzaSyA8X7HsOXDERBTy4GvLE8ibg3bk8JhldZg", authDomain: "chat-16746.firebaseapp.com", projectId: "chat-16746", storageBucket: "chat-16746.firebasestorage.app", messagingSenderId: "1009009975164", appId: "1:1009009975164:web:64192371271cb589614ef9" };
 const app = initializeApp(firebaseConfig);
 const rtdb = getDatabase(app);
+const cloudFunctions = getFunctions(app, "us-central1"); // functionsのデプロイ先リージョンと合わせる
 
 // プッシュ通知表示用のService Workerを登録しておく。
 // （new Notification() はAndroid Chromeでは"Illegal constructor"エラーになり動かないため、
@@ -3286,6 +3288,35 @@ window.openAdminPanel = async () => {
     } catch (error) {
         console.error('Load admin panel error:', error);
         $list.html('<div style="color:#ff6b6b; padding:10px;">読み込みに失敗しました</div>');
+    }
+};
+
+// ===== 管理者：ユーザーを手動でメール認証済みにする(Cloud Functions経由) =====
+// 認証メールが迷惑メール判定等で届かず、ログインできなくなったユーザーを救済するための機能。
+// functions/index.js の adminVerifyUserEmail を呼び出す。事前にCloud Functionsのデプロイが必要。
+window.adminForceVerifyUser = async () => {
+    if (!isCurrentUserAdmin) return;
+    const uid = $('#admin-verify-uid-input').val().trim();
+    const $result = $('#admin-verify-result').text('');
+
+    if (!uid) {
+        $result.css('color', 'var(--danger)').text('UIDを入力してください');
+        return;
+    }
+
+    $result.css('color', 'var(--txt-m)').text('処理中...');
+    try {
+        const call = httpsCallable(cloudFunctions, 'adminVerifyUserEmail');
+        const res = await call({ uid });
+        if (res.data.alreadyVerified) {
+            $result.css('color', 'var(--txt-m)').text(`ℹ️ ${res.data.email} は既に認証済みでした`);
+        } else {
+            $result.css('color', 'var(--success)').text(`✅ ${res.data.email} を認証済みにしました`);
+        }
+        $('#admin-verify-uid-input').val('');
+    } catch (error) {
+        console.error('Admin force verify error:', error);
+        $result.css('color', 'var(--danger)').text('❌ 失敗: ' + (error.message || error));
     }
 };
 
